@@ -55,16 +55,24 @@ Through these interactions, we aim to refine our algorithms 🔄 and explore the
 
 🚀 Join us in pioneering the next frontier of AI-driven virtual worlds and witness the evolution of **Sovereignty Agents** as the foundation for tomorrow’s digital ecosystems.
 
+## 🔮 Features
+
+Module Name | Description | File Name
+---- | ---- | ----
+AI_websocket_server | handle all websocket connections of running agents, receive response messages from the game server and send agent decisions to the game environment. | core/ai.py
+Model Selector | select large language models, such as gpt4o-mini and deepseek, and set different keys for plan and chat module | core/llm_factory.py
+
+
 
 ## 🛠️ Development Guide
 ### Requirements
 - `python 3.10` or above
 - `pip install -r requirements.txt` all the required packages
-- `.env` file with API keys from your providers like OPENAI_API_KEY, DEEP_SEEK_API_KEY, and database url like GAME_BACKEND_URL, AGENT_BACKEND_URL 
+- `.env` file with API keys from your providers like OPENAI_API_KEY, DEEP_SEEK_API_KEY, and database urls like GAME_BACKEND_URL, AGENT_BACKEND_URL 
 
 ### Get started
 After installing all the packages and configuring the environment, you can start deploying your own agent.  
-First, run `core/ai.py` to send on your server.
+First, run `core/ai.py` to deploy the agent server.
 ```
 python ai.py
 ```  
