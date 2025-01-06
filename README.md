@@ -59,13 +59,13 @@ Through these interactions, we aim to refine our algorithms 🔄 and explore the
 
 Module Name | Description | File Name
 ---- | ---- | ----
-Communication Center | <ul><li> Handle all the messages of running agents through websocket connections, including receiving response messages from the game server and sending agent decisions to the game environment.</li></ui> | `core/ai.py`
-Model Selector | Select large language models, such as gpt4o-mini and deepseek, and set different keys for plan and chat module. | `core/llm_factory.py`
-Plan | Create an agent instance and run the planning workflow. <br> Set initial states, decisions and tools for agent instance. <br> Get character data from database. <br> Prompt for the agent instance. <br> Construct output structures for the agent instance. <br> Invoke the LLM for each plan function of the agent instance. | `core/graph_instance.py` <br> `core/agent_srv/factories.py` <br> `core/agent_srv/utils.py` <br> `core/agent_srv/prompts.py` <br> `core/agent_srv/node_models.py` <br> `core/agent_srv/node_engines.py`
-Chat | Create an conversation instance and run different tasks. <br> Prompt for the conversation instance. <br> Construct output structures for the conversation instance. <br> Invoke the LLM for launching, reponding and reading tasks. | `core/conversation_instance.py` <br> `core/conversation_srv/conversation_prompts.py` <br> `core/conversation_srv/conversation_model.py` <br> `core/conversation_srv/conversation_engines.py` 
-Database Support | Fetch character data from game database and update new states. <br> Get agent data from agent database and update agent decisions. | `core/db/game_api_utils.py` <br> `core/db/database_api_utils.py`
-Character Management | Manage and monitor all active agent connections and clean up disconnected characters. | `core/websocket_server` 
-Game Settings | Map character skills to actions. | `core/files/skill2actions.json`
+Communication Center | <ul><li> Handle all the messages of running agents through websocket connections, including receiving response messages from the game server and sending agent decisions to the game environment.</li></ui> | <ul><li>`core/ai.py`</li></ui>
+Model Selector | <ul><li>Select large language models, such as gpt4o-mini and deepseek, and set different keys for plan and chat module.</li></ui> | <ul><li>`core/llm_factory.py`</li></ui>
+Plan | <ul><li>Create an agent instance and run the planning workflow. </li><li> Set initial states, decisions and tools for agent instance. </li><li> Get character data from database. </li><li> Prompt for the agent instance. </li><li> Construct output structures for the agent instance. </li><li> Invoke the LLM for each plan function of the agent instance.</li></ui> | <ul><li>`core/graph_instance.py` </li><li> `core/agent_srv/factories.py` </li><li> `core/agent_srv/utils.py` </li><li> `core/agent_srv/prompts.py` </li><li> `core/agent_srv/node_models.py` </li><li> `core/agent_srv/node_engines.py`</li></ui>
+Chat | <ul><li>Create an conversation instance and run different tasks. <br> Prompt for the conversation instance. <br> Construct output structures for the conversation instance. <br> Invoke the LLM for launching, reponding and reading tasks.</li></ui> | <ul><li>`core/conversation_instance.py` <br> `core/conversation_srv/conversation_prompts.py` <br> `core/conversation_srv/conversation_model.py` <br> `core/conversation_srv/conversation_engines.py`</li></ui> 
+Database Support | <ul><li>Fetch character data from game database and update new states. <br> Get agent data from agent database and update agent decisions.</li></ui> | <ul><li>`core/db/game_api_utils.py` <br> `core/db/database_api_utils.py`</li></ui>
+Character Management | <ul><li>Manage and monitor all active agent connections and clean up disconnected characters.</li></ui> | <ul><li>`core/websocket_server`</li></ui> 
+Game Settings | <ul><li>Map character skills to actions.</li></ui> | <ul><li>`core/files/skill2actions.json`</li></ui>
 
 ## 🛠️ Development Guide
 ### Requirements
