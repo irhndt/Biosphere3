@@ -79,9 +79,7 @@ First, run `core/ai.py` to deploy the agent server.
 ```
 python ai.py
 ```  
-Then, initalize the websocket connection with agent server.  
-Once the connection is initialized, you can create an agent with certain character_id (the character_id should be a positive integer).  
-If the agent is successfully created, it will automatically plan once and return the planned meta action list.  
+Then, initalize the websocket connection with agent server. Once the connection is initialized, you can create an agent with certain character_id (the character_id should be a positive integer). If the agent is successfully created, it will automatically plan once and return the planned meta action list.  
 Here is an example to initialize connection and receive response message from the agent server.
 ```python
 import asyncio
