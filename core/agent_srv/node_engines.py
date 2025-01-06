@@ -432,7 +432,7 @@ async def generate_accommodation_decision(state: RunningState):
     )
     # 1. 获取当前住宿信息
     current_accommodation_response = await make_api_request_async_backend(
-        "GET", f"/dormitory/getById/{state['userid']}"
+        "GET", f"/characterDormitory/getByCharacterIdNew/{state['userid']}"
     )
     current_accommodation_data = current_accommodation_response.get("data", None)
 
@@ -445,11 +445,7 @@ async def generate_accommodation_decision(state: RunningState):
         )
 
     # 2. 获取角色财务状态
-    character_info_response = await make_api_request_async_backend(
-        "GET", f"/characters/getById/{state['userid']}"
-    )
-    character_info = character_info_response.get("data", {})
-    financial_status = {"money": character_info.get("money", 0)}
+    financial_status = {"money": state["character_stats"].get("money", 0)}
 
     # 3. 获取所有可用住宿信息并保留必要字段
     accommodations_response = await make_api_request_async_backend(
