@@ -329,7 +329,7 @@ async def generate_mayor_decision(
             "characterId": user_id,
             "jobid": cv.job_id,
             "week": week,
-            "election_status": mayor_decision.decision,
+            "election_status": "succeeded" if mayor_decision.decision == "yes" else "failed",
         },
     )
 
