@@ -11,7 +11,6 @@ from core.agent_srv.node_model import (
     Reflection,
     AccommodationDecision,
 )
-from core.agent_srv.utils import generate_initial_state_hardcoded
 from core.agent_srv.prompts import *
 from core.llm_factory import LLMSelector
 from core.db.database_api_utils import make_api_request_sync
@@ -22,42 +21,22 @@ from core.db.game_api_utils import (
 
 llm_selector = LLMSelector()
 
-obj_planner = obj_planner_prompt | llm_selector.get_llm(
-    model_name="deepseek-chat", temperature=1.5
-).with_structured_output(DailyObjective)
 
-meta_action_sequence_planner = meta_action_sequence_prompt | llm_selector.get_llm(
-    model_name="gpt-4o-mini", temperature=0
-).with_structured_output(MetaActionSequence)
-
-meta_seq_adjuster = meta_seq_adjuster_prompt | llm_selector.get_llm(
-    model_name="gpt-4o-mini", temperature=0
-).with_structured_output(MetaActionSequence)
-
-character_arc_generator = generate_character_arc_prompt | llm_selector.get_llm(
-    model_name="gpt-4o-mini", temperature=0.5
-).with_structured_output(CharacterArc)
-
-daily_reflection_generator = daily_reflection_prompt | llm_selector.get_llm(
-    model_name="gpt-4o-mini", temperature=1
-).with_structured_output(Reflection)
-
-cv_generator = generate_cv_prompt | llm_selector.get_llm(
-    model_name="gpt-4o-mini", temperature=0.7
-).with_structured_output(CV)
-
-mayor_decision_generator = mayor_decision_prompt | llm_selector.get_llm(
-    model_name="gpt-4o-mini", temperature=0.5
-).with_structured_output(MayorDecision)
-
-accommodation_decision_generator = accommodation_decision_prompt | llm_selector.get_llm(
-    model_name="gpt-4o-mini", temperature=0.5
-).with_structured_output(AccommodationDecision)
+def create_planner(prompt_template, model_name, output_type, temperature=0.5):
+    return prompt_template | llm_selector.get_llm(
+        model_name=model_name, temperature=temperature
+    ).with_structured_output(output_type)
 
 
 async def generate_daily_reflection(state: RunningState):
+    daily_reflection_generator = create_planner(
+        daily_reflection_prompt,
+        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        Reflection,
+        1,
+    )
     payload = {
-        "character_stats": state["character_stats"],
+        "character_stats": format_character_data(state["character_stats"]),
         "daily_objectives": state["decision"]["daily_objective"],
         "failed_actions": str(state["false_action_queue"]),
         "additional_requirements": state["prompts"]["daily_reflection_ar"],
@@ -76,6 +55,12 @@ async def generate_daily_reflection(state: RunningState):
 
 
 async def generate_daily_objective(state: RunningState):
+    obj_planner = create_planner(
+        obj_planner_prompt,
+        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        DailyObjective,
+        1.5,
+    )
     response = make_api_request_sync_backend(
         "GET", f"/characters/getByIdS/{state['userid']}"
     )
@@ -91,7 +76,7 @@ async def generate_daily_objective(state: RunningState):
 
     retry_count = 0
     payload = {
-        "character_stats": state["character_stats"],
+        "character_stats": format_character_data(state["character_stats"]),
         "tool_functions": state["meta"]["tool_functions"],
         "locations": state["meta"]["available_locations"],
         # get the last 3 objectives
@@ -121,6 +106,12 @@ async def generate_daily_objective(state: RunningState):
 
 
 async def generate_meta_action_sequence(state: RunningState):
+    meta_action_sequence_planner = create_planner(
+        meta_action_sequence_prompt,
+        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        MetaActionSequence,
+        0,
+    )
     payload = {
         "daily_objective": (
             state["decision"]["daily_objective"][-1]
@@ -161,7 +152,7 @@ async def generate_meta_action_sequence(state: RunningState):
                 "command": meta_action_sequence.meta_action_sequence,
                 "action_emoji": meta_action_sequence.action_emoji_sequence,
                 "state_emoji": meta_action_sequence.state_emoji_sequence,
-                "description": meta_action_sequence.description_sequence
+                "description": meta_action_sequence.description_sequence,
             },
         }
     )
@@ -172,53 +163,21 @@ async def generate_meta_action_sequence(state: RunningState):
 
 
 async def sensing_environment(state: RunningState):
-    # logger.info(f"👀 User {state['userid']}: Sensing environment...")
-
-    # # Check if there was a failed action that needs replanning
-    # if state.get("decision", {}).get("action_result"):
-    #     latest_result = state["decision"]["action_result"][-1]
-    #     if latest_result.get("status") == "failed":
-    #         logger.info(f"🔄 User {state['userid']}: Action failed, triggering replan")
-    #         return {"current_pointer": "Replan_Action"}
-
-    # try:
-    #     # Send environment query message
-    #     # await state["instance"].send_message(
-    #     #     {
-    #     #         "characterId": state["userid"],
-    #     #         "messageName": "queryEnvironment",
-    #     #         "messageCode": 7,
-    #     #         "data": {"query": ["location", "nearby_objects", "nearby_characters"]},
-    #     #     }
-    #     # )
-
-    #     await asyncio.sleep(1)
-
-    #     # Check message queue for environment data
-    #     while not state["message_queue"].empty():
-    #         message = state["message_queue"].get_nowait()
-    #         if message.get("messageName") == "environment_data":
-    #             state["environment"] = message.get("data", {})
-    #             logger.info(
-    #                 f"🌍 User {state['userid']}: Environment updated - {state['environment']}"
-    #             )
-    # except Exception as e:
-    #     logger.error(f"❌ User {state['userid']}: Error sensing environment - {str(e)}")
     token_usage = llm_selector.get_token_usage()
     print(token_usage)
     return {"current_pointer": "Process_Messages"}
 
 
 async def replan_action(state: RunningState):
-    # 从false_action_queue里取
+    meta_seq_adjuster = create_planner(
+        meta_seq_adjuster_prompt,
+        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        MetaActionSequence,
+        0,
+    )
     false_action = state["false_action_queue"].get_nowait()
     failed_action = false_action.get("actionName")
     error_message = false_action.get("msg")
-
-    # latest_result = state["decision"]["action_result"][-1]
-    # failed_action = latest_result.get("action")
-    # error_message = latest_result.get("error")
-    # current_location = state.get("environment", {}).get("location")
 
     logger.info(f"🔄 User {state['userid']}: Replanning failed action: {failed_action}")
 
@@ -269,7 +228,7 @@ async def replan_action(state: RunningState):
                 "command": meta_action_sequence.meta_action_sequence,
                 "action_emoji": meta_action_sequence.action_emoji_sequence,
                 "state_emoji": meta_action_sequence.state_emoji_sequence,
-                "description": meta_action_sequence.description_sequence
+                "description": meta_action_sequence.description_sequence,
             },
         }
     )
@@ -278,9 +237,7 @@ async def replan_action(state: RunningState):
 
 
 async def generate_change_job_cv(instance, msg: dict):
-    # 1. 从后端接口调用工作列表
-    # 2. 调用LLM，输出申请的jobId和cv内容
-    # 3. 存储在数据库cv表中
+    cv_generator = create_planner(generate_cv_prompt, "gpt-4o-mini", CV, 0.7)
     available_public_jobs = make_api_request_sync_backend(
         "GET", "/publicWork/getAll"
     ).get("data", [])
@@ -337,6 +294,9 @@ async def generate_change_job_cv(instance, msg: dict):
 async def generate_mayor_decision(
     cv: CV, user_id: int, experience: int, education: str, week: int = 0
 ):
+    mayor_decision_generator = create_planner(
+        mayor_decision_prompt, "gpt-4o-mini", MayorDecision, 0.5
+    )
     public_work_info = make_api_request_sync_backend(
         "GET", f"/publicWork/getById/{cv.job_id}"
     ).get("data", {})
@@ -369,7 +329,7 @@ async def generate_mayor_decision(
             "characterId": user_id,
             "jobid": cv.job_id,
             "week": week,
-            "election_status": mayor_decision.decision,
+            "election_status": "succeeded" if mayor_decision.decision == "yes" else "failed",
         },
     )
 
@@ -380,6 +340,12 @@ async def generate_mayor_decision(
 
 
 async def generate_character_arc(state: RunningState):
+    character_arc_generator = create_planner(
+        generate_character_arc_prompt,
+        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        CharacterArc,
+        0.5,
+    )
     character_info_task = make_api_request_async_backend(
         "GET", f"/characters/getById/{state['userid']}"
     )
@@ -387,7 +353,7 @@ async def generate_character_arc(state: RunningState):
     character_info = character_info_response.get("data", {})
     character_arc = await character_arc_generator.ainvoke(
         {
-            "character_stats": state["character_stats"],
+            "character_stats": format_character_data(state["character_stats"]),
             "character_info": character_info,
             "daily_objectives": state["decision"]["daily_objective"],
             "daily_reflection": state["decision"].get("daily_reflection", ""),
@@ -409,28 +375,64 @@ def format_role_actions(roles, data):
     for index, role in enumerate(roles, start=1):
         role_data = data.get(role, {})
         actions = role_data.get("actions", [])
+        cost = role_data.get("cost", 0)
         materials = role_data.get("materials", {})
 
         # Format the actions
-        action_str = f"{index}. craft [itemType:string] [num:int]: Craft a certain number of items.\n"
+        action_str = f"{index}. craft [itemType:string] [num:int]: Craft a certain number of items and cost energy ({cost} per item)\n"
         action_str += "Constraints: Item must be in ItemType: ("
         action_str += ", ".join([action.split()[1] for action in actions])
         action_str += ") and you should have enough materials.\nHere's the rule:\n"
 
         # Format the materials
         for item, constraints in materials.items():
-            constraint_str = "None" if not constraints else ", ".join(constraints)
-            action_str += f"- {item}: {constraint_str}\n"
+            if not constraints:
+                action_str += f"- {item}: No materials required.\n"
+            else:
+                constraint_str = ", ".join(constraints)
+                action_str += f"- {item}: Required materials: {constraint_str}\n"
 
         action_strings.append(action_str)
 
     return "\n".join(action_strings)
 
 
+def format_character_data(character_data: dict) -> str:
+    return (
+        f"Health: {character_data.get('health', 'N/A')} - Represents the character's physical well-being.\n"
+        f"Energy: {character_data.get('energy', 'N/A')} - Indicates how much energy the character has left.\n"
+        f"Hungry: {character_data.get('hungry', 'N/A')} - Indicates the character's level of satiety; the higher, the fuller.\n"
+        f"Education: {character_data.get('education', 'N/A')} - The level of education attained.\n"
+        f"Education Experience: {character_data.get('education_experience', 'N/A')} - Experience points in education.\n"
+        f"Money: {character_data.get('money', 'N/A')} - Current financial status.\n"
+        f"Occupation: {character_data.get('occupation', 'N/A')} - Current job or role work at {character_data.get('work_place')}\n"
+        f"Efficiency: {character_data.get('efficiency', 'N/A'):.2f} - Calculated efficiency based on various factors: "
+        f"Efficiency = (Hungry Factor) * (Energy Factor) * (Health Factor) * (Wisdom Factor), where:\n"
+        f"  - Hungry Factor = hungry / 100 if hungry < 50 else 1\n"
+        f"  - Energy Factor = energy / 100\n"
+        f"  - Health Factor = health / 100\n"
+        f"  - Wisdom Factor = log(education_experience + 10, 10)\n"
+        f"  Efficiency affects the crafting efficiency of items. If the efficiency is too low (lower than 0.2), "
+        f"  it is advisable to improve the basic attributes first.\n"
+        f"Inventory: {character_data.get('inventory', {})} - Items currently held by the character.\n"
+        f"Personality: {character_data.get('personality', 'N/A')} - Describes the character's personality traits.\n"
+        f"Long-term Goal: {character_data.get('long_term_goal', 'N/A')} - The character's long-term aspirations.\n"
+        f"Short-term Goal: {character_data.get('short_term_goal', 'N/A')} - Immediate objectives.\n"
+        f"Language Style: {character_data.get('language_style', 'N/A')} - Preferred communication style.\n"
+        f"Biography: {character_data.get('biography', 'N/A')} - A brief background story.\n"
+    )
+
+
 async def generate_accommodation_decision(state: RunningState):
+    accommodation_decision_generator = create_planner(
+        accommodation_decision_prompt,
+        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        AccommodationDecision,
+        0.5,
+    )
     # 1. 获取当前住宿信息
     current_accommodation_response = await make_api_request_async_backend(
-        "GET", f"/dormitory/getById/{state['userid']}"
+        "GET", f"/characterDormitory/getByCharacterIdNew/{state['userid']}"
     )
     current_accommodation_data = current_accommodation_response.get("data", None)
 
@@ -443,11 +445,7 @@ async def generate_accommodation_decision(state: RunningState):
         )
 
     # 2. 获取角色财务状态
-    character_info_response = await make_api_request_async_backend(
-        "GET", f"/characters/getById/{state['userid']}"
-    )
-    character_info = character_info_response.get("data", {})
-    financial_status = {"money": character_info.get("money", 0)}
+    financial_status = {"money": state["character_stats"].get("money", 0)}
 
     # 3. 获取所有可用住宿信息并保留必要字段
     accommodations_response = await make_api_request_async_backend(
@@ -489,7 +487,7 @@ async def generate_accommodation_decision(state: RunningState):
     while retries < max_retries:
         # 为 LLM 构建输入
         payload = {
-            "character_stats": state["character_stats"],
+            "character_stats": format_character_data(state["character_stats"]),
             "current_accommodation": current_accommodation,
             "available_accommodations": available_accommodations,
             "financial_status": financial_status,
