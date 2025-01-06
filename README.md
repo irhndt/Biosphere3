@@ -59,9 +59,10 @@ Through these interactions, we aim to refine our algorithms 🔄 and explore the
 
 Module Name | Description | File Name
 ---- | ---- | ----
-AI_websocket_server | handle the websocket connections of running agents, receive response messages from the game server and send agent decisions to the game environment. | `core/ai.py`
-Model Selector | select large language models, such as gpt4o-mini and deepseek, and set different keys for plan and chat module | `core/llm_factory.py`
-Plan | -create an agent instance and run the planning workflow <br> -set initial states, decisions and tools for agent instance <br> -get character data from database <br> -prompts of the agent instance <br> -construct output structures for the agent instance <br> -invoke the LLM to implement each functional module of the agent instance | -`core/graph_instance.py` <br> -`core/agent_srv/factories.py` <br> -`core/agent_srv/utils.py` <br> -`core/agent_srv/prompts.py` <br> -`core/agent_srv/node_models.py` <br> -`core/agent_srv/node_engines.py`
+AI_websocket_server | Handle the websocket connections of running agents, receive response messages from the game server and send agent decisions to the game environment. | `core/ai.py`
+Model Selector | Select large language models, such as gpt4o-mini and deepseek, and set different keys for plan and chat module | `core/llm_factory.py`
+Plan | Create an agent instance and run the planning workflow <br> Set initial states, decisions and tools for agent instance <br> Get character data from database <br> Prompts of the agent instance <br> Construct output structures for the agent instance <br> Invoke the LLM to implement each functional module of the agent instance | `core/graph_instance.py` <br> `core/agent_srv/factories.py` <br> `core/agent_srv/utils.py` <br> `core/agent_srv/prompts.py` <br> `core/agent_srv/node_models.py` <br> `core/agent_srv/node_engines.py`
+
 
 ## 🛠️ Development Guide
 ### Requirements
