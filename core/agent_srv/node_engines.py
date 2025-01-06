@@ -21,40 +21,20 @@ from core.db.game_api_utils import (
 
 llm_selector = LLMSelector()
 
-obj_planner = obj_planner_prompt | llm_selector.get_llm(
-    model_name="deepseek-chat", temperature=1.5
-).with_structured_output(DailyObjective)
 
-meta_action_sequence_planner = meta_action_sequence_prompt | llm_selector.get_llm(
-    model_name="gpt-4o-mini", temperature=0
-).with_structured_output(MetaActionSequence)
-
-meta_seq_adjuster = meta_seq_adjuster_prompt | llm_selector.get_llm(
-    model_name="gpt-4o-mini", temperature=0
-).with_structured_output(MetaActionSequence)
-
-character_arc_generator = generate_character_arc_prompt | llm_selector.get_llm(
-    model_name="gpt-4o-mini", temperature=0.5
-).with_structured_output(CharacterArc)
-
-daily_reflection_generator = daily_reflection_prompt | llm_selector.get_llm(
-    model_name="gpt-4o-mini", temperature=1
-).with_structured_output(Reflection)
-
-cv_generator = generate_cv_prompt | llm_selector.get_llm(
-    model_name="gpt-4o-mini", temperature=0.7
-).with_structured_output(CV)
-
-mayor_decision_generator = mayor_decision_prompt | llm_selector.get_llm(
-    model_name="gpt-4o-mini", temperature=0.5
-).with_structured_output(MayorDecision)
-
-accommodation_decision_generator = accommodation_decision_prompt | llm_selector.get_llm(
-    model_name="gpt-4o-mini", temperature=0.5
-).with_structured_output(AccommodationDecision)
+def create_planner(prompt_template, model_name, output_type, temperature=0.5):
+    return prompt_template | llm_selector.get_llm(
+        model_name=model_name, temperature=temperature
+    ).with_structured_output(output_type)
 
 
 async def generate_daily_reflection(state: RunningState):
+    daily_reflection_generator = create_planner(
+        daily_reflection_prompt,
+        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        Reflection,
+        1,
+    )
     payload = {
         "character_stats": format_character_data(state["character_stats"]),
         "daily_objectives": state["decision"]["daily_objective"],
@@ -75,6 +55,12 @@ async def generate_daily_reflection(state: RunningState):
 
 
 async def generate_daily_objective(state: RunningState):
+    obj_planner = create_planner(
+        obj_planner_prompt,
+        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        DailyObjective,
+        1.5,
+    )
     response = make_api_request_sync_backend(
         "GET", f"/characters/getByIdS/{state['userid']}"
     )
@@ -120,6 +106,12 @@ async def generate_daily_objective(state: RunningState):
 
 
 async def generate_meta_action_sequence(state: RunningState):
+    meta_action_sequence_planner = create_planner(
+        meta_action_sequence_prompt,
+        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        MetaActionSequence,
+        0,
+    )
     payload = {
         "daily_objective": (
             state["decision"]["daily_objective"][-1]
@@ -177,15 +169,15 @@ async def sensing_environment(state: RunningState):
 
 
 async def replan_action(state: RunningState):
-    # 从false_action_queue里取
+    meta_seq_adjuster = create_planner(
+        meta_seq_adjuster_prompt,
+        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        MetaActionSequence,
+        0,
+    )
     false_action = state["false_action_queue"].get_nowait()
     failed_action = false_action.get("actionName")
     error_message = false_action.get("msg")
-
-    # latest_result = state["decision"]["action_result"][-1]
-    # failed_action = latest_result.get("action")
-    # error_message = latest_result.get("error")
-    # current_location = state.get("environment", {}).get("location")
 
     logger.info(f"🔄 User {state['userid']}: Replanning failed action: {failed_action}")
 
@@ -245,9 +237,7 @@ async def replan_action(state: RunningState):
 
 
 async def generate_change_job_cv(instance, msg: dict):
-    # 1. 从后端接口调用工作列表
-    # 2. 调用LLM，输出申请的jobId和cv内容
-    # 3. 存储在数据库cv表中
+    cv_generator = create_planner(generate_cv_prompt, "gpt-4o-mini", CV, 0.7)
     available_public_jobs = make_api_request_sync_backend(
         "GET", "/publicWork/getAll"
     ).get("data", [])
@@ -304,6 +294,9 @@ async def generate_change_job_cv(instance, msg: dict):
 async def generate_mayor_decision(
     cv: CV, user_id: int, experience: int, education: str, week: int = 0
 ):
+    mayor_decision_generator = create_planner(
+        mayor_decision_prompt, "gpt-4o-mini", MayorDecision, 0.5
+    )
     public_work_info = make_api_request_sync_backend(
         "GET", f"/publicWork/getById/{cv.job_id}"
     ).get("data", {})
@@ -347,6 +340,12 @@ async def generate_mayor_decision(
 
 
 async def generate_character_arc(state: RunningState):
+    character_arc_generator = create_planner(
+        generate_character_arc_prompt,
+        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        CharacterArc,
+        0.5,
+    )
     character_info_task = make_api_request_async_backend(
         "GET", f"/characters/getById/{state['userid']}"
     )
@@ -425,6 +424,12 @@ def format_character_data(character_data: dict) -> str:
 
 
 async def generate_accommodation_decision(state: RunningState):
+    accommodation_decision_generator = create_planner(
+        accommodation_decision_prompt,
+        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        AccommodationDecision,
+        0.5,
+    )
     # 1. 获取当前住宿信息
     current_accommodation_response = await make_api_request_async_backend(
         "GET", f"/dormitory/getById/{state['userid']}"

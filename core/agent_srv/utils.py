@@ -227,25 +227,36 @@ async def fetch_agent_db_response_async(userid: int) -> dict:
             "🆕 No character data found in agent database, creating new character"
         )
         return {}
-    return response
+    return response.get("data", [])[0]
 
 
-async def get_character_data_async(userid: int) -> dict:
+async def fetch_model_type_response_async(userid: int) -> dict:
     """
-    Asynchronously constructs the character_data dictionary for a user.
+    Asynchronously fetches model type from the character model service.
 
     Args:
         userid (int): The ID of the user.
 
     Returns:
-        dict: The character data dictionary.
+        dict: The model type response.
     """
+    response = await fetch_json_async(
+        f"{GAME_BACKEND_URL}/CharacterModel/getByCharacterId/{userid}",
+        timeout=GAME_BACKEND_TIMEOUT,
+        _logger=logger,
+        error_message="Failed to get model type from character model service",
+    )
+    return response
+
+
+async def get_character_data_async(userid: int) -> dict:
     # Fetch data concurrently using asyncio.gather
     game_db_task = asyncio.create_task(fetch_game_db_character_response_async(userid))
     agent_db_task = asyncio.create_task(fetch_agent_db_response_async(userid))
+    model_type_task = asyncio.create_task(fetch_model_type_response_async(userid))
 
-    game_db_character_response, agent_db_response = await asyncio.gather(
-        game_db_task, agent_db_task
+    game_db_character_response, agent_db_response, model_type_response = (
+        await asyncio.gather(game_db_task, agent_db_task, model_type_task)
     )
 
     # Fetch inventory asynchronously
@@ -264,17 +275,12 @@ async def get_character_data_async(userid: int) -> dict:
             "work_place": get_work_place(game_db_character_response.get("jobId")),
             "efficiency": compute_efficiency(game_db_character_response),
             "inventory": inventory,
-            # "characterName": game_db_character_response.get("characterName"),
-            # "gender": (
-            #     "Male" if game_db_character_response.get("isMale") == 1 else "Female"
-            # ),
-            # agent_db_response
-            # "relationship": agent_db_response.get("relationship"),
             "personality": agent_db_response.get("personality"),
             "long_term_goal": agent_db_response.get("long_term_goal"),
             "short_term_goal": agent_db_response.get("short_term_goal"),
             "language_style": agent_db_response.get("language_style"),
             "biography": agent_db_response.get("biography"),
+            "model_type": model_type_response.get("modelType", "deepseek-chat"),
         }
 
     except AttributeError:
@@ -360,7 +366,7 @@ def get_work_place(job_id: int) -> str:
 def compute_efficiency(character_data: dict) -> float:
     hungry = (
         character_data.get("hungry", 0) / 100
-        if character_data.get("hungry") < 50
+        if character_data.get("hungry", 0) < 50
         else 1
     )
     energy = character_data.get("energy", 0) / 100
