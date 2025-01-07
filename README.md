@@ -57,6 +57,7 @@ Through these interactions, we aim to refine our algorithms 🔄 and explore the
 
 ## 🔮 Features
 Our latest version of code for the **Sovereignty Agents** is in the `core` path. There are seven main modules: 
+
 - 📞 **Message Center**,
 - 🧩 **Model Selector**,
 - 🗓️ **Action Planner**,
@@ -65,7 +66,7 @@ Our latest version of code for the **Sovereignty Agents** is in the `core` path.
 - 🦸‍♂️ **Character Manager**,
 - ⚙️ **Game Settings**.
   
-Their main functions and file path are listed as follows.    
+The main functions and file path of these seven modules are listed as follows.    
 Old versions and other experiment data can be found in the `legacy` path. Interested developers can learn about our development journey from this path.
 
 Module Name | Description | File Path
@@ -77,7 +78,7 @@ Module Name | Description | File Path
 📊 Database Support | <ul><li>Fetch character data from game database and update new states. </li><li> Get agent data from agent database and update agent decisions.</li></ui> | <ul><li>`core/db/game_api_utils.py` </li><li> `core/db/database_api_utils.py`</li></ui>
 🦸‍♂️ Character Manager | <ul><li>Manage and monitor all active agent connections and clean up disconnected characters.</li></ui> | <ul><li>`core/websocket_server`</li></ui> 
 ⚙️ Game Settings | <ul><li>Map character skills to actions.</li></ui> | <ul><li>`core/files/skill2actions.json`</li></ui>
-💾 Development Journey| <ul><li>Old versions and other experiments during the development process.</li></ui> | <ul><li>`legacy`</li></ui>
+💾 Experiments | <ul><li>Old versions and other experiments during the development process.</li></ui> | <ul><li>`legacy`</li></ui>
 
 
 ## 🛠️ Development Guide
