@@ -1,17 +1,11 @@
 import sys
-
-sys.path.append(".")
-
 import asyncio
 import json
 import time
-
 from pprint import pprint
-
 from loguru import logger
 import websockets
 from langgraph.graph import StateGraph
-
 from core.agent_srv.node_engines import (
     generate_daily_objective,
     generate_meta_action_sequence,
@@ -24,6 +18,7 @@ from core.agent_srv.node_engines import (
 )
 from core.agent_srv.node_model import RunningState
 from core.agent_srv.utils import get_initial_state_from_db
+sys.path.append(".")
 
 
 class LangGraphInstance:
@@ -81,7 +76,7 @@ class LangGraphInstance:
             if message_code >= 100:  # Ignore Conversation Messages
                 pass
             elif message_name == "actionresult":
-                self.state["decision"]["action_result"].append(msg["data"])
+                self.state["decision"]["action_result"].append(message_data["msg"])
                 # If the action result is False, put REPLAN into event_queue
                 if msg["data"]["result"] is False:
                     try:
