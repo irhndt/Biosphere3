@@ -81,7 +81,7 @@ class LangGraphInstance:
             if message_code >= 100:  # Ignore Conversation Messages
                 pass
             elif message_name == "actionresult":
-                self.state["decision"]["action_result"].append(msg["data"])
+                self.state["decision"]["action_result"].append(message_data["msg"])
                 # If the action result is False, put REPLAN into event_queue
                 if msg["data"]["result"] is False:
                     try:
