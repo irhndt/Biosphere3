@@ -57,19 +57,20 @@ Through these interactions, we aim to refine our algorithms 🔄 and explore the
 
 ## 🔮 Features
 Our latest version of code for the **Sovereignty Agents** is in the `core` path. There are seven main modules: 
-- 📞**Communication Center**,
+- 📞**Message Center**,
 - 🧩**Model Selector**,
 - 🗓️**Action Planner**,
 - 💬**Conversation**,
 - 📊**Database Support**,
 - 🦸‍♂️**Character Manager**,
-- ⚙️**Game Settings**.  
+- ⚙️**Game Settings**.
+  
 Their main functions and file path are listed as follows.    
 Old versions and other experiment data can be found in the `legacy` path. Interested developers can learn about our development journey from this path.
 
 Module Name | Description | File Path
 ---- | ---- | ----
-📞Communication Center | <ul><li> Receive response messages from the game server and send agent decisions to the game environment for both plan and conversation workflow through websocket connections.</li></ui> | <ul><li>`core/ai.py`</li></ui>
+📞Message Center | <ul><li> Receive response messages from the game server and send agent decisions to the game environment for both plan and conversation workflow through websocket connections.</li></ui> | <ul><li>`core/ai.py`</li></ui>
 🧩Model Selector | <ul><li>Select different model types, and split api keys for plan and conversation module.</li></ui> | <ul><li>`core/llm_factory.py`</li></ui>
 🗓️Action Planner | <ul><li>Create an agent instance and run the planning workflow. </li><li> Set initial states, decisions and tools for agent instance. </li><li> Get character data from database. </li><li> Prompt for the agent instance. </li><li> Construct output structures for the agent instance. </li><li> Invoke the LLM for each plan function of the agent instance.</li></ui> | <ul><li>`core/graph_instance.py` </li><li> `core/agent_srv/factories.py` </li><li> `core/agent_srv/utils.py` </li><li> `core/agent_srv/prompts.py` </li><li> `core/agent_srv/node_models.py` </li><li> `core/agent_srv/node_engines.py`</li></ui>
 💬Conversation | <ul><li>Create an conversation instance and run different tasks. </li><li> Prompt for the conversation instance. </li><li> Construct output structures for the conversation instance. </li><li> Invoke the LLM for launching, reponding and reading tasks. </li><li> Create conversation planner and responser.</li></ui> | <ul><li>`core/conversation_instance.py` </li><li> `core/conversation_srv/conversation_prompts.py` </li><li> `core/conversation_srv/conversation_model.py` </li><li> `core/conversation_srv/conversation_engines.py` </li><li> `core/conversation_srv/conversation_utils.py`</li></ui> 
