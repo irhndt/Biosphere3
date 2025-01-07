@@ -12,14 +12,12 @@ from core.agent_srv.node_model import (
     AccommodationDecision,
 )
 from core.agent_srv.prompts import *
-from core.llm_factory import LLMSelector
+from core.llm_factory import llm_selector
 from core.db.database_api_utils import make_api_request_sync
 from core.db.game_api_utils import (
     make_api_request_async as make_api_request_async_backend,
     make_api_request_sync as make_api_request_sync_backend,
 )
-
-llm_selector = LLMSelector()
 
 
 def create_planner(prompt_template, model_name, output_type, temperature=0.5):
@@ -167,8 +165,6 @@ async def generate_meta_action_sequence(state: RunningState):
 
 
 async def sensing_environment(state: RunningState):
-    token_usage = llm_selector.get_token_usage()
-    print(token_usage)
     return {"current_pointer": "Process_Messages"}
 
 

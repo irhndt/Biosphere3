@@ -8,11 +8,42 @@ from core.db.game_api_utils import make_api_request_sync as make_backend_api_req
 from datetime import datetime
 import random
 from langgraph.graph import StateGraph
+import numpy as np
+from core.llm_factory import llm_selector
 
 logger.add(
         "conversation_engines.log",
         format="{time} {level} {message}",
     )
+
+
+conversation_topic_planner = conversation_topic_planner_prompt | llm_selector.get_llm(
+    model_type="CHAT", model_name="gpt-4o-mini", temperature=1.
+).with_structured_output(ConversationTopics)
+
+conversation_planner = conversation_planner_prompt | llm_selector.get_llm(
+    model_type="CHAT", model_name="gpt-4o-mini", temperature=1.
+).with_structured_output(PreConversationTask)
+
+conversation_check = conversation_check_prompt | llm_selector.get_llm(
+    model_type="CHAT", model_name="gpt-4o-mini", temperature=0
+).with_structured_output(CheckResult)
+
+conversation_responser = conversation_responser_prompt | llm_selector.get_llm(
+    model_type="CHAT", model_name="gpt-4o-mini", temperature=1
+).with_structured_output(PreResponse)
+
+impression_update = impression_update_prompt | llm_selector.get_llm(
+    model_type="CHAT", model_name="gpt-4o-mini", temperature=1
+).with_structured_output(ImpressionUpdate)
+
+knowledge_generator = knowledge_generator_prompt | llm_selector.get_llm(
+    model_type="CHAT", model_name="gpt-4o-mini", temperature=1
+).with_structured_output(Knowledge)
+
+conversation_intimacy_mark = intimacy_mark_prompt | llm_selector.get_llm(
+    model_type="CHAT", model_name="gpt-4o-mini", temperature=1.
+).with_structured_output(IntimacyMark)
 
 
 async def generate_daily_conversation_plan(state: ConversationState):

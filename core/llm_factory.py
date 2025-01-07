@@ -72,3 +72,6 @@ class TokenUsageHandler(BaseCallbackHandler):
             token_usage = response.llm_output.get("token_usage", {})
             usage_data = {"token_usage": token_usage}
             LLMSelector._update_token_usage(self.model_name, usage_data)
+
+
+llm_selector = LLMSelector()
