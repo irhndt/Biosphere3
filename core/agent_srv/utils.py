@@ -344,7 +344,7 @@ def save_token_consumption_to_db(token_consumption: dict):
         except JSONDecodeError:
             logger.error(f"Failed to decode JSON from {url}")
 
-
+            
 def get_occupation(job_id: int) -> str:
     occupation_mapping = {
         "0": "Unemployed",

@@ -1,18 +1,13 @@
-from core.conversation_srv.conversation_model import *
-from core.conversation_srv.conversation_prompts import *
-from langchain_openai import ChatOpenAI
+from core.conversation_srv.conversation_utils import *
 from loguru import logger
 from typing import Literal
-from apscheduler.schedulers.blocking import BlockingScheduler
-from datetime import datetime
 import websockets
 import json
-import os
-import pprint
 from core.db.database_api_utils import make_api_request_sync
 from core.db.game_api_utils import make_api_request_sync as make_backend_api_request_sync
-from datetime import datetime, timedelta
+from datetime import datetime
 import random
+from langgraph.graph import StateGraph
 import numpy as np
 from core.llm_factory import llm_selector
 
@@ -151,7 +146,6 @@ async def generate_daily_conversation_plan(state: ConversationState):
     plan_time = []
     if start_time_list:
         for index, start_time in enumerate(start_time_list):
-            # start_time = start_time_list[index]
             talk = final_topic_list[index]
             # reconstruct the format
             single_conversation = ConversationTask(
@@ -477,12 +471,13 @@ async def generate_response(state: ConversationState):
 
     # get the history for this conversation event
     history = reset_conversation_history(
-                question_item["start_time"],
-                question_item["send_gametime"][0],
-                question_item["from_id"],
-                question_item["to_id"],
-                list(question.keys())[0],
-                state["character_stats"]["characterName"])
+        question_item["start_time"],
+        question_item["send_gametime"][0],
+        question_item["from_id"],
+        question_item["to_id"],
+        list(question.keys())[0],
+        state["character_stats"]["characterName"]
+    )
 
     # get impression
     impression_query_data = {
@@ -590,7 +585,7 @@ async def generate_response(state: ConversationState):
     return {"response": response_message}
 
 
-# Check whether all tasks are complete; connect to the starter module for remaining tasks and the end module if all are finished.
+# Check whether all tasks are complete
 def all_conversation_started(state: ConversationState) -> Literal["Conversation_starter", "__end__"]:
     if len(state["daily_task"]) == 0:
         logger.info(f"🧠 ALL CONVERSATIONS HAVE BEEN LAUNCHED.")
@@ -600,7 +595,7 @@ def all_conversation_started(state: ConversationState) -> Literal["Conversation_
         return "Conversation_starter"
 
 
-# check the finish state of conversation message, if not finished, push to waiting_response, otherwise push to handle function
+# check the finish state of conversation message
 async def check_conversation_state(state: ConversationState, message: RunningConversation):
     if False in message["Finish"]:
         await state["waiting_response"].put(message)
@@ -739,7 +734,6 @@ def start_conversation_workflow():
     workflow = StateGraph(ConversationState)
     workflow.add_node("Conversation_planner", generate_daily_conversation_plan)
     workflow.add_node("Conversation_starter", start_conversation)
-    # workflow.add_node("Task_check", all_conversation_started)
     workflow.set_entry_point("Conversation_planner")
     workflow.add_conditional_edges("Conversation_starter", all_conversation_started)
     workflow.add_edge("Conversation_planner", "Conversation_starter")

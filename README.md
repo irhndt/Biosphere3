@@ -55,4 +55,101 @@ Through these interactions, we aim to refine our algorithms 🔄 and explore the
 
 🚀 Join us in pioneering the next frontier of AI-driven virtual worlds and witness the evolution of **Sovereignty Agents** as the foundation for tomorrow’s digital ecosystems.
 
+## 🔮 Features
+Our latest version of code for the **Sovereignty Agents** is in the `core` path. There are seven main modules: 
 
+- 📞 **Message Center**,
+- 🧩 **Model Selector**,
+- 🗓️ **Action Planner**,
+- 💬 **Conversation**,
+- 📊 **Database Support**,
+- 🦸‍♂️ **Character Manager**,
+- ⚙️ **Game Settings**.
+  
+The main functions and file path of these seven modules are listed as follows.    
+Old versions and other experiment data can be found in the `legacy` path. Interested developers can learn about our development journey from this path.
+
+Module Name | Description | File Path
+---- | ---- | ----
+📞 Message Center | <ul><li> Receive response messages from the game server and send agent decisions to the game environment for both plan and conversation workflow through websocket connections.</li></ui> | <ul><li>`core/ai.py`</li></ui>
+🧩 Model Selector | <ul><li>Select different model types, and split api keys for plan and conversation module.</li></ui> | <ul><li>`core/llm_factory.py`</li></ui>
+🗓️ Action Planner | <ul><li>Create an agent instance and run the planning workflow. </li><li> Set initial states, decisions and tools for agent instance. </li><li> Get character data from database. </li><li> Prompt for the agent instance. </li><li> Construct output structures for the agent instance. </li><li> Invoke the LLM for each plan function of the agent instance.</li></ui> | <ul><li>`core/graph_instance.py` </li><li> `core/agent_srv/factories.py` </li><li> `core/agent_srv/utils.py` </li><li> `core/agent_srv/prompts.py` </li><li> `core/agent_srv/node_models.py` </li><li> `core/agent_srv/node_engines.py`</li></ui>
+💬 Conversation | <ul><li>Create an conversation instance and run different tasks. </li><li> Prompt for the conversation instance. </li><li> Construct output structures for the conversation instance. </li><li> Invoke the LLM for launching, reponding and reading tasks. </li><li> Create conversation planner and responser.</li></ui> | <ul><li>`core/conversation_instance.py` </li><li> `core/conversation_srv/conversation_prompts.py` </li><li> `core/conversation_srv/conversation_model.py` </li><li> `core/conversation_srv/conversation_engines.py` </li><li> `core/conversation_srv/conversation_utils.py`</li></ui> 
+📊 Database Support | <ul><li>Fetch character data from game database and update new states. </li><li> Get agent data from agent database and update agent decisions.</li></ui> | <ul><li>`core/db/game_api_utils.py` </li><li> `core/db/database_api_utils.py`</li></ui>
+🦸‍♂️ Character Manager | <ul><li>Manage and monitor all active agent connections and clean up disconnected characters.</li></ui> | <ul><li>`core/websocket_server`</li></ui> 
+⚙️ Game Settings | <ul><li>Map character skills to actions.</li></ui> | <ul><li>`core/files/skill2actions.json`</li></ui>
+💾 Experiments | <ul><li>Old versions and other experiments during the development process.</li></ui> | <ul><li>`legacy`</li></ui>
+
+
+## 🛠️ Development Guide
+### Requirements
+- `python 3.10` or above
+- `pip install -r requirements.txt` all the required packages
+- `.env` file with API keys like OPENAI_API_KEY, DEEP_SEEK_API_KEY, and database urls like GAME_BACKEND_URL, AGENT_BACKEND_URL 
+
+### Get started
+After installing all the packages and configuring the environment, you can start deploying your own agent.  
+First, direct to `core` file which is the latest edition of our agent.
+```
+cd core
+```
+Then, run `ai.py` to deploy the agent server.
+```
+python ai.py
+```  
+After that, you can use your own method to initalize the websocket connection with agent server. Once the connection is initialized, you are able to create an agent with certain valid character_id (the character_id should be a positive integer). If the agent is successfully created, it will automatically plan once and return the planned meta action list.  
+Here is an example python sricpt to initialize connection and receive plan result from the agent server.
+```python
+import asyncio
+import websockets
+import json
+
+async def test_client():
+    uri = "ws://localhost:6789"  # This is an example url for agent server. 
+    async with websockets.connect(uri) as websocket:
+        character_id = 1  # Input your character_id here 
+
+        init_message = {
+            "characterId": character_id,
+            "messageName": "connectionInit",
+            "data": {},
+        }
+        await websocket.send(json.dumps(init_message))
+        response = await websocket.recv()
+        print(f"Received response: {response}")
+        
+        action_response = await websocket.recv()
+        print(f"Received response: {action_response}")
+
+asyncio.run(test_client())
+```
+If you have correctly configured the environment and successfully established the connection, and the character_id is valid, you will see the following output.  
+The first response indicates that the connection is successfully initialized and an agent is created.  
+```
+{"characterId": 1,
+ "messageCode": null,
+ "messageName": "connectionInit",
+ "data": {"result": true, "msg": "character init success"}}
+```
+The second response is a meta action list planned by the agent. It contains three parts:
+- A command list that consists of meta actions and corresponding parameters.
+- An action emoji list that describes the meta actions.
+- A state emoji list that demonstrates the mood and feeling when conducting certain actions.
+- A brief description list of the above actions and states. 
+```
+{'characterId': 1,
+ 'messageName': 'actionList',
+ 'messageCode': 6,
+ 'data': {'command': ['goto home', 'sleep 8', 'goto fishing', 'gofishing 2', 'goto mall', 'sell fish 1', 'goto school', 'study 2'],
+          'action_emoji': ['🏠', '🛌', '🎣', '🐟', '🏬', '💰', '🏫', '📚'],
+          'state_emoji': ['😴', '💤', '🌊', '🐠', '💵', '🤑', '🎓', '🤓'],
+          'description': ['go to home, feel tired and want to have a rest',
+                          'sleep for 8 hours, recover energy and health',
+                          'go to fishing area, excited to catch some fish',
+                          'fish for 2 hours, enjoy the peaceful time',
+                          'go to mall, ready to sell some fish',
+                          'sell 1 fish, happy to earn some money',
+                          'go to school, determined to improve education',
+                          'study for 2 hours, feel a bit tired but motivated']}}
+```
+**You can refer to our [official website](https://biosphere3.ai/) for more information and demo.**

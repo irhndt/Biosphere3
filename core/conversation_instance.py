@@ -1,10 +1,5 @@
-import asyncio
 from conversation_srv.conversation_engines import *
-from conversation_srv.conversation_model import *
-from langgraph.graph import StateGraph, START, END
-import os
 import asyncio
-from pprint import pprint
 
 
 class ConversationInstance:
@@ -158,20 +153,6 @@ class ConversationInstance:
                 )
                 await check_conversation_state(
                     self.state, msg["data"]
-                )  
-            elif message_name == "prompt_modification":  
-                new_prompt_data = msg.get("data")
-                self.logger.info(f"User {self.user_id}: new prompts received.")
-                if "topic_planner_prompt" in new_prompt_data:
-                    new_topic_prompt = new_prompt_data["topic_planner_prompt"]
-                    self.state["prompt"]["topic_requirements"] = new_topic_prompt
-                if "responser_prompt" in new_prompt_data:
-                    new_impression_prompt = new_prompt_data["responser_prompt"]
-                    self.state["prompt"]["impression_impact"].update(
-                        new_impression_prompt
-                    )
-                self.logger.info(
-                    f"User {self.user_id}'s new prompts are: {self.state['prompt']}"
                 )
 
     # reply task
