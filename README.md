@@ -152,4 +152,4 @@ The second response is a meta action list planned by the agent. It contains thre
                           'go to school, determined to improve education',
                           'study for 2 hours, feel a bit tired but motivated']}}
 ```
-**You can refer to our [official website]() for more demos.**
+**You can refer to our [official website](https://biosphere3.ai/) for more information and demo.**
