@@ -14,14 +14,13 @@ from core.db.game_api_utils import make_api_request_sync as make_backend_api_req
 from datetime import datetime, timedelta
 import random
 import numpy as np
-from core.llm_factory import LLMSelector
+from core.llm_factory import llm_selector
 
 logger.add(
         "conversation_engines.log",
         format="{time} {level} {message}",
     )
 
-llm_selector = LLMSelector()
 
 conversation_topic_planner = conversation_topic_planner_prompt | llm_selector.get_llm(
     model_type="CHAT", model_name="gpt-4o-mini", temperature=1.

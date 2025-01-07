@@ -315,6 +315,36 @@ def save_decision_to_db(userid: int, decision: dict):
         logger.error(f"Failed to decode JSON from {url}")
 
 
+def save_token_consumption_to_db(token_consumption: dict):
+    """
+    Save the token consumption to the game database.
+
+    Args:
+        token_consumption (dict): The token consumption data to save.
+    """
+    url = f"{GAME_BACKEND_URL}/modelToken/add/"
+    for model_type, usage in token_consumption.items():
+        data = {
+            "modelType": model_type,
+            "prompt": usage.get("prompt", 0),
+            "completion": usage.get("completion", 0),
+            "total": usage.get("total", 0),
+        }
+        try:
+            response = requests.post(
+                url,
+                json=data,
+                timeout=GAME_BACKEND_TIMEOUT,
+            )
+            response.raise_for_status()
+        except requests.Timeout:
+            logger.error(f"Timeout while saving token consumption to {url}")
+        except requests.HTTPError as e:
+            logger.error(f"HTTP error while saving token consumption to {url}: {e}")
+        except JSONDecodeError:
+            logger.error(f"Failed to decode JSON from {url}")
+
+
 def get_occupation(job_id: int) -> str:
     occupation_mapping = {
         "0": "Unemployed",
