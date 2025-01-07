@@ -66,6 +66,8 @@ Conversation | <ul><li>Create an conversation instance and run different tasks. 
 Database Support | <ul><li>Fetch character data from game database and update new states. </li><li> Get agent data from agent database and update agent decisions.</li></ui> | <ul><li>`core/db/game_api_utils.py` </li><li> `core/db/database_api_utils.py`</li></ui>
 Character Manager | <ul><li>Manage and monitor all active agent connections and clean up disconnected characters.</li></ui> | <ul><li>`core/websocket_server`</li></ui> 
 Game Settings | <ul><li>Map character skills to actions.</li></ui> | <ul><li>`core/files/skill2actions.json`</li></ui>
+Developer Data | <ul><li>Old versions and other experiments during the development process.</li></ui> | <ul><li>`legacy`</li></ui>
+
 
 ## 🛠️ Development Guide
 ### Requirements
