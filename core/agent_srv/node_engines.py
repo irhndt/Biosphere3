@@ -67,7 +67,7 @@ async def generate_daily_objective(state: RunningState):
     skill_list = response.get("data", {}).get("skillList", [])
     skill_name = [skill["skillName"] for skill in skill_list]
     try:
-        with open("files/skill2actions.json", "r") as f:
+        with open("core/files/skill2actions.json", "r") as f:
             skills = json.load(f)
     except Exception as e:
         logger.error(f"Failed to load skill actions: {e}")
