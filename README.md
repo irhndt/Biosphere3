@@ -106,13 +106,31 @@ async def test_client():
 asyncio.run(test_client())
 ```
 If you have correctly configured the environment and successfully established the connection, and the character_id is valid, you will see the following output.  
-The first response indicates that the connection is successfully initialized and an agent is created.
+The first response indicates that the connection is successfully initialized and an agent is created.  
+```
+Received response: {"characterId": 1, "messageCode": null, "messageName": "connectionInit", "data": {"result": true, "msg": "character init success"}}
+```
 The second response is a meta action list planned by the agent. It contains three parts:
 - A command list that consists of meta actions and corresponding parameters.
 - An action emoji list that describes the meta actions.
 - A state emoji list that demonstrates the mood and feeling when conducting certain actions.
 - A brief description list of the above actions and states. 
 ```
-Received response: {"characterId": 1, "messageCode": null, "messageName": "connectionInit", "data": {"result": true, "msg": "character init success"}}
-Received response: {'characterId': 1, 'messageName': 'actionList', 'messageCode': 6, 'data': {'command': ['goto home', 'sleep 8', 'goto fishing', 'gofishing 2', 'goto mall', 'sell fish 1', 'goto school', 'study 2'], 'action_emoji': ['🏠', '🛌', '🎣', '🐟', '🏬', '💰', '🏫', '📚'], 'state_emoji': ['😴', '💤', '🌊', '🐠', '💵', '🤑', '🎓', '🤓'], 'description': ['go to home, feel tired and want to have a rest', 'sleep for 8 hours, recover energy and health', 'go to fishing area, excited to catch some fish', 'fish for 2 hours, enjoy the peaceful time', 'go to mall, ready to sell some fish', 'sell 1 fish, happy to earn some money', 'go to school, determined to improve education', 'study for 2 hours, feel a bit tired but motivated']}}
+Received response: {'characterId': 1,
+                    'messageName': 'actionList',
+                    'messageCode': 6,
+                    'data': {
+                        'command': ['goto home', 'sleep 8', 'goto fishing', 'gofishing 2', 'goto mall', 'sell fish 1', 'goto school', 'study 2'],
+                        'action_emoji': ['🏠', '🛌', '🎣', '🐟', '🏬', '💰', '🏫', '📚'],
+                        'state_emoji': ['😴', '💤', '🌊', '🐠', '💵', '🤑', '🎓', '🤓'],
+                        'description': ['go to home, feel tired and want to have a rest',
+                                        'sleep for 8 hours, recover energy and health',
+                                        'go to fishing area, excited to catch some fish',
+                                        'fish for 2 hours, enjoy the peaceful time',
+                                        'go to mall, ready to sell some fish',
+                                        'sell 1 fish, happy to earn some money',
+                                        'go to school, determined to improve education',
+                                        'study for 2 hours, feel a bit tired but motivated']
+                             }
+                   }
 ```
