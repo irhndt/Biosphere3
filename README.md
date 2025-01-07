@@ -75,12 +75,16 @@ Game Settings | <ul><li>Map character skills to actions.</li></ui> | <ul><li>`co
 
 ### Get started
 After installing all the packages and configuring the environment, you can start deploying your own agent.  
-First, run `core/ai.py` to deploy the agent server.
+First, direct to `core` file which is the latest edition of our agent.
+```
+cd core
+```
+Then, run `ai.py` to deploy the agent server.
 ```
 python ai.py
 ```  
-Then, initalize the websocket connection with agent server. Once the connection is initialized, you can create an agent with certain valid character_id (the character_id should be a positive integer). If the agent is successfully created, it will automatically plan once and return the planned meta action list.  
-Here is an example to initialize connection and receive plan result from the agent server.
+After that, you can use your own method to initalize the websocket connection with agent server. Once the connection is initialized, you are able to create an agent with certain valid character_id (the character_id should be a positive integer). If the agent is successfully created, it will automatically plan once and return the planned meta action list.  
+Here is an example python sricpt to initialize connection and receive plan result from the agent server.
 ```python
 import asyncio
 import websockets
@@ -134,4 +138,4 @@ The second response is a meta action list planned by the agent. It contains thre
                           'go to school, determined to improve education',
                           'study for 2 hours, feel a bit tired but motivated']}}
 ```
-[**You can refer to our official website for more demos.**]()
+**You can refer to our [official website]() for more demos.**
