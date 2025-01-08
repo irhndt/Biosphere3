@@ -81,75 +81,48 @@ Module Name | Description | File Path
 💾 Experiments | <ul><li>Old versions and other experiments during the development process.</li></ui> | <ul><li>`legacy`</li></ui>
 
 
-## 🛠️ Development Guide
-### Requirements
-- `python 3.10` or above
-- `pip install -r requirements.txt` all the required packages
-- `.env` file with API keys like OPENAI_API_KEY, DEEP_SEEK_API_KEY, and database urls like GAME_BACKEND_URL, AGENT_BACKEND_URL 
+## 🛠️ Quickstart
+### Overview
+Our project consists of multiple components, including **databases and game environment**. To provide a seamless experience for developers and researchers who want to quickly get started with our **Agent framework**, we’ve designed a **simulator** that replicates the core functionalities of both the game and database environments.
 
-### Get started
-After installing all the packages and configuring the environment, you can start deploying your own agent.  
-First, direct to `core` file which is the latest edition of our agent.
-```
-cd core
-```
-Then, run `ai.py` to deploy the agent server.
-```
-python ai.py
-```  
-After that, you can use your own method to initalize the websocket connection with agent server. Once the connection is initialized, you are able to create an agent with certain valid character_id (the character_id should be a positive integer). If the agent is successfully created, it will automatically plan once and return the planned meta action list.  
-Here is an example python sricpt to initialize connection and receive plan result from the agent server.
-```python
-import asyncio
-import websockets
-import json
+This **lightweight sandbox environment** allows you to test and interact with the Agent framework in a controlled setting without requiring full integration with the actual game and databases. However, note that **some features are limited**, and full capabilities can only be experienced when connected to the complete game environment.
 
-async def test_client():
-    uri = "ws://localhost:6789"  # This is an example url for agent server. 
-    async with websockets.connect(uri) as websocket:
-        character_id = 1  # Input your character_id here 
+### Prerequisites
+Before running the simulator, ensure that you have:
+- Python 3.10 or above installed.
+- All required dependencies installed via pip.
+- A properly configured .env file with necessary API keys and database URLs.
 
-        init_message = {
-            "characterId": character_id,
-            "messageName": "connectionInit",
-            "data": {},
-        }
-        await websocket.send(json.dumps(init_message))
-        response = await websocket.recv()
-        print(f"Received response: {response}")
-        
-        action_response = await websocket.recv()
-        print(f"Received response: {action_response}")
+### Setup Instructions
+1. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
 
-asyncio.run(test_client())
+2. Configure Environment Variables
+```bash
+cp .env.example .env
 ```
-If you have correctly configured the environment and successfully established the connection, and the character_id is valid, you will see the following output.  
-The first response indicates that the connection is successfully initialized and an agent is created.  
+- Add the necessary API keys
+- Add database URLs, if you run locally, here are the urls:
 ```
-{"characterId": 1,
- "messageCode": null,
- "messageName": "connectionInit",
- "data": {"result": true, "msg": "character init success"}}
+GAME_BACKEND_URL="http://127.0.0.1:5003"
+AGENT_BACKEND_URL="http://127.0.0.1:5006"
 ```
-The second response is a meta action list planned by the agent. It contains three parts:
-- A command list that consists of meta actions and corresponding parameters.
-- An action emoji list that describes the meta actions.
-- A state emoji list that demonstrates the mood and feeling when conducting certain actions.
-- A brief description list of the above actions and states. 
+
+3. Run the Websocket server
+```bash
+python core/ai.py
 ```
-{'characterId': 1,
- 'messageName': 'actionList',
- 'messageCode': 6,
- 'data': {'command': ['goto home', 'sleep 8', 'goto fishing', 'gofishing 2', 'goto mall', 'sell fish 1', 'goto school', 'study 2'],
-          'action_emoji': ['🏠', '🛌', '🎣', '🐟', '🏬', '💰', '🏫', '📚'],
-          'state_emoji': ['😴', '💤', '🌊', '🐠', '💵', '🤑', '🎓', '🤓'],
-          'description': ['go to home, feel tired and want to have a rest',
-                          'sleep for 8 hours, recover energy and health',
-                          'go to fishing area, excited to catch some fish',
-                          'fish for 2 hours, enjoy the peaceful time',
-                          'go to mall, ready to sell some fish',
-                          'sell 1 fish, happy to earn some money',
-                          'go to school, determined to improve education',
-                          'study for 2 hours, feel a bit tired but motivated']}}
+
+4. Run the game simulators
+```bash
+python core/sandbox/game_http_server.py &  
+python core/sandbox/agent_http_server.py &  
+python core/sandbox/game_simulator.py &
 ```
+
+5. Interact with the Agent
+- Once running, you can observe the Agent’s behavior in the terminal.
+
 **You can refer to our [official website](https://biosphere3.ai/) for more information and demo.**
