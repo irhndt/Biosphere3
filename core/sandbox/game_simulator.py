@@ -61,13 +61,16 @@ requests = {
 async def send_request(websocket, request):
     message = json.dumps(request)
     await websocket.send(message)
-    print(f"Sent: {message}")
+    if request["messageName"] != "heartbeat":
+        print(f"Sent: {message}")
 
 
 async def receive_response(websocket):
     while True:
         response = await websocket.recv()
-        print(f"Received: {response}")
+        message = json.loads(response)
+        if message["messageName"] != "heartbeat":
+            print(f"Received: {message}")
 
 
 async def send_heartbeat(websocket):

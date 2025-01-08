@@ -104,10 +104,11 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 - Add the necessary API keys
-- Add database URLs, if you run locally, here are the urls:
+- Add database URLs, if you run locally:
 ```
 GAME_BACKEND_URL="http://127.0.0.1:5003"
 AGENT_BACKEND_URL="http://127.0.0.1:5006"
+GAME_BACKEND_TIMEOUT=8
 ```
 
 3. Run the Websocket server
@@ -115,11 +116,9 @@ AGENT_BACKEND_URL="http://127.0.0.1:5006"
 python core/ai.py
 ```
 
-4. Run the game simulators
+4. Open another terminal & Run the game simulators
 ```bash
-python core/sandbox/game_http_server.py &  
-python core/sandbox/agent_http_server.py &  
-python core/sandbox/game_simulator.py &
+sh run_simulator.sh
 ```
 
 5. Interact with the Agent
