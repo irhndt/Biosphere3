@@ -1,5 +1,5 @@
-from langchain_core.pydantic_v1 import BaseModel, Field
-from typing import List, TypedDict, Dict, Any
+from pydantic import BaseModel, Field
+from typing_extensions import List, TypedDict, Dict, Any
 import asyncio
 
 
@@ -29,12 +29,20 @@ class ConversationTask(TypedDict):
 class ConversationState(TypedDict):
     userid: int
     character_stats: Dict[str, Any]
-    ongoing_task: List[dict]  # Temporarily store read-only message, which contains npc_ids, start_time, and diaologue
-    daily_task: List[dict]  # Daily conversation plan, the format is DailyConversationPlan
-    message_queue: asyncio.Queue  
-    waiting_response: asyncio.Queue  # Conversations that need reply, the format is RunningConversation
+    ongoing_task: List[
+        dict
+    ]  # Temporarily store read-only message, which contains npc_ids, start_time, and diaologue
+    daily_task: List[
+        dict
+    ]  # Daily conversation plan, the format is DailyConversationPlan
+    message_queue: asyncio.Queue
+    waiting_response: (
+        asyncio.Queue
+    )  # Conversations that need reply, the format is RunningConversation
     websocket: Any
-    prompt: Dict[str, Any]   # initial prompt setting, including "topic_requirements", "impression_impact"
+    prompt: Dict[
+        str, Any
+    ]  # initial prompt setting, including "topic_requirements", "impression_impact"
 
 
 # ongoing conversation
@@ -42,7 +50,7 @@ class RunningConversation(TypedDict):
     from_id: int
     to_id: int
     start_time: str
-    latest_message: Dict[str, str]  
+    latest_message: Dict[str, str]
     send_gametime: list
     send_realtime: str
     Finish: List[bool]
@@ -68,8 +76,12 @@ class ImpressionUpdate(BaseModel):
 
 class Knowledge(BaseModel):
     time: str = Field(description="The day before the knowledge is generated")
-    environment_information: str = Field(description="Short-term memory related to environment")
-    personal_information: str = Field(description="Long-term memory related to personal profile")
+    environment_information: str = Field(
+        description="Short-term memory related to environment"
+    )
+    personal_information: str = Field(
+        description="Long-term memory related to personal profile"
+    )
 
 
 class DailyConversationPlan(BaseModel):
@@ -81,6 +93,9 @@ class DailyConversationPlan(BaseModel):
 
 
 class IntimacyMark(BaseModel):
-    mark1: int = Field(description="The intimacy mark of player 1 towards the given conversation.")
-    mark2: int = Field(description="The intimacy mark of player 2 towards the given conversation.")
-
+    mark1: int = Field(
+        description="The intimacy mark of player 1 towards the given conversation."
+    )
+    mark2: int = Field(
+        description="The intimacy mark of player 2 towards the given conversation."
+    )

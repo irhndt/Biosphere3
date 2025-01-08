@@ -26,32 +26,6 @@ def create_planner(prompt_template, model_name, output_type, temperature=0.5):
     ).with_structured_output(output_type)
 
 
-async def generate_daily_reflection(state: RunningState):
-    daily_reflection_generator = create_planner(
-        daily_reflection_prompt,
-        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
-        Reflection,
-        1,
-    )
-    payload = {
-        "character_stats": format_character_data(state["character_stats"]),
-        "daily_objectives": state["decision"]["daily_objective"],
-        "failed_actions": str(state["false_action_queue"]),
-        "additional_requirements": state["prompts"]["daily_reflection_ar"],
-        "focus_topic": state["prompts"]["focus_topic"],
-        "depth_of_reflection": state["prompts"]["depth_of_reflection"],
-        "level_of_detail": state["prompts"]["level_of_detail"],
-        "tone_and_style": state["prompts"]["tone_and_style"],
-    }
-    daily_reflection = await daily_reflection_generator.ainvoke(payload)
-
-    full_prompt = daily_reflection_prompt.format(**payload)
-    logger.info("======generate_daily_reflection======\n" + full_prompt)
-    state["decision"]["daily_reflection"].append(daily_reflection.reflection)
-
-    return {"decision": {"daily_reflection": daily_reflection.reflection}}
-
-
 async def generate_daily_objective(state: RunningState):
     obj_planner = create_planner(
         obj_planner_prompt,
@@ -97,11 +71,10 @@ async def generate_daily_objective(state: RunningState):
             continue
     full_prompt = obj_planner_prompt.format(**payload)
     logger.info("======generate_daily_objective======\n" + full_prompt)
-    for item in planner_response.objectives:
+    for item in planner_response["objectives"]:
         state["decision"]["daily_objective"].append(item)
 
-    logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response.objectives}")
-    return {"decision": {"daily_objective": planner_response.objectives}}
+    logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response['objectives']}")
 
 
 async def generate_meta_action_sequence(state: RunningState):
@@ -140,9 +113,9 @@ async def generate_meta_action_sequence(state: RunningState):
 
     full_prompt = meta_action_sequence_prompt.format(**payload)
     logger.info("======generate_meta_action_sequence======\n" + full_prompt)
-    for item in meta_action_sequence.meta_action_sequence:
+    for item in meta_action_sequence["meta_action_sequence"]:
         state["decision"]["meta_seq"].append(item)
-    for item in meta_action_sequence.description_sequence:
+    for item in meta_action_sequence["description_sequence"]:
         state["decision"]["action_description"].append(item)
 
     await state["instance"].send_message(
@@ -151,21 +124,20 @@ async def generate_meta_action_sequence(state: RunningState):
             "messageName": "actionList",
             "messageCode": 6,
             "data": {
-                "command": meta_action_sequence.meta_action_sequence,
-                "action_emoji": meta_action_sequence.action_emoji_sequence,
-                "state_emoji": meta_action_sequence.state_emoji_sequence,
-                "description": meta_action_sequence.description_sequence,
+                "command": meta_action_sequence["meta_action_sequence"],
+                "action_emoji": meta_action_sequence["action_emoji_sequence"],
+                "state_emoji": meta_action_sequence["state_emoji_sequence"],
+                "description": meta_action_sequence["description_sequence"],
             },
         }
     )
     logger.info(
-        f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence.meta_action_sequence}"
+        f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence['meta_action_sequence']}"
     )
-    return {"decision": {"meta_seq": meta_action_sequence.meta_action_sequence}}
 
 
 async def sensing_environment(state: RunningState):
-    return {"current_pointer": "Process_Messages"}
+    return {"current_pointer": "Process_Event"}
 
 
 async def replan_action(state: RunningState):
@@ -214,9 +186,9 @@ async def replan_action(state: RunningState):
             continue
 
     logger.info(
-        f"✨ User {state['userid']}: Generated new action sequence: {meta_action_sequence.meta_action_sequence}"
+        f"✨ User {state['userid']}: Generated new action sequence: {meta_action_sequence['meta_action_sequence']}"
     )
-    for item in meta_action_sequence.meta_action_sequence:
+    for item in meta_action_sequence["meta_action_sequence"]:
         state["decision"]["new_plan"].append(item)
 
     # Send new action sequence to client
@@ -226,15 +198,13 @@ async def replan_action(state: RunningState):
             "messageName": "actionList",
             "messageCode": 6,
             "data": {
-                "command": meta_action_sequence.meta_action_sequence,
-                "action_emoji": meta_action_sequence.action_emoji_sequence,
-                "state_emoji": meta_action_sequence.state_emoji_sequence,
-                "description": meta_action_sequence.description_sequence,
+                "command": meta_action_sequence["meta_action_sequence"],
+                "action_emoji": meta_action_sequence["action_emoji_sequence"],
+                "state_emoji": meta_action_sequence["state_emoji_sequence"],
+                "description": meta_action_sequence["description_sequence"],
             },
         }
     )
-
-    return {"decision": {"meta_seq": meta_action_sequence.meta_action_sequence}}
 
 
 async def generate_change_job_cv(instance, msg: dict):
@@ -262,13 +232,13 @@ async def generate_change_job_cv(instance, msg: dict):
     logger.info(f"📃 CV: {cv}")
 
     job_detail = make_api_request_sync_backend(
-        "GET", f"/publicWork/getById/{cv.job_id}"
+        "GET", f"/publicWork/getById/{cv['job_id']}"
     )
     job_name = job_detail.get("data", {}).get("jobName", "")
     cv_request = {
-        "jobid": cv.job_id,
+        "jobid": cv["job_id"],
         "characterId": user_id,
-        "CV_content": cv.cv,
+        "CV_content": cv["cv"],
         "week": week,
         "health": health,
         "studyxp": studyXp,
@@ -287,7 +257,7 @@ async def generate_change_job_cv(instance, msg: dict):
                 "characterId": user_id,
                 "messageName": "mayor_decision",
                 "messageCode": 10,
-                "data": {"jobId": cv.job_id, "cv": cv.cv, **mayor_decision},
+                "data": {"jobId": cv["job_id"], "cv": cv["cv"], **mayor_decision},
             }
         )
 
@@ -320,8 +290,8 @@ async def generate_mayor_decision(
         "meet_requirements": {"meet": code == 1, "message": message},
     }
     mayor_decision = await mayor_decision_generator.ainvoke(payload)
-    logger.info(f"🧔 Mayor decision: {mayor_decision.decision}")
-    logger.info(f"🧔 Mayor comments: {mayor_decision.comments}")
+    logger.info(f"🧔 Mayor decision: {mayor_decision['decision']}")
+    logger.info(f"🧔 Mayor comments: {mayor_decision['comments']}")
 
     make_api_request_sync(
         "PUT",
@@ -331,15 +301,41 @@ async def generate_mayor_decision(
             "jobid": cv.job_id,
             "week": week,
             "election_status": (
-                "succeeded" if mayor_decision.decision == "yes" else "failed"
+                "succeeded" if mayor_decision["decision"] == "yes" else "failed"
             ),
         },
     )
 
     return {
-        "mayor_decision": mayor_decision.decision,
-        "mayor_comments": mayor_decision.comments,
+        "mayor_decision": mayor_decision["decision"],
+        "mayor_comments": mayor_decision["comments"],
     }
+
+
+async def generate_daily_reflection(state: RunningState):
+    daily_reflection_generator = create_planner(
+        daily_reflection_prompt,
+        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        Reflection,
+        1,
+    )
+    payload = {
+        "character_stats": format_character_data(state["character_stats"]),
+        "daily_objectives": state["decision"]["daily_objective"],
+        "failed_actions": str(state["false_action_queue"]),
+        "reflection_ar": state["prompts"]["reflection_ar"],
+        "focus_topic": state["prompts"]["focus_topic"],
+        "depth_of_reflection": state["prompts"]["depth_of_reflection"],
+        "level_of_detail": state["prompts"]["level_of_detail"],
+        "tone_and_style": state["prompts"]["tone_and_style"],
+    }
+    daily_reflection = await daily_reflection_generator.ainvoke(payload)
+
+    full_prompt = daily_reflection_prompt.format(**payload)
+    logger.info("======generate_daily_reflection======\n" + full_prompt)
+    state["decision"]["reflection"].append(daily_reflection["reflection"])
+
+    logger.info(f"🔍 DAILY_REFLECTION INVOKED with {daily_reflection['reflection']}")
 
 
 async def generate_character_arc(state: RunningState):
@@ -359,7 +355,7 @@ async def generate_character_arc(state: RunningState):
             "character_stats": format_character_data(state["character_stats"]),
             "character_info": character_info,
             "daily_objectives": state["decision"]["daily_objective"],
-            "daily_reflection": state["decision"].get("daily_reflection", ""),
+            "daily_reflection": state["decision"]["reflection"],
             "action_results": state["decision"]["action_result"],
         }
     )
@@ -367,8 +363,8 @@ async def generate_character_arc(state: RunningState):
         "characterId": state["userid"],
         **dict(character_arc),
     }
+    logger.info(f"📜 Character Arc: {character_arc_data}")
     make_api_request_sync("POST", "/character_arc/", data=character_arc_data)
-    return {"Character_Stats": {"character_arc": dict(character_arc)}}
 
 
 def format_role_actions(roles, data):
@@ -511,23 +507,25 @@ async def generate_accommodation_decision(state: RunningState):
             continue
 
         logger.info(f"🏠 Attempt {retries + 1}:")
-        logger.info(f"🏠 Accommodation ID: {accommodation_decision.accommodation_id}")
-        logger.info(f"🏠 Lease Weeks: {accommodation_decision.lease_weeks}")
-        logger.info(f"🏠 Comments: {accommodation_decision.comments}")
+        logger.info(
+            f"🏠 Accommodation ID: {accommodation_decision['accommodation_id']}"
+        )
+        logger.info(f"🏠 Lease Weeks: {accommodation_decision['lease_weeks']}")
+        logger.info(f"🏠 Comments: {accommodation_decision['comments']}")
 
         # 验证选择的住宿是否存在
         selected_accommodation = next(
             (
                 acc
                 for acc in available_accommodations
-                if acc["id"] == accommodation_decision.accommodation_id
+                if acc["id"] == accommodation_decision["accommodation_id"]
             ),
             None,
         )
 
         if not selected_accommodation:
             failure_message = (
-                f"Attempt {retries + 1}: Selected accommodation ID {accommodation_decision.accommodation_id} "
+                f"Attempt {retries + 1}: Selected accommodation ID {accommodation_decision['accommodation_id']} "
                 f"does not exist. Please choose a valid accommodation."
             )
 
@@ -536,7 +534,7 @@ async def generate_accommodation_decision(state: RunningState):
             retries += 1
             continue
 
-        lease_weeks = accommodation_decision.lease_weeks
+        lease_weeks = accommodation_decision["lease_weeks"]
 
         # 检查租期是否在1-12周
         if not (1 <= lease_weeks <= 12):
@@ -557,7 +555,7 @@ async def generate_accommodation_decision(state: RunningState):
         if total_rent > financial_status["money"]:
             failure_message = (
                 f"Attempt {retries + 1}: Cannot afford total rent of {total_rent} for accommodation ID "
-                f"{accommodation_decision.accommodation_id} over {lease_weeks} weeks. "
+                f"{accommodation_decision['accommodation_id']} over {lease_weeks} weeks. "
                 f"Available money: {financial_status['money']}."
             )
 
@@ -570,7 +568,7 @@ async def generate_accommodation_decision(state: RunningState):
             rent_data = {
                 "characterId": state["userid"],
                 "money": financial_status["money"],
-                "dormitoryId": accommodation_decision.accommodation_id,
+                "dormitoryId": accommodation_decision["accommodation_id"],
                 "leaseWeeks": lease_weeks,
             }
             print("rent_data: ", rent_data)
@@ -598,17 +596,9 @@ async def generate_accommodation_decision(state: RunningState):
             "messageName": "accommodationChange",
             "messageCode": 8,
             "data": {
-                "accommodationId": accommodation_decision.accommodation_id,
+                "accommodationId": accommodation_decision["accommodation_id"],
                 "leaseWeeks": lease_weeks,
-                "comments": accommodation_decision.comments,
+                "comments": accommodation_decision["comments"],
             },
         }
     )
-
-    return {
-        "decision": {
-            "accommodation_id": accommodation_decision.accommodation_id,
-            "lease_weeks": lease_weeks,
-            "accommodation_comments": accommodation_decision.comments,
-        }
-    }

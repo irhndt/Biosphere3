@@ -1,8 +1,6 @@
-from langchain_core.pydantic_v1 import BaseModel, Field
-from typing import List, Annotated, TypedDict, Dict, Any
+from pydantic import BaseModel, Field
+from typing_extensions import List, Annotated, TypedDict, Dict, Any
 import asyncio
-
-# 带有合并逻辑的鸡肋
 
 
 def generic_reducer(a, b):
@@ -102,8 +100,12 @@ class MetaActionSequence(BaseModel):
     """Meta action sequence to follow in future"""
 
     meta_action_sequence: List[str] = Field(description="meta action sequence")
-    action_emoji_sequence: List[str] = Field(description="emoji sequence that describes actions")
-    state_emoji_sequence: List[str] = Field(description="emoji sequence that describes states")
+    action_emoji_sequence: List[str] = Field(
+        description="emoji sequence that describes actions"
+    )
+    state_emoji_sequence: List[str] = Field(
+        description="emoji sequence that describes states"
+    )
     description_sequence: List[str] = Field(description="description sequence")
 
 
