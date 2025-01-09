@@ -12,7 +12,7 @@ from core.agent_srv.node_model import (
     AccommodationDecision,
 )
 from core.agent_srv.prompts import *
-from core.llm_factory import llm_selector
+from core.utils.llm_factory import llm_selector
 from core.db.database_api_utils import make_api_request_sync
 from core.db.game_api_utils import (
     make_api_request_async as make_api_request_async_backend,
@@ -61,7 +61,7 @@ async def generate_daily_objective(state: RunningState):
     }
     while retry_count < 3:
         try:
-            planner_response: RunningState = await obj_planner.ainvoke(payload)
+            planner_response = await obj_planner.ainvoke(payload)
             break
         except Exception as e:
             logger.error(
@@ -71,10 +71,10 @@ async def generate_daily_objective(state: RunningState):
             continue
     # full_prompt = obj_planner_prompt.format(**payload)
     # logger.info("======generate_daily_objective======\n" + full_prompt)
-    for item in planner_response["objectives"]:
+    for item in planner_response.objectives:
         state["decision"]["daily_objective"].append(item)
 
-    logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response['objectives']}")
+    logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response.objectives}")
 
 
 async def generate_meta_action_sequence(state: RunningState):
@@ -113,9 +113,9 @@ async def generate_meta_action_sequence(state: RunningState):
 
     # full_prompt = meta_action_sequence_prompt.format(**payload)
     # logger.info("======generate_meta_action_sequence======\n" + full_prompt)
-    for item in meta_action_sequence["meta_action_sequence"]:
+    for item in meta_action_sequence.meta_action_sequence:
         state["decision"]["meta_seq"].append(item)
-    for item in meta_action_sequence["description_sequence"]:
+    for item in meta_action_sequence.description_sequence:
         state["decision"]["action_description"].append(item)
 
     await state["instance"].send_message(
@@ -124,15 +124,15 @@ async def generate_meta_action_sequence(state: RunningState):
             "messageName": "actionList",
             "messageCode": 6,
             "data": {
-                "command": meta_action_sequence["meta_action_sequence"],
-                "action_emoji": meta_action_sequence["action_emoji_sequence"],
-                "state_emoji": meta_action_sequence["state_emoji_sequence"],
-                "description": meta_action_sequence["description_sequence"],
+                "command": meta_action_sequence.meta_action_sequence,
+                "action_emoji": meta_action_sequence.action_emoji_sequence,
+                "state_emoji": meta_action_sequence.state_emoji_sequence,
+                "description": meta_action_sequence.description_sequence,
             },
         }
     )
     logger.info(
-        f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence['meta_action_sequence']}"
+        f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence.meta_action_sequence}"
     )
 
 
@@ -186,10 +186,12 @@ async def replan_action(state: RunningState):
             continue
 
     logger.info(
-        f"✨ User {state['userid']}: Generated new action sequence: {meta_action_sequence['meta_action_sequence']}"
+        f"✨ User {state['userid']}: Generated new action sequence: {meta_action_sequence.meta_action_sequence}"
     )
-    for item in meta_action_sequence["meta_action_sequence"]:
+    for item in meta_action_sequence.meta_action_sequence:
         state["decision"]["new_plan"].append(item)
+    for item in meta_action_sequence.description_sequence:
+        state["decision"]["action_description"].append(item)
 
     # Send new action sequence to client
     await state["instance"].send_message(
@@ -198,10 +200,10 @@ async def replan_action(state: RunningState):
             "messageName": "actionList",
             "messageCode": 6,
             "data": {
-                "command": meta_action_sequence["meta_action_sequence"],
-                "action_emoji": meta_action_sequence["action_emoji_sequence"],
-                "state_emoji": meta_action_sequence["state_emoji_sequence"],
-                "description": meta_action_sequence["description_sequence"],
+                "command": meta_action_sequence.meta_action_sequence,
+                "action_emoji": meta_action_sequence.action_emoji_sequence,
+                "state_emoji": meta_action_sequence.state_emoji_sequence,
+                "description": meta_action_sequence.description_sequence,
             },
         }
     )
@@ -232,13 +234,13 @@ async def generate_change_job_cv(instance, msg: dict):
     logger.info(f"📃 CV: {cv}")
 
     job_detail = make_api_request_sync_backend(
-        "GET", f"/publicWork/getById/{cv['job_id']}"
+        "GET", f"/publicWork/getById/{cv.job_id}"
     )
     job_name = job_detail.get("data", {}).get("jobName", "")
     cv_request = {
-        "jobid": cv["job_id"],
+        "jobid": cv.job_id,
         "characterId": user_id,
-        "CV_content": cv["cv"],
+        "CV_content": cv.cv,
         "week": week,
         "health": health,
         "studyxp": studyXp,
@@ -257,7 +259,7 @@ async def generate_change_job_cv(instance, msg: dict):
                 "characterId": user_id,
                 "messageName": "mayor_decision",
                 "messageCode": 10,
-                "data": {"jobId": cv["job_id"], "cv": cv["cv"], **mayor_decision},
+                "data": {"jobId": cv.job_id, "cv": cv.cv, **mayor_decision},
             }
         )
 
@@ -290,8 +292,8 @@ async def generate_mayor_decision(
         "meet_requirements": {"meet": code == 1, "message": message},
     }
     mayor_decision = await mayor_decision_generator.ainvoke(payload)
-    logger.info(f"🧔 Mayor decision: {mayor_decision['decision']}")
-    logger.info(f"🧔 Mayor comments: {mayor_decision['comments']}")
+    logger.info(f"🧔 Mayor decision: {mayor_decision.decision}")
+    logger.info(f"🧔 Mayor comments: {mayor_decision.comments}")
 
     make_api_request_sync(
         "PUT",
@@ -301,14 +303,14 @@ async def generate_mayor_decision(
             "jobid": cv.job_id,
             "week": week,
             "election_status": (
-                "succeeded" if mayor_decision["decision"] == "yes" else "failed"
+                "succeeded" if mayor_decision.decision == "yes" else "failed"
             ),
         },
     )
 
     return {
-        "mayor_decision": mayor_decision["decision"],
-        "mayor_comments": mayor_decision["comments"],
+        "mayor_decision": mayor_decision.decision,
+        "mayor_comments": mayor_decision.comments,
     }
 
 
@@ -333,7 +335,7 @@ async def generate_daily_reflection(state: RunningState):
 
     # full_prompt = daily_reflection_prompt.format(**payload)
     # logger.info("======generate_daily_reflection======\n" + full_prompt)
-    state["decision"]["reflection"].append(daily_reflection["reflection"])
+    state["decision"]["reflection"].append(daily_reflection.reflection)
     # await state["instance"].send_message(
     #     {
     #         "characterId": state["userid"],
@@ -345,7 +347,7 @@ async def generate_daily_reflection(state: RunningState):
     #     }
     # )
 
-    logger.info(f"🔍 DAILY_REFLECTION INVOKED with {daily_reflection['reflection']}")
+    logger.info(f"🔍 DAILY_REFLECTION INVOKED with {daily_reflection.reflection}")
 
 
 async def generate_character_arc(state: RunningState):
@@ -526,24 +528,24 @@ async def generate_accommodation_decision(state: RunningState):
 
         logger.info(f"🏠 Attempt {retries + 1}:")
         logger.info(
-            f"🏠 Accommodation ID: {accommodation_decision['accommodation_id']}"
+            f"🏠 Accommodation ID: {accommodation_decision.accommodation_id}"
         )
-        logger.info(f"🏠 Lease Weeks: {accommodation_decision['lease_weeks']}")
-        logger.info(f"🏠 Comments: {accommodation_decision['comments']}")
+        logger.info(f"🏠 Lease Weeks: {accommodation_decision.lease_weeks}")
+        logger.info(f"🏠 Comments: {accommodation_decision.comments}")
 
         # 验证选择的住宿是否存在
         selected_accommodation = next(
             (
                 acc
                 for acc in available_accommodations
-                if acc["id"] == accommodation_decision["accommodation_id"]
+                if acc["id"] == accommodation_decision.accommodation_id
             ),
             None,
         )
 
         if not selected_accommodation:
             failure_message = (
-                f"Attempt {retries + 1}: Selected accommodation ID {accommodation_decision['accommodation_id']} "
+                f"Attempt {retries + 1}: Selected accommodation ID {accommodation_decision.accommodation_id} "
                 f"does not exist. Please choose a valid accommodation."
             )
 
@@ -552,7 +554,7 @@ async def generate_accommodation_decision(state: RunningState):
             retries += 1
             continue
 
-        lease_weeks = accommodation_decision["lease_weeks"]
+        lease_weeks = accommodation_decision.lease_weeks
 
         # 检查租期是否在1-12周
         if not (1 <= lease_weeks <= 12):
@@ -573,7 +575,7 @@ async def generate_accommodation_decision(state: RunningState):
         if total_rent > financial_status["money"]:
             failure_message = (
                 f"Attempt {retries + 1}: Cannot afford total rent of {total_rent} for accommodation ID "
-                f"{accommodation_decision['accommodation_id']} over {lease_weeks} weeks. "
+                f"{accommodation_decision.accommodation_id} over {lease_weeks} weeks. "
                 f"Available money: {financial_status['money']}."
             )
 
@@ -586,7 +588,7 @@ async def generate_accommodation_decision(state: RunningState):
             rent_data = {
                 "characterId": state["userid"],
                 "money": financial_status["money"],
-                "dormitoryId": accommodation_decision["accommodation_id"],
+                "dormitoryId": accommodation_decision.accommodation_id,
                 "leaseWeeks": lease_weeks,
             }
             print("rent_data: ", rent_data)
@@ -614,9 +616,9 @@ async def generate_accommodation_decision(state: RunningState):
             "messageName": "accommodationChange",
             "messageCode": 8,
             "data": {
-                "accommodationId": accommodation_decision["accommodation_id"],
+                "accommodationId": accommodation_decision.accommodation_id,
                 "leaseWeeks": lease_weeks,
-                "comments": accommodation_decision["comments"],
+                "comments": accommodation_decision.comments,
             },
         }
     )

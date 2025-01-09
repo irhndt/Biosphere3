@@ -1,5 +1,5 @@
 from core.conversation_srv.conversation_prompts import *
-from core.llm_factory import LLMSelector
+from core.utils.llm_factory import LLMSelector
 from core.conversation_srv.conversation_model import *
 
 llm_selector = LLMSelector()

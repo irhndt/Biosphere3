@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing_extensions import List, Annotated, TypedDict, Dict, Any
+from typing_extensions import List, Annotated, TypedDict, Dict, Any, Optional
 import asyncio
 
 
@@ -8,7 +8,6 @@ def generic_reducer(a, b):
         result = a.copy()
         for key in b:
             if key in a:
-                # 递归调用
                 result[key] = generic_reducer(a[key], b[key])
             else:
                 result[key] = b[key]
@@ -65,7 +64,7 @@ class Prompts(TypedDict):
 
 
 class PublicData(TypedDict):
-    market_data: Dict[str, Any]  # 市场数据
+    market_data: Dict[str, Any]
 
 
 class RunningState(TypedDict):
@@ -87,7 +86,7 @@ class DailyObjective(BaseModel):
     """Daily objective to follow in future"""
 
     objectives: List[str] = Field(description="daily objectives list")
-    past_objectives: List[List[str]] = Field(description="past daily objectives list")
+    past_objectives: Optional[List[str]] = None
 
 
 class DetailedPlan(BaseModel):
