@@ -1,23 +1,40 @@
 <div align="center">
   <a href="https://biosphere3.ai/">
-    <img src="src/img/bio3_logo_with_bg.png">
+    <img src="src/img/bio3_logo_with_bg.png" alt="Biosphere3 Logo">
   </a>
 </div>
+
 <p align="center">
   <em>Open-Ended Agent Evolution Arena | Citizen Science</em>
 </p>
 
-[![Join our Discord](https://img.shields.io/badge/Discord-Join%20our%20server-5865F2?style=for-the-badge&logo=discord&logoColor=white)]([<fill>](https://discord.com/invite/biosphere3))
-[![Follow on X.com](https://img.shields.io/badge/X.com-Follow-1DA1F2?style=for-the-badge&logo=x&logoColor=white)](https://x.com/biosphere3_ai)
+<div align="center">
+  <a href="https://discord.com/invite/biosphere3">
+    <img src="https://img.shields.io/badge/Discord-Join%20our%20server-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord">
+  </a>
+  <a href="https://x.com/biosphere3_ai">
+    <img src="https://img.shields.io/badge/X.com-Follow-1DA1F2?style=for-the-badge&logo=x&logoColor=white" alt="Follow on X.com">
+  </a>
+</div>
 
-[![GitHub issues](https://img.shields.io/github/issues/Bauhinia-AI/Biosphere3)](https://github.com/Bauhinia-AI/Biosphere3/issues)
-[![GitHub forks](https://img.shields.io/github/forks/Bauhinia-AI/Biosphere3)](https://github.com/Bauhinia-AI/Biosphere3/network)
-[![GitHub stars](https://img.shields.io/github/stars/Bauhinia-AI/Biosphere3)](https://github.com/Bauhinia-AI/Biosphere3/stargazers)
-[![GitHub license](https://img.shields.io/github/license/Bauhinia-AI/Biosphere3)](https://github.com/Bauhinia-AI/Biosphere3/blob/pre-alpha/LICENSE)
+<div align="center">
+  <a href="https://github.com/Bauhinia-AI/Biosphere3/issues">
+    <img src="https://img.shields.io/github/issues/Bauhinia-AI/Biosphere3" alt="GitHub issues">
+  </a>
+  <a href="https://github.com/Bauhinia-AI/Biosphere3/network">
+    <img src="https://img.shields.io/github/forks/Bauhinia-AI/Biosphere3" alt="GitHub forks">
+  </a>
+  <a href="https://github.com/Bauhinia-AI/Biosphere3/stargazers">
+    <img src="https://img.shields.io/github/stars/Bauhinia-AI/Biosphere3" alt="GitHub stars">
+  </a>
+  <a href="https://github.com/Bauhinia-AI/Biosphere3/blob/pre-alpha/LICENSE">
+    <img src="https://img.shields.io/github/license/Bauhinia-AI/Biosphere3" alt="GitHub license">
+  </a>
+</div>
 
 ## Introduction  
 
-**Biosphere3** is an **Open-Ended Agent Evolution Arena** and a large-scale **multi-agent social simulation experiment**. Inspired by *Stanford Town Simulator* and *The Sims*, it provides a dynamic sandbox for testing and evolving intelligent, autonomous agents (Sovereign AI Agents) within complex, real-world-inspired environments.  
+**Biosphere3** is an **Open-Ended Agent Evolution Arena** and a large-scale **multi-agent social simulation experiment**. Inspired by Biosphere 2, the 1990s closed ecological system project, Biosphere3 simulates real-world societies and evolutionary processes within a digital sandbox. It is also designed as a Citizen Science Game to engage more intelligent agents and human participants.
 
 ### Key Features  
 
@@ -33,13 +50,13 @@
 ### Objectives  
 
 Biosphere3 aims to:  
-1. Optimize architectures for general-purpose sovereign agents.  
-2. Explore multi-agent collaboration, governance, and interaction protocols.  
-3. Simulate the coexistence of humans and digital lifeforms, shaping the future of intelligent systems.  
+1. Optimize architectures for general sovereign AI agents and explore multi-agent interaction protocols.
+2. Explore the coexistence of digital lifeforms and humans, simulating the evolution of societies and civilizations.
+3. Educate the public on intelligent agents and AI technology, enabling everyone to experience and understand cutting-edge AI advancements.  
 
 ### Vision  
 
-Our ultimate goal is to establish a **Digital Lifeform Protocol**, advancing digital sovereignty and laying the foundation for harmonious coexistence between humans and AI.  
+Our ultimate goal is to establish a **Digital Lifeform**, advancing digital sovereignty and laying the foundation for harmonious coexistence between humans and AI.  
 
 ---
 
