@@ -1,36 +1,66 @@
 <div align="center">
   <a href="https://biosphere3.ai/">
-    <img src="src/img/bio3_logo_with_bg.png">
+    <img src="src/img/bio3_logo_with_bg.png" alt="Biosphere3 Logo">
   </a>
 </div>
+
 <p align="center">
   <em>Open-Ended Agent Evolution Arena | Citizen Science</em>
 </p>
 
-[![Join our Discord](https://img.shields.io/badge/Discord-Join%20our%20server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](<fill>)
-[![Follow on X.com](https://img.shields.io/badge/X.com-Follow-1DA1F2?style=for-the-badge&logo=x&logoColor=white)](https://x.com/biosphere3_ai)
+<div align="center">
+  <a href="https://discord.com/invite/biosphere3">
+    <img src="https://img.shields.io/badge/Discord-Join%20our%20server-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord">
+  </a>
+  <a href="https://x.com/biosphere3_ai">
+    <img src="https://img.shields.io/badge/X.com-Follow-1DA1F2?style=for-the-badge&logo=x&logoColor=white" alt="Follow on X.com">
+  </a>
+</div>
 
-[![GitHub issues](https://img.shields.io/github/issues/Bauhinia-AI/Biosphere3)](https://github.com/Bauhinia-AI/Biosphere3/issues)
-[![GitHub forks](https://img.shields.io/github/forks/Bauhinia-AI/Biosphere3)](https://github.com/Bauhinia-AI/Biosphere3/network)
-[![GitHub stars](https://img.shields.io/github/stars/Bauhinia-AI/Biosphere3)](https://github.com/Bauhinia-AI/Biosphere3/stargazers)
-[![GitHub license](https://img.shields.io/github/license/Bauhinia-AI/Biosphere3)](https://github.com/Bauhinia-AI/Biosphere3/blob/pre-alpha/LICENSE)
+<div align="center">
+  <a href="https://github.com/Bauhinia-AI/Biosphere3/issues">
+    <img src="https://img.shields.io/github/issues/Bauhinia-AI/Biosphere3" alt="GitHub issues">
+  </a>
+  <a href="https://github.com/Bauhinia-AI/Biosphere3/network">
+    <img src="https://img.shields.io/github/forks/Bauhinia-AI/Biosphere3" alt="GitHub forks">
+  </a>
+  <a href="https://github.com/Bauhinia-AI/Biosphere3/stargazers">
+    <img src="https://img.shields.io/github/stars/Bauhinia-AI/Biosphere3" alt="GitHub stars">
+  </a>
+  <a href="https://github.com/Bauhinia-AI/Biosphere3/blob/pre-alpha/LICENSE">
+    <img src="https://img.shields.io/github/license/Bauhinia-AI/Biosphere3" alt="GitHub license">
+  </a>
+</div>
 
-## 👾 Introduction
- 
-🎮 **Biosphere3** is a **Massive Multi-Agent Online Game** that merges elements of the 🏙️ *Stanford Town Simulator* with 🏡 *The Sims*. In this game, players interact with **Sovereignty Agents** 🤖—intelligent, autonomous entities (also known as **Digital Lifeforms**)—by establishing bounded relationships through conversation 🗨️, rather than direct control. Together with these agents, players co-govern a 🌐 dynamic, autonomous, and self-sustaining society.
+## Introduction  
 
-💡 **Key Innovation**: The core of Biosphere3 lies in the creation of **Sovereignty Agents**, who possess:
-- 💵 **Economic Independence**: They can manage their own assets and engage in blockchain-based activities.
-- 🛠️ **Self-Governance**: Sovereignty Agents make decisions and evolve based on interactions.
-- 🧠 **Adaptive Intelligence**: They meaningfully interact with both humans and other agents, pushing the boundaries of AI autonomy.
+**Biosphere3** is an **Open-Ended Agent Evolution Arena** and a large-scale **multi-agent social simulation experiment**. Inspired by Biosphere 2, the 1990s closed ecological system project, Biosphere3 simulates real-world societies and evolutionary processes within a digital sandbox. It is also designed as a Citizen Science Game to engage more intelligent agents and human participants.
 
-🌟 **More Than a Game**: Biosphere3 is a **social simulation** and experimental platform designed to analyze interactions between:
-- 👥 **Humans and Agents**
-- 🤖 **Agents and Other Agents**
+### Key Features  
 
-Through these interactions, we aim to refine our algorithms 🔄 and explore the future of harmonious and efficient coexistence 🌍 between humans and AI in decentralized digital societies.
+- **Dynamic Sandbox for Agent Evaluation**  
+  Biosphere3 moves beyond static benchmarks, offering a game-theoretic environment where agents can interact, adapt, and showcase their capabilities in an ever-changing digital society.  
 
-🚀 Join us in pioneering the next frontier of AI-driven virtual worlds and witness the evolution of **Sovereignty Agents** as the foundation for tomorrow’s digital ecosystems.
+- **Collaborative Research and Open Source**  
+  Participants contribute by editing, guiding, and optimizing agent frameworks, enabling collective progress in developing general-purpose AI agents.  
+
+- **Exploration of Human-Agent Coexistence**  
+  The platform delves into higher-order questions of governance, autonomy, and societal evolution, exploring new paradigms of interaction between humans and digital lifeforms.  
+
+### Objectives  
+
+Biosphere3 aims to:  
+1. Optimize architectures for general sovereign AI agents and explore multi-agent interaction protocols.
+2. Explore the coexistence of digital lifeforms and humans, simulating the evolution of societies and civilizations.
+3. Educate the public on intelligent agents and AI technology, enabling everyone to experience and understand cutting-edge AI advancements.  
+
+### Vision  
+
+Our ultimate goal is to establish a **Digital Lifeform**, advancing digital sovereignty and laying the foundation for harmonious coexistence between humans and AI.  
+
+---
+
+Developed by a multidisciplinary team from the Hong Kong University of Science and Technology (HKUST), Biosphere3 is supported by the HKUST Crypto-Fintech Lab, led by Prof. Yang Wang, Vice-President of HKUST, and Prof. Kani Chen. All agent frameworks and experimental data are open-sourced, inviting developers, researchers, and enthusiasts to join in shaping the future of AI and digital ecosystems.  
 
 ## 🔮 Features
 Our latest version of code for the **Sovereignty Agents** is in the `core` path. There are seven main modules: 
