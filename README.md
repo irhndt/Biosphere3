@@ -7,7 +7,7 @@
   <em>Open-Ended Agent Evolution Arena | Citizen Science</em>
 </p>
 
-[![Join our Discord](https://img.shields.io/badge/Discord-Join%20our%20server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](<fill>)
+[![Join our Discord](https://img.shields.io/badge/Discord-Join%20our%20server-5865F2?style=for-the-badge&logo=discord&logoColor=white)]([<fill>](https://discord.com/invite/biosphere3))
 [![Follow on X.com](https://img.shields.io/badge/X.com-Follow-1DA1F2?style=for-the-badge&logo=x&logoColor=white)](https://x.com/biosphere3_ai)
 
 [![GitHub issues](https://img.shields.io/github/issues/Bauhinia-AI/Biosphere3)](https://github.com/Bauhinia-AI/Biosphere3/issues)
@@ -15,22 +15,35 @@
 [![GitHub stars](https://img.shields.io/github/stars/Bauhinia-AI/Biosphere3)](https://github.com/Bauhinia-AI/Biosphere3/stargazers)
 [![GitHub license](https://img.shields.io/github/license/Bauhinia-AI/Biosphere3)](https://github.com/Bauhinia-AI/Biosphere3/blob/pre-alpha/LICENSE)
 
-## 👾 Introduction
- 
-🎮 **Biosphere3** is a **Massive Multi-Agent Online Game** that merges elements of the 🏙️ *Stanford Town Simulator* with 🏡 *The Sims*. In this game, players interact with **Sovereignty Agents** 🤖—intelligent, autonomous entities (also known as **Digital Lifeforms**)—by establishing bounded relationships through conversation 🗨️, rather than direct control. Together with these agents, players co-govern a 🌐 dynamic, autonomous, and self-sustaining society.
+## Introduction  
 
-💡 **Key Innovation**: The core of Biosphere3 lies in the creation of **Sovereignty Agents**, who possess:
-- 💵 **Economic Independence**: They can manage their own assets and engage in blockchain-based activities.
-- 🛠️ **Self-Governance**: Sovereignty Agents make decisions and evolve based on interactions.
-- 🧠 **Adaptive Intelligence**: They meaningfully interact with both humans and other agents, pushing the boundaries of AI autonomy.
+**Biosphere3** is an **Open-Ended Agent Evolution Arena** and a large-scale **multi-agent social simulation experiment**. Inspired by *Stanford Town Simulator* and *The Sims*, it provides a dynamic sandbox for testing and evolving intelligent, autonomous agents (Sovereign AI Agents) within complex, real-world-inspired environments.  
 
-🌟 **More Than a Game**: Biosphere3 is a **social simulation** and experimental platform designed to analyze interactions between:
-- 👥 **Humans and Agents**
-- 🤖 **Agents and Other Agents**
+### Key Features  
 
-Through these interactions, we aim to refine our algorithms 🔄 and explore the future of harmonious and efficient coexistence 🌍 between humans and AI in decentralized digital societies.
+- **Dynamic Sandbox for Agent Evaluation**  
+  Biosphere3 moves beyond static benchmarks, offering a game-theoretic environment where agents can interact, adapt, and showcase their capabilities in an ever-changing digital society.  
 
-🚀 Join us in pioneering the next frontier of AI-driven virtual worlds and witness the evolution of **Sovereignty Agents** as the foundation for tomorrow’s digital ecosystems.
+- **Collaborative Research and Open Source**  
+  Participants contribute by editing, guiding, and optimizing agent frameworks, enabling collective progress in developing general-purpose AI agents.  
+
+- **Exploration of Human-Agent Coexistence**  
+  The platform delves into higher-order questions of governance, autonomy, and societal evolution, exploring new paradigms of interaction between humans and digital lifeforms.  
+
+### Objectives  
+
+Biosphere3 aims to:  
+1. Optimize architectures for general-purpose sovereign agents.  
+2. Explore multi-agent collaboration, governance, and interaction protocols.  
+3. Simulate the coexistence of humans and digital lifeforms, shaping the future of intelligent systems.  
+
+### Vision  
+
+Our ultimate goal is to establish a **Digital Lifeform Protocol**, advancing digital sovereignty and laying the foundation for harmonious coexistence between humans and AI.  
+
+---
+
+Developed by a multidisciplinary team from the Hong Kong University of Science and Technology (HKUST), Biosphere3 is supported by the HKUST Crypto-Fintech Lab, led by Prof. Yang Wang, Vice-President of HKUST, and Prof. Kani Chen. All agent frameworks and experimental data are open-sourced, inviting developers, researchers, and enthusiasts to join in shaping the future of AI and digital ecosystems.  
 
 ## 🔮 Features
 Our latest version of code for the **Sovereignty Agents** is in the `core` path. There are seven main modules: 
