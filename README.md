@@ -1,42 +1,19 @@
+<div align="center">
+  <a href="https://biosphere3.ai/">
+    <img src="src/img/bio3_logo_with_bg.png">
+  </a>
+</div>
 <p align="center">
-<img src="src/img/bio3_logo_with_bg.png">
-<br>
-<em>Biosphere3</em>
-<br><br>
-<a title="Build Status" target="_blank" href="#"><img src="https://img.shields.io/badge/Build_Status-passing-green"></a>
-<a title="Releases" target="_blank" href="#"><img src="https://img.shields.io/badge/Releases-V0.1-blue"></a>
-<a title="Downloads" target="_blank" href="#"><img src="https://img.shields.io/badge/Downloads-873-purple"></a>
-
-<br>
-<a title="Docker Pulls" target="_blank" href="#"><img src="https://img.shields.io/badge/Docker_Pulls-green"></a>
-<a title="Docker Image Size" target="_blank" href="#"><img src="https://img.shields.io/badge/Docker_Image_Size-ff96b4"></a>
-<a title="Hits" target="_blank" href="#"><img src="https://img.shields.io/badge/Hits-lightgrey"></a>
-<br>
-<a title="AGPLv3" target="_blank" href="#"><img src="https://img.shields.io/badge/license-AGPLv3-orange"></a>
-<a title="Code Size" target="_blank" href="#"><img src="https://img.shields.io/badge/Code_Size-yellow"></a>
-<a title="GitHub Pull Requests" target="_blank" href="#"><img src="https://img.shields.io/badge/GitHub_Pull_Requests-FF9966"></a>
-<br>
-<a title="GitHub Commits" target="_blank" href="#"><img src="https://img.shields.io/badge/GitHub_Commits-lightgrey"></a>
-<a title="Last Commit" target="_blank" href="#"><img src="https://img.shields.io/badge/Last_Commit-FF9900"></a>
-<br><br>
+  <em>Open-Ended Agent Evolution Arena | Citizen Science</em>
 </p>
 
----
+[![Join our Discord](https://img.shields.io/badge/Discord-Join%20our%20server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](<fill>)
+[![Follow on X.com](https://img.shields.io/badge/X.com-Follow-1DA1F2?style=for-the-badge&logo=x&logoColor=white)](https://x.com/biosphere3_ai)
 
-## Table of Contents
-
-* [👾 Introduction](#-introduction)
-* [🔮 Features](#-features)
-* [🏗️ Architecture and Ecosystem](#-architecture-and-ecosystem)
-* [🌟 Star History](#-star-history)
-* [🗺️ Roadmap](#️-roadmap)
-* [🏘️ Community](#️-community)
-* [🛠️ Development Guide](#️-development-guide)
-* [❓ FAQ](#-faq)
-* [🙏 Acknowledgement](#-acknowledgement)
-  * [Contributors](#contributors)
-
----
+[![GitHub issues](https://img.shields.io/github/issues/Bauhinia-AI/Biosphere3)](https://github.com/Bauhinia-AI/Biosphere3/issues)
+[![GitHub forks](https://img.shields.io/github/forks/Bauhinia-AI/Biosphere3)](https://github.com/Bauhinia-AI/Biosphere3/network)
+[![GitHub stars](https://img.shields.io/github/stars/Bauhinia-AI/Biosphere3)](https://github.com/Bauhinia-AI/Biosphere3/stargazers)
+[![GitHub license](https://img.shields.io/github/license/Bauhinia-AI/Biosphere3)](https://github.com/Bauhinia-AI/Biosphere3/blob/pre-alpha/LICENSE)
 
 ## 👾 Introduction
  
@@ -82,24 +59,24 @@ Module Name | Description | File Path
 
 
 ## 🛠️ Quickstart
-### Overview
+### 🌟 Overview
 Our project consists of multiple components, including **databases and game environment**. To provide a seamless experience for developers and researchers who want to quickly get started with our **Agent framework**, we’ve designed a **simulator** that replicates the core functionalities of both the game and database environments.
 
 This **lightweight sandbox environment** allows you to test and interact with the Agent framework in a controlled setting without requiring full integration with the actual game and databases. However, note that **some features are limited**, and full capabilities can only be experienced when connected to the complete game environment.
 
-### Prerequisites
+### 📋 Prerequisites
 Before running the simulator, ensure that you have:
-- Python 3.10 or above installed.
-- All required dependencies installed via pip.
-- A properly configured .env file with necessary API keys and database URLs.
+- 🐍 Python 3.10 or above installed.
+- 📦 All required dependencies installed via pip.
+- 🔑 A properly configured .env file with necessary API keys and database URLs.
 
-### Setup Instructions
-1. Install Dependencies
+### ⚙️ Setup Instructions
+1. 📥 Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Configure Environment Variables
+2. 🛠️ Configure Environment Variables
 ```bash
 cp .env.example .env
 ```
@@ -111,17 +88,15 @@ AGENT_BACKEND_URL="http://127.0.0.1:5006"
 GAME_BACKEND_TIMEOUT=8
 ```
 
-3. Run the Websocket server
+3. 🚀 Run the Websocket server
 ```bash
 python core/ai.py
 ```
 
-4. Open another terminal & Run the game simulators
+4. 🕹️ Open another terminal & Run the game simulators
 ```bash
 sh run_simulator.sh
 ```
 
-5. Interact with the Agent
+5. 🤖 Interact with the Agent
 - Once running, you can observe the Agent’s behavior in the terminal.
-
-**You can refer to our [official website](https://biosphere3.ai/) for more information and demo.**
