@@ -1,4 +1,6 @@
 import sys
+
+sys.path.append(".")
 import yaml
 import asyncio
 import websockets
@@ -8,9 +10,8 @@ import os
 from loguru import logger
 from utils.character_manager import CharacterManager
 from utils.web_monitor.routes import WebMonitor
-from graph_instance import LangGraphInstance
-from conversation_instance import ConversationInstance
-from agent_srv.utils import save_decision_to_db
+from core.agents.graph_instance import LangGraphInstance
+from core.agents.conversation_instance import ConversationInstance
 
 
 class ConfigLoader:
@@ -201,7 +202,8 @@ def main():
         format="{time} {level} {message}",
     )
 
-    environment = "production" if sys.platform.startswith("linux") else "development"
+    # environment = "production" if sys.platform.startswith("linux") else "development"
+    environment = "development"
     config = ConfigLoader(environment)
     server = AI_WS_Server(config)
     asyncio.run(server.run())

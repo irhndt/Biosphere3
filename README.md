@@ -62,7 +62,7 @@ Our ultimate goal is to establish a **Digital Lifeform**, advancing digital sove
 
 Developed by a multidisciplinary team from the Hong Kong University of Science and Technology (HKUST), Biosphere3 is supported by the HKUST Crypto-Fintech Lab, led by Prof. Yang Wang, Vice-President of HKUST, and Prof. Kani Chen. All agent frameworks and experimental data are open-sourced, inviting developers, researchers, and enthusiasts to join in shaping the future of AI and digital ecosystems.  
 
-## 🔮 Features
+## 🔮 Structure
 Our latest version of code for the **Sovereignty Agents** is in the `core` path. There are seven main modules: 
 
 - 📞 **Message Center**,
@@ -78,12 +78,12 @@ Old versions and other experiment data can be found in the `legacy` path. Intere
 
 Module Name | Description | File Path
 ---- | ---- | ----
-📞 Message Center | <ul><li> Receive response messages from the game server and send agent decisions to the game environment for both plan and conversation workflow through websocket connections.</li></ui> | <ul><li>`core/ai.py`</li></ui>
-🧩 Model Selector | <ul><li>Select different model types, and split api keys for plan and conversation module.</li></ui> | <ul><li>`core/llm_factory.py`</li></ui>
-🗓️ Action Planner | <ul><li>Create an agent instance and run the planning workflow. </li><li> Get character data from database. </li><li> Prompt for the agent instance. </li><li> Construct output structures for the agent instance. </li><li> Invoke the LLM for each plan function of the agent instance.</li></ui> | <ul><li>`core/graph_instance.py` </li><li> `core/agent_srv/utils.py` </li><li> `core/agent_srv/prompts.py` </li><li> `core/agent_srv/node_models.py` </li><li> `core/agent_srv/node_engines.py`</li></ui>
-💬 Conversation | <ul><li>Create an conversation instance and run different tasks. </li><li> Prompt for the conversation instance. </li><li> Construct output structures for the conversation instance. </li><li> Invoke the LLM for launching, reponding and reading tasks. </li><li> Create conversation planner and responser.</li></ui> | <ul><li>`core/conversation_instance.py` </li><li> `core/conversation_srv/conversation_prompts.py` </li><li> `core/conversation_srv/conversation_model.py` </li><li> `core/conversation_srv/conversation_engines.py` </li><li> `core/conversation_srv/conversation_utils.py`</li></ui> 
+📞 Message Center | <ul><li> Receive response messages from the game server and send agent decisions to the game environment for both plan and conversation workflow through websocket connections.</li></ui> | <ul><li>`core/main.py`</li></ui>
+🧩 Model Selector | <ul><li>Select different model types, and split api keys for plan and conversation module.</li></ui> | <ul><li>`core/utils/llm_factory.py`</li></ui>
+🗓️ Action Planner | <ul><li>Create an agent instance and run the planning workflow. </li><li> Get character data from database. </li><li> Prompt for the agent instance. </li><li> Construct output structures for the agent instance. </li><li> Invoke the LLM for each plan function of the agent instance.</li></ui> | <ul><li>`core/agents/graph_instance.py` </li><li> `core/agent_srv/utils.py` </li><li> `core/agent_srv/prompts.py` </li><li> `core/agent_srv/node_models.py` </li><li> `core/agent_srv/node_engines.py`</li></ui>
+💬 Conversation | <ul><li>Create an conversation instance and run different tasks. </li><li> Prompt for the conversation instance. </li><li> Construct output structures for the conversation instance. </li><li> Invoke the LLM for launching, reponding and reading tasks. </li><li> Create conversation planner and responser.</li></ui> | <ul><li>`core/agents/conversation_instance.py` </li><li> `core/conversation_srv/conversation_prompts.py` </li><li> `core/conversation_srv/conversation_model.py` </li><li> `core/conversation_srv/conversation_engines.py` </li><li> `core/conversation_srv/conversation_utils.py`</li></ui> 
 📊 Database Support | <ul><li>Fetch character data from game database and update new states. </li><li> Get agent data from agent database and update agent decisions.</li></ui> | <ul><li>`core/db/game_api_utils.py` </li><li> `core/db/database_api_utils.py`</li></ui>
-🦸‍♂️ Character Manager | <ul><li>Manage and monitor all active agent connections and clean up disconnected characters.</li></ui> | <ul><li>`core/websocket_server`</li></ui> 
+🦸‍♂️ Character Manager | <ul><li>Manage and monitor all active agent connections and clean up disconnected characters.</li></ui> | <ul><li>`core/utils/character_manager.py`</li></ui> 
 ⚙️ Game Settings | <ul><li>Map character skills to actions.</li></ui> | <ul><li>`core/files/skill2actions.json`</li></ui>
 💾 Experiments | <ul><li>Old versions and other experiments during the development process.</li></ui> | <ul><li>`legacy`</li></ui>
 
@@ -120,7 +120,7 @@ GAME_BACKEND_TIMEOUT=8
 
 3. 🚀 Run the Websocket server
 ```bash
-python core/ai.py
+python core/main.py
 ```
 
 4. 🕹️ Open another terminal & Run the game simulators
