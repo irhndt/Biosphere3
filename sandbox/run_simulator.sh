@@ -8,17 +8,16 @@ AGENT_SERVER_PORT=5006
 
 # Start Game and Agent servers
 echo "Starting game_http_server.py..."
-python core/sandbox/game_http_server.py &  
+python sandbox/game_http_server.py &  
 GAME_PID=$!
 
 echo "Starting agent_http_server.py..."
-python core/sandbox/agent_http_server.py &  
+python sandbox/agent_http_server.py &  
 AGENT_PID=$!
 
 # Function: Wait for a port to be available
 wait_for_port() {
     local port=$1
-    echo "Waiting for port $port to be available..."
     while ! nc -z localhost $port; do
         sleep 1
     done
@@ -31,7 +30,7 @@ wait_for_port $AGENT_SERVER_PORT
 
 # Start the game simulator
 echo "Starting game_simulator.py..."
-python core/sandbox/game_simulator.py &  
+python sandbox/game_simulator.py &  
 SIMULATOR_PID=$!
 
 # Handle SIGINT (Ctrl+C) and ensure all processes are terminated

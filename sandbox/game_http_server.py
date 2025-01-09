@@ -691,7 +691,7 @@ class HTTPServer:
                     "data": {
                         "id": 47,
                         "characterId": 448450,
-                        "modelType": "deepseek-chat",
+                        "modelType": "gpt-4o-mini",
                         "createTime": "2025-01-03 22:05:32",
                     },
                 }
