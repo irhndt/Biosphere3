@@ -69,8 +69,8 @@ async def generate_daily_objective(state: RunningState):
             )
             retry_count += 1
             continue
-    full_prompt = obj_planner_prompt.format(**payload)
-    logger.info("======generate_daily_objective======\n" + full_prompt)
+    # full_prompt = obj_planner_prompt.format(**payload)
+    # logger.info("======generate_daily_objective======\n" + full_prompt)
     for item in planner_response["objectives"]:
         state["decision"]["daily_objective"].append(item)
 
@@ -111,8 +111,8 @@ async def generate_meta_action_sequence(state: RunningState):
             retry_count += 1
             continue
 
-    full_prompt = meta_action_sequence_prompt.format(**payload)
-    logger.info("======generate_meta_action_sequence======\n" + full_prompt)
+    # full_prompt = meta_action_sequence_prompt.format(**payload)
+    # logger.info("======generate_meta_action_sequence======\n" + full_prompt)
     for item in meta_action_sequence["meta_action_sequence"]:
         state["decision"]["meta_seq"].append(item)
     for item in meta_action_sequence["description_sequence"]:
@@ -331,9 +331,19 @@ async def generate_daily_reflection(state: RunningState):
     }
     daily_reflection = await daily_reflection_generator.ainvoke(payload)
 
-    full_prompt = daily_reflection_prompt.format(**payload)
-    logger.info("======generate_daily_reflection======\n" + full_prompt)
+    # full_prompt = daily_reflection_prompt.format(**payload)
+    # logger.info("======generate_daily_reflection======\n" + full_prompt)
     state["decision"]["reflection"].append(daily_reflection["reflection"])
+    # await state["instance"].send_message(
+    #     {
+    #         "characterId": state["userid"],
+    #         "messageName": "daily_reflection",
+    #         "messageCode": 11,
+    #         "data": {
+    #             "reflection": daily_reflection["reflection"],
+    #         },
+    #     }
+    # )
 
     logger.info(f"🔍 DAILY_REFLECTION INVOKED with {daily_reflection['reflection']}")
 
@@ -363,6 +373,14 @@ async def generate_character_arc(state: RunningState):
         "characterId": state["userid"],
         **dict(character_arc),
     }
+    # await state["instance"].send_message(
+    #     {
+    #         "characterId": state["userid"],
+    #         "messageName": "character_arc",
+    #         "messageCode": 12,
+    #         "data": {"character_arc": character_arc_data},
+    #     }
+    # )
     logger.info(f"📜 Character Arc: {character_arc_data}")
     make_api_request_sync("POST", "/character_arc/", data=character_arc_data)
 

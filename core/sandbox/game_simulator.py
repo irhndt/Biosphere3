@@ -1,6 +1,7 @@
 import asyncio
 import websockets
 import json
+from loguru import logger
 
 characterId = 448450
 characterId2 = 240929
@@ -55,6 +56,27 @@ requests = {
             "Finish": [False, False],
         },
     },
+    "cv_submission": {
+        "characterId": characterId,
+        "messageCode": 13,
+        "messageName": "cv_submission",
+        "data": {
+            "health": 100,
+            "studyXp": 100,
+            "education": "University",
+            "week": 1,
+            "date": 1,
+        },
+    },
+    "accommodation_event": {
+        "characterId": characterId,
+        "messageCode": 14,
+        "messageName": "accommodation_event",
+        "data": {
+            "msg": "House rent will expire tomorrow",
+            "gameTime": "time",
+        },
+    },
 }
 
 
@@ -62,7 +84,7 @@ async def send_request(websocket, request):
     message = json.dumps(request)
     await websocket.send(message)
     if request["messageName"] != "heartbeat":
-        print(f"Sent: {message}")
+        logger.info(f"Sent: {message}")
 
 
 async def receive_response(websocket):
@@ -70,7 +92,7 @@ async def receive_response(websocket):
         response = await websocket.recv()
         message = json.loads(response)
         if message["messageName"] != "heartbeat":
-            print(f"Received: {message}")
+            logger.info(f"Received: {message}")
 
 
 async def send_heartbeat(websocket):
@@ -92,6 +114,26 @@ async def send_event_info(websocket):
         await send_request(websocket, requests["eventInfo"])
 
 
+async def send_cv_submission(websocket):
+    while True:
+        await asyncio.sleep(1800)
+        requests["cv_submission"]["data"]["health"] = 100
+        requests["cv_submission"]["data"]["studyXp"] = 100
+        requests["cv_submission"]["data"]["education"] = "University"
+        requests["cv_submission"]["data"]["week"] = 1
+        requests["cv_submission"]["data"]["date"] = 1
+        await send_request(websocket, requests["cv_submission"])
+
+
+async def send_accommodation_event(websocket):
+    while True:
+        await asyncio.sleep(1800)
+        requests["accommodation_event"]["data"][
+            "msg"
+        ] = "House rent will expire tomorrow"
+        await send_request(websocket, requests["accommodation_event"])
+
+
 async def main():
     uri = "ws://localhost:6789"
     async with websockets.connect(uri) as websocket:
@@ -100,11 +142,19 @@ async def main():
         receive_task = asyncio.create_task(receive_response(websocket))
 
         heartbeat_task = asyncio.create_task(send_heartbeat(websocket))
-        game_time_task = asyncio.create_task(send_game_time(websocket))
+        # game_time_task = asyncio.create_task(send_game_time(websocket))
         event_info_task = asyncio.create_task(send_event_info(websocket))
-
+        cv_submission_task = asyncio.create_task(send_cv_submission(websocket))
+        accommodation_event_task = asyncio.create_task(
+            send_accommodation_event(websocket)
+        )
         await asyncio.gather(
-            receive_task, heartbeat_task, game_time_task, event_info_task
+            receive_task,
+            heartbeat_task,
+            # game_time_task,
+            event_info_task,
+            cv_submission_task,
+            accommodation_event_task,
         )
 
 

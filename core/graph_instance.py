@@ -148,7 +148,7 @@ class LangGraphInstance:
             character_arc_task = asyncio.create_task(
                 self.run_event("CHARACTER_ARC", 900)
             )
-            self.tasks = [plan_task, reflection_task, character_arc_task]
+            self.routine_tasks = [plan_task, reflection_task, character_arc_task]
             await asyncio.gather(*self.routine_tasks)
         except Exception as e:
             self.logger.error(f"User {self.user_id}: Error in event_scheduler: {e}")
