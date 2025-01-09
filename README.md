@@ -95,7 +95,7 @@ python core/ai.py
 
 4. 🕹️ Open another terminal & Run the game simulators
 ```bash
-sh run_simulator.sh
+sh sandbox/run_simulator.sh
 ```
 
 5. 🤖 Interact with the Agent
