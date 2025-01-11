@@ -1,8 +1,6 @@
-from langchain_core.pydantic_v1 import BaseModel, Field
-from typing import List, Annotated, TypedDict, Dict, Any
+from pydantic import BaseModel, Field
+from typing_extensions import List, Annotated, TypedDict, Dict, Any, Optional
 import asyncio
-
-# 带有合并逻辑的鸡肋
 
 
 def generic_reducer(a, b):
@@ -10,7 +8,6 @@ def generic_reducer(a, b):
         result = a.copy()
         for key in b:
             if key in a:
-                # 递归调用
                 result[key] = generic_reducer(a[key], b[key])
             else:
                 result[key] = b[key]
@@ -67,7 +64,7 @@ class Prompts(TypedDict):
 
 
 class PublicData(TypedDict):
-    market_data: Dict[str, Any]  # 市场数据
+    market_data: Dict[str, Any]
 
 
 class RunningState(TypedDict):
@@ -89,7 +86,7 @@ class DailyObjective(BaseModel):
     """Daily objective to follow in future"""
 
     objectives: List[str] = Field(description="daily objectives list")
-    past_objectives: List[List[str]] = Field(description="past daily objectives list")
+    past_objectives: Optional[List[str]] = None
 
 
 class DetailedPlan(BaseModel):
@@ -102,8 +99,12 @@ class MetaActionSequence(BaseModel):
     """Meta action sequence to follow in future"""
 
     meta_action_sequence: List[str] = Field(description="meta action sequence")
-    action_emoji_sequence: List[str] = Field(description="emoji sequence that describes actions")
-    state_emoji_sequence: List[str] = Field(description="emoji sequence that describes states")
+    action_emoji_sequence: List[str] = Field(
+        description="emoji sequence that describes actions"
+    )
+    state_emoji_sequence: List[str] = Field(
+        description="emoji sequence that describes states"
+    )
     description_sequence: List[str] = Field(description="description sequence")
 
 

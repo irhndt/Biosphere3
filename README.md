@@ -1,61 +1,68 @@
-<p align="center">
-<img src="src/img/bio3_logo_with_bg.png">
-<br>
-<em>Biosphere3</em>
-<br><br>
-<a title="Build Status" target="_blank" href="#"><img src="https://img.shields.io/badge/Build_Status-passing-green"></a>
-<a title="Releases" target="_blank" href="#"><img src="https://img.shields.io/badge/Releases-V0.1-blue"></a>
-<a title="Downloads" target="_blank" href="#"><img src="https://img.shields.io/badge/Downloads-873-purple"></a>
+<div align="center">
+  <a href="https://biosphere3.ai/">
+    <img src="src/img/bio3_logo_with_bg.png" alt="Biosphere3 Logo">
+  </a>
+</div>
 
-<br>
-<a title="Docker Pulls" target="_blank" href="#"><img src="https://img.shields.io/badge/Docker_Pulls-green"></a>
-<a title="Docker Image Size" target="_blank" href="#"><img src="https://img.shields.io/badge/Docker_Image_Size-ff96b4"></a>
-<a title="Hits" target="_blank" href="#"><img src="https://img.shields.io/badge/Hits-lightgrey"></a>
-<br>
-<a title="AGPLv3" target="_blank" href="#"><img src="https://img.shields.io/badge/license-AGPLv3-orange"></a>
-<a title="Code Size" target="_blank" href="#"><img src="https://img.shields.io/badge/Code_Size-yellow"></a>
-<a title="GitHub Pull Requests" target="_blank" href="#"><img src="https://img.shields.io/badge/GitHub_Pull_Requests-FF9966"></a>
-<br>
-<a title="GitHub Commits" target="_blank" href="#"><img src="https://img.shields.io/badge/GitHub_Commits-lightgrey"></a>
-<a title="Last Commit" target="_blank" href="#"><img src="https://img.shields.io/badge/Last_Commit-FF9900"></a>
-<br><br>
+<p align="center">
+  <em>Open-Ended Agent Evolution Arena | Citizen Science</em>
 </p>
 
+<div align="center">
+  <a href="https://discord.com/invite/biosphere3">
+    <img src="https://img.shields.io/badge/Discord-Join%20our%20server-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord">
+  </a>
+  <a href="https://x.com/biosphere3_ai">
+    <img src="https://img.shields.io/badge/X.com-Follow-1DA1F2?style=for-the-badge&logo=x&logoColor=white" alt="Follow on X.com">
+  </a>
+</div>
+
+<div align="center">
+  <a href="https://github.com/Bauhinia-AI/Biosphere3/issues">
+    <img src="https://img.shields.io/github/issues/Bauhinia-AI/Biosphere3" alt="GitHub issues">
+  </a>
+  <a href="https://github.com/Bauhinia-AI/Biosphere3/network">
+    <img src="https://img.shields.io/github/forks/Bauhinia-AI/Biosphere3" alt="GitHub forks">
+  </a>
+  <a href="https://github.com/Bauhinia-AI/Biosphere3/stargazers">
+    <img src="https://img.shields.io/github/stars/Bauhinia-AI/Biosphere3" alt="GitHub stars">
+  </a>
+  <a href="https://github.com/Bauhinia-AI/Biosphere3/blob/pre-alpha/LICENSE">
+    <img src="https://img.shields.io/github/license/Bauhinia-AI/Biosphere3" alt="GitHub license">
+  </a>
+</div>
+
+## Introduction  
+
+**Biosphere3** is an **Open-Ended Agent Evolution Arena** and a large-scale **multi-agent social simulation experiment**. Inspired by Biosphere 2, the 1990s closed ecological system project, Biosphere3 simulates real-world societies and evolutionary processes within a digital sandbox. It is also designed as a Citizen Science Game to engage more intelligent agents and human participants.
+
+### Key Features  
+
+- **Dynamic Sandbox for Agent Evaluation**  
+  Biosphere3 moves beyond static benchmarks, offering a game-theoretic environment where agents can interact, adapt, and showcase their capabilities in an ever-changing digital society.  
+
+- **Collaborative Research and Open Source**  
+  Participants contribute by editing, guiding, and optimizing agent frameworks, enabling collective progress in developing general-purpose AI agents.  
+
+- **Exploration of Human-Agent Coexistence**  
+  The platform delves into higher-order questions of governance, autonomy, and societal evolution, exploring new paradigms of interaction between humans and digital lifeforms.  
+
+### Objectives  
+
+Biosphere3 aims to:  
+1. Optimize architectures for general sovereign AI agents and explore multi-agent interaction protocols.
+2. Explore the coexistence of digital lifeforms and humans, simulating the evolution of societies and civilizations.
+3. Educate the public on intelligent agents and AI technology, enabling everyone to experience and understand cutting-edge AI advancements.  
+
+### Vision  
+
+Our ultimate goal is to establish a **Digital Lifeform**, advancing digital sovereignty and laying the foundation for harmonious coexistence between humans and AI.  
+
 ---
 
-## Table of Contents
+Developed by a multidisciplinary team from the Hong Kong University of Science and Technology (HKUST), Biosphere3 is supported by the HKUST Crypto-Fintech Lab, led by Prof. Yang Wang, Vice-President of HKUST, and Prof. Kani Chen. All agent frameworks and experimental data are open-sourced, inviting developers, researchers, and enthusiasts to join in shaping the future of AI and digital ecosystems.  
 
-* [👾 Introduction](#-introduction)
-* [🔮 Features](#-features)
-* [🏗️ Architecture and Ecosystem](#-architecture-and-ecosystem)
-* [🌟 Star History](#-star-history)
-* [🗺️ Roadmap](#️-roadmap)
-* [🏘️ Community](#️-community)
-* [🛠️ Development Guide](#️-development-guide)
-* [❓ FAQ](#-faq)
-* [🙏 Acknowledgement](#-acknowledgement)
-  * [Contributors](#contributors)
-
----
-
-## 👾 Introduction
- 
-🎮 **Biosphere3** is a **Massive Multi-Agent Online Game** that merges elements of the 🏙️ *Stanford Town Simulator* with 🏡 *The Sims*. In this game, players interact with **Sovereignty Agents** 🤖—intelligent, autonomous entities (also known as **Digital Lifeforms**)—by establishing bounded relationships through conversation 🗨️, rather than direct control. Together with these agents, players co-govern a 🌐 dynamic, autonomous, and self-sustaining society.
-
-💡 **Key Innovation**: The core of Biosphere3 lies in the creation of **Sovereignty Agents**, who possess:
-- 💵 **Economic Independence**: They can manage their own assets and engage in blockchain-based activities.
-- 🛠️ **Self-Governance**: Sovereignty Agents make decisions and evolve based on interactions.
-- 🧠 **Adaptive Intelligence**: They meaningfully interact with both humans and other agents, pushing the boundaries of AI autonomy.
-
-🌟 **More Than a Game**: Biosphere3 is a **social simulation** and experimental platform designed to analyze interactions between:
-- 👥 **Humans and Agents**
-- 🤖 **Agents and Other Agents**
-
-Through these interactions, we aim to refine our algorithms 🔄 and explore the future of harmonious and efficient coexistence 🌍 between humans and AI in decentralized digital societies.
-
-🚀 Join us in pioneering the next frontier of AI-driven virtual worlds and witness the evolution of **Sovereignty Agents** as the foundation for tomorrow’s digital ecosystems.
-
-## 🔮 Features
+## 🔮 Structure
 Our latest version of code for the **Sovereignty Agents** is in the `core` path. There are seven main modules: 
 
 - 📞 **Message Center**,
@@ -66,90 +73,58 @@ Our latest version of code for the **Sovereignty Agents** is in the `core` path.
 - 🦸‍♂️ **Character Manager**,
 - ⚙️ **Game Settings**.
   
-The main functions and file path of these seven modules are listed as follows.    
-Old versions and other experiment data can be found in the `legacy` path. Interested developers can learn about our development journey from this path.
+The main functions and file path of these seven modules are listed as follows.
 
 Module Name | Description | File Path
 ---- | ---- | ----
-📞 Message Center | <ul><li> Receive response messages from the game server and send agent decisions to the game environment for both plan and conversation workflow through websocket connections.</li></ui> | <ul><li>`core/ai.py`</li></ui>
-🧩 Model Selector | <ul><li>Select different model types, and split api keys for plan and conversation module.</li></ui> | <ul><li>`core/llm_factory.py`</li></ui>
-🗓️ Action Planner | <ul><li>Create an agent instance and run the planning workflow. </li><li> Set initial states, decisions and tools for agent instance. </li><li> Get character data from database. </li><li> Prompt for the agent instance. </li><li> Construct output structures for the agent instance. </li><li> Invoke the LLM for each plan function of the agent instance.</li></ui> | <ul><li>`core/graph_instance.py` </li><li> `core/agent_srv/factories.py` </li><li> `core/agent_srv/utils.py` </li><li> `core/agent_srv/prompts.py` </li><li> `core/agent_srv/node_models.py` </li><li> `core/agent_srv/node_engines.py`</li></ui>
-💬 Conversation | <ul><li>Create an conversation instance and run different tasks. </li><li> Prompt for the conversation instance. </li><li> Construct output structures for the conversation instance. </li><li> Invoke the LLM for launching, reponding and reading tasks. </li><li> Create conversation planner and responser.</li></ui> | <ul><li>`core/conversation_instance.py` </li><li> `core/conversation_srv/conversation_prompts.py` </li><li> `core/conversation_srv/conversation_model.py` </li><li> `core/conversation_srv/conversation_engines.py` </li><li> `core/conversation_srv/conversation_utils.py`</li></ui> 
+📞 Message Center | <ul><li> Receive response messages from the game server and send agent decisions to the game environment for both plan and conversation workflow through websocket connections.</li></ui> | <ul><li>`core/main.py`</li></ui>
+🧩 Model Selector | <ul><li>Select different model types, and split api keys for plan and conversation module.</li></ui> | <ul><li>`core/utils/llm_factory.py`</li></ui>
+🗓️ Action Planner | <ul><li>Create an agent instance and run the planning workflow. </li><li> Get character data from database. </li><li> Prompt for the agent instance. </li><li> Construct output structures for the agent instance. </li><li> Invoke the LLM for each plan function of the agent instance.</li></ui> | <ul><li>`core/agents/graph_instance.py` </li><li> `core/agent_srv/utils.py` </li><li> `core/agent_srv/prompts.py` </li><li> `core/agent_srv/node_models.py` </li><li> `core/agent_srv/node_engines.py`</li></ui>
+💬 Conversation | <ul><li>Create an conversation instance and run different tasks. </li><li> Prompt for the conversation instance. </li><li> Construct output structures for the conversation instance. </li><li> Invoke the LLM for launching, reponding and reading tasks. </li><li> Create conversation planner and responser.</li></ui> | <ul><li>`core/agents/conversation_instance.py` </li><li> `core/conversation_srv/conversation_prompts.py` </li><li> `core/conversation_srv/conversation_model.py` </li><li> `core/conversation_srv/conversation_engines.py` </li><li> `core/conversation_srv/conversation_utils.py`</li></ui> 
 📊 Database Support | <ul><li>Fetch character data from game database and update new states. </li><li> Get agent data from agent database and update agent decisions.</li></ui> | <ul><li>`core/db/game_api_utils.py` </li><li> `core/db/database_api_utils.py`</li></ui>
-🦸‍♂️ Character Manager | <ul><li>Manage and monitor all active agent connections and clean up disconnected characters.</li></ui> | <ul><li>`core/websocket_server`</li></ui> 
+🦸‍♂️ Character Manager | <ul><li>Manage and monitor all active agent connections and clean up disconnected characters.</li></ui> | <ul><li>`core/utils/character_manager.py`</li></ui> 
 ⚙️ Game Settings | <ul><li>Map character skills to actions.</li></ui> | <ul><li>`core/files/skill2actions.json`</li></ui>
-💾 Experiments | <ul><li>Old versions and other experiments during the development process.</li></ui> | <ul><li>`legacy`</li></ui>
 
 
-## 🛠️ Development Guide
-### Requirements
-- `python 3.10` or above
-- `pip install -r requirements.txt` all the required packages
-- `.env` file with API keys like OPENAI_API_KEY, DEEP_SEEK_API_KEY, and database urls like GAME_BACKEND_URL, AGENT_BACKEND_URL 
+## 🛠️ Quickstart
+### 🌟 Overview
+Our project consists of multiple components, including **databases and game environment**. To provide a seamless experience for developers and researchers who want to quickly get started with our **Agent framework**, we’ve designed a **simulator** that replicates the core functionalities of both the game and database environments.
 
-### Get started
-After installing all the packages and configuring the environment, you can start deploying your own agent.  
-First, direct to `core` file which is the latest edition of our agent.
-```
-cd core
-```
-Then, run `ai.py` to deploy the agent server.
-```
-python ai.py
-```  
-After that, you can use your own method to initalize the websocket connection with agent server. Once the connection is initialized, you are able to create an agent with certain valid character_id (the character_id should be a positive integer). If the agent is successfully created, it will automatically plan once and return the planned meta action list.  
-Here is an example python sricpt to initialize connection and receive plan result from the agent server.
-```python
-import asyncio
-import websockets
-import json
+This **lightweight sandbox environment** allows you to test and interact with the Agent framework in a controlled setting without requiring full integration with the actual game and databases. However, note that **some features are limited**, and full capabilities can only be experienced when connected to the complete game environment.
 
-async def test_client():
-    uri = "ws://localhost:6789"  # This is an example url for agent server. 
-    async with websockets.connect(uri) as websocket:
-        character_id = 1  # Input your character_id here 
+### 📋 Prerequisites
+Before running the simulator, ensure that you have:
+- 🐍 Python 3.10 or above installed.
+- 📦 All required dependencies installed via pip.
+- 🔑 A properly configured .env file with necessary API keys and database URLs.
 
-        init_message = {
-            "characterId": character_id,
-            "messageName": "connectionInit",
-            "data": {},
-        }
-        await websocket.send(json.dumps(init_message))
-        response = await websocket.recv()
-        print(f"Received response: {response}")
-        
-        action_response = await websocket.recv()
-        print(f"Received response: {action_response}")
+### ⚙️ Setup Instructions
+1. 📥 Install Dependencies
+```bash
+pip install -r requirements.txt
+```
 
-asyncio.run(test_client())
+2. 🛠️ Configure Environment Variables
+```bash
+cp .env.example .env
 ```
-If you have correctly configured the environment and successfully established the connection, and the character_id is valid, you will see the following output.  
-The first response indicates that the connection is successfully initialized and an agent is created.  
+- Add the necessary API keys
+- Add database URLs, if you run locally:
 ```
-{"characterId": 1,
- "messageCode": null,
- "messageName": "connectionInit",
- "data": {"result": true, "msg": "character init success"}}
+GAME_BACKEND_URL="http://127.0.0.1:5003"
+AGENT_BACKEND_URL="http://127.0.0.1:5006"
+GAME_BACKEND_TIMEOUT=8
 ```
-The second response is a meta action list planned by the agent. It contains three parts:
-- A command list that consists of meta actions and corresponding parameters.
-- An action emoji list that describes the meta actions.
-- A state emoji list that demonstrates the mood and feeling when conducting certain actions.
-- A brief description list of the above actions and states. 
+
+3. 🚀 Run the Websocket server
+```bash
+python core/main.py
 ```
-{'characterId': 1,
- 'messageName': 'actionList',
- 'messageCode': 6,
- 'data': {'command': ['goto home', 'sleep 8', 'goto fishing', 'gofishing 2', 'goto mall', 'sell fish 1', 'goto school', 'study 2'],
-          'action_emoji': ['🏠', '🛌', '🎣', '🐟', '🏬', '💰', '🏫', '📚'],
-          'state_emoji': ['😴', '💤', '🌊', '🐠', '💵', '🤑', '🎓', '🤓'],
-          'description': ['go to home, feel tired and want to have a rest',
-                          'sleep for 8 hours, recover energy and health',
-                          'go to fishing area, excited to catch some fish',
-                          'fish for 2 hours, enjoy the peaceful time',
-                          'go to mall, ready to sell some fish',
-                          'sell 1 fish, happy to earn some money',
-                          'go to school, determined to improve education',
-                          'study for 2 hours, feel a bit tired but motivated']}}
+
+4. 🕹️ Open another terminal & Run the game simulators
+```bash
+sh sandbox/run_simulator.sh
 ```
-**You can refer to our [official website](https://biosphere3.ai/) for more information and demo.**
+
+5. 🤖 Interact with the Agent
+- Once running, you can observe the Agent’s behavior in the terminal.

@@ -4,8 +4,8 @@ sys.path.append("..")
 import time
 import asyncio
 from typing import Dict, Optional, Callable, Coroutine, Any
-from graph_instance import LangGraphInstance
-from core.conversation_instance import ConversationInstance
+from core.agents.graph_instance import LangGraphInstance
+from core.agents.conversation_instance import ConversationInstance
 from loguru import logger
 
 

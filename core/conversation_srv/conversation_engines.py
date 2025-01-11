@@ -8,8 +8,7 @@ from core.db.game_api_utils import make_api_request_sync as make_backend_api_req
 from datetime import datetime
 import random
 from langgraph.graph import StateGraph
-import numpy as np
-from core.llm_factory import llm_selector
+from core.utils.llm_factory import llm_selector
 
 logger.add(
         "conversation_engines.log",

@@ -155,7 +155,7 @@ Here are some information you need to know:
 User State: {character_stats}
 Daily Objectives: {daily_objectives}
 Failed Actions: {failed_actions}
-Some additional Requirements: {additional_requirements}
+Some additional Requirements: {reflection_ar}
 
 Remind:
 1. You should summarize the user's daily objectives and failed actions in the reflection.

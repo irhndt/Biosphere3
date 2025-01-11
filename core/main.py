@@ -1,4 +1,6 @@
 import sys
+
+sys.path.append(".")
 import yaml
 import asyncio
 import websockets
@@ -6,11 +8,10 @@ import ssl
 import json
 import os
 from loguru import logger
-from websocket_server.character_manager import CharacterManager
-from websocket_server.web_monitor.routes import WebMonitor
-from graph_instance import LangGraphInstance
-from conversation_instance import ConversationInstance
-from agent_srv.utils import save_decision_to_db
+from utils.character_manager import CharacterManager
+from utils.web_monitor.routes import WebMonitor
+from core.agents.graph_instance import LangGraphInstance
+from core.agents.conversation_instance import ConversationInstance
 
 
 class ConfigLoader:
@@ -81,7 +82,6 @@ class AI_WS_Server:
                     break
         finally:
             if character_id:
-                save_decision_to_db(character_id, agent_instance.state["decision"])
                 self.character_manager.host_character(character_id)
                 logger.info(f"🧹 Cleaned up resources for Character {character_id}")
             await websocket.close()

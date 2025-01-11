@@ -20,9 +20,12 @@ from core.agent_srv.node_engines import (
     generate_accommodation_decision,
 )
 from core.agent_srv.node_model import RunningState
-from core.agent_srv.utils import get_initial_state_from_db, save_token_consumption_to_db
-from core.llm_factory import llm_selector
-
+from core.agent_srv.utils import (
+    get_initial_state_from_db,
+    save_token_consumption_to_db,
+    save_decision_to_db,
+)
+from core.utils.llm_factory import llm_selector
 
 
 class LangGraphInstance:
@@ -35,9 +38,7 @@ class LangGraphInstance:
         self.websocket = websocket
         self.signal = None
         self.state = {}
-        self.start_time = None
 
-        # 数据竞争时，锁住state
         self.websocket_lock = None
         self.graph = None
         self.graph_config = {"recursion_limit": 1e10}
@@ -45,9 +46,10 @@ class LangGraphInstance:
 
         # Asynchronous tasks
         self.msg_processor_task = None
-        self.save_token_consumption_task = None
+        self.save_states_task = None
         self.event_scheduler_task = None
         self.task = None
+        self.routine_tasks = None
 
     @classmethod
     async def create(cls, user_id, websocket=None):
@@ -62,9 +64,7 @@ class LangGraphInstance:
         self.start_time = time.time()
 
         self.msg_processor_task = asyncio.create_task(self.msg_processor())
-        self.save_token_consumption_task = asyncio.create_task(
-            self.save_token_consumption()
-        )
+        self.save_states_task = asyncio.create_task(self.save_states())
         self.event_scheduler_task = asyncio.create_task(self.event_scheduler())
         self.schedule_event("PLAN")
         self.logger.info(f"User {self.user_id} workflow initialized")
@@ -124,7 +124,7 @@ class LangGraphInstance:
                     f"User {self.user_id}: Unknown message: {message_name}"
                 )
 
-    async def save_token_consumption(self):
+    async def save_states(self):
         """
         Saves token consumption data to the database every 30 minutes.
         """
@@ -132,34 +132,28 @@ class LangGraphInstance:
             while True:
                 await asyncio.sleep(1800)
                 token_usage = llm_selector.get_token_usage()
+                save_token_consumption_to_db(token_usage)
                 self.logger.info(
                     f"📊 User {self.user_id}: Token consumption: {token_usage}"
                 )
-                save_token_consumption_to_db(token_usage)
+                save_decision_to_db(self.user_id, self.state["decision"])
+                self.logger.info(
+                    f"📊 User {self.user_id}: Decision: {self.state['decision']}"
+                )
         except Exception as e:
-            self.logger.error(
-                f"User {self.user_id}: Error in save_token_consumption: {e}"
-            )
+            self.logger.error(f"User {self.user_id}: Error in save_states: {e}")
 
     async def event_scheduler(self):
-        """
-        Schedules and manages events based on the state of action results and timings.
-        """
         try:
-            while True:
-                await asyncio.sleep(100)
-                elapsed_time = time.time() - self.start_time
-                if self.signal == "TERMINATE":
-                    self.logger.error(
-                        "⛔ Task event_scheduler terminated due to termination signal."
-                    )
-                    break
-                if elapsed_time >= 900:
-                    self.schedule_event("CHARACTER_ARC")
-                elif elapsed_time >= 600:
-                    self.schedule_event("DAILY_REFLECTION")
-                elif elapsed_time >= 300:
-                    self.schedule_event("PLAN")
+            plan_task = asyncio.create_task(self.run_event("PLAN", 300))
+            reflection_task = asyncio.create_task(
+                self.run_event("DAILY_REFLECTION", 600)
+            )
+            character_arc_task = asyncio.create_task(
+                self.run_event("CHARACTER_ARC", 900)
+            )
+            self.routine_tasks = [plan_task, reflection_task, character_arc_task]
+            await asyncio.gather(*self.routine_tasks)
         except Exception as e:
             self.logger.error(f"User {self.user_id}: Error in event_scheduler: {e}")
 
@@ -184,6 +178,21 @@ class LangGraphInstance:
                 return "Accommodation_Decision"
             else:
                 self.logger.error(f"User {self.user_id}: Unknown event: {event}")
+
+    async def run_event(self, event_name, interval):
+        try:
+            while True:
+                await asyncio.sleep(interval)
+
+                if self.signal == "TERMINATE":
+                    self.logger.error(
+                        f"⛔ Task run_event terminated due to termination signal."
+                    )
+                    break
+                if event_name not in list(self.state["event_queue"]._queue):
+                    self.schedule_event(event_name)
+        except Exception as e:
+            self.logger.error(f"User {self.user_id}: Error in run_event: {e}")
 
     def _get_workflow(self):
         workflow = StateGraph(RunningState)
