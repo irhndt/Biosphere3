@@ -44,7 +44,6 @@ class LLMSelector:
 
         if model_name.startswith("gpt"):
             return ChatOpenAI(
-                base_url="https://api.aiproxy.io/v1",
                 api_key=get_api_key("gpt"),
                 model=model_name,
                 temperature=temperature,
