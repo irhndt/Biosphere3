@@ -426,28 +426,7 @@ async def get_initial_state_from_db(userid, websocket):
         "meta": {
             "tool_functions": tool_functions_live,
             "day": "",
-            "available_locations": [
-                "school",
-                "workshop",
-                "home",
-                "farm",
-                "mall",
-                "square",
-                "councilHall",
-                "hospital",
-                "fruit",
-                "harvest",
-                "fishing",
-                "mine",
-                "orchard",
-                "foodfactory",
-                "factory",
-                "garden",
-                "policestation",
-                "library",
-                "supermarket",
-                "canteen",
-            ],
+            "available_locations": available_locations,
         },
         "prompts": prompt_data,
         "message_queue": asyncio.Queue(),
@@ -482,22 +461,9 @@ def generate_initial_state_hardcoded(userid, websocket):
             "reflection": [],
         },
         "meta": {
-            "tool_functions": tool_functions_easy,
+            "tool_functions": tool_functions_live,
             "day": "",
-            "available_locations": [
-                "school",
-                "workshop",
-                "home",
-                "farm",
-                "mall",
-                "square",
-                "hospital",
-                "fruit",
-                "harvest",
-                "fishing",
-                "mine",
-                "orchard",
-            ],
+            "available_locations": available_locations,
         },
         "prompts": {
             "daily_goal": "",
@@ -527,31 +493,6 @@ def generate_initial_state_hardcoded(userid, websocket):
     return initial_state
 
 
-tool_functions_easy = """
-1. goto [placeName:string]: Go to a specified location.
-Constraints: Must in (school,workshop,home,farm,mall,square,hospital,fruit,harvest,fishing,mine,orchard).
-2. pickapple [number:int]: Pick an apple, costing energy.
-Constraints: Must have enough energy and be in the orchard.
-3. gofishing [hours:int]: Fish for fish, costing energy.
-Constraints: Must have enough energy and be in the fishing area.
-4. harvest [hours:int]: Harvest crops, costing energy.
-Constraints: Must have enough energy and be in the harvest area.
-5. sleep [hours:int]: Sleep to recover energy and health.
-Constraints: Must be at home.
-6. study [hours:int]: Study to achieve a higher degree, will cost money.
-Constraints: Must be in school and have enough money.
-8. gomining [hours:int]: Mine for ore, costing energy.
-Constraints: Must have enough energy and be in the mine.
-17. buy [itemType:string] [amount:int]: Purchase items, costing money.
-Constraints: Must have enough money, and items must be available in sufficient quantity in the AMM. ItemType:(ore,bread,apple,wheat,fish)
-18. sell [itemType:string] [amount:int]: Sell items for money. The ONLY way to get money.
-Constraints: Must have enough items in inventory. ItemType:(ore,bread,apple,wheat,fish)
-20. showallitem: Show all items in inventory.
-Constraints: None
-21. getprice [itemType:string]: Get the price of an item.
-Constraints: None
-"""
-
 tool_functions_live = """
 1. goto [placeName:string]: Go to a specified location.
 Constraints: Must in (school,workshop,home,farm,mall,square,councilHall,hospital,fruit,harvest,fishing,mine,orchard,foodfactory,factory,garden,policestation,library,supermarket,canteen).
@@ -579,3 +520,26 @@ Constraints: Must have enough money, and items must be available in sufficient q
 8. sell [itemType:string] [amount:int]: Sell items to get money (you should check the market data to get the price of different items).
 Constraints: Must have enough items in inventory.
 """
+
+available_locations = [
+    "school",
+    "workshop",
+    "home",
+    "farm",
+    "mall",
+    "square",
+    "councilHall",
+    "hospital",
+    "fruit",
+    "harvest",
+    "fishing",
+    "mine",
+    "orchard",
+    "foodfactory",
+    "factory",
+    "garden",
+    "policestation",
+    "library",
+    "supermarket",
+    "canteen",
+]

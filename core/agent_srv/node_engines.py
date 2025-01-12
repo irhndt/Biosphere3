@@ -355,16 +355,16 @@ async def generate_daily_reflection(state: RunningState):
     # logger.info("======generate_daily_reflection======\n" + full_prompt)
     state["decision"]["reflection"].append(daily_reflection.reflection)
     save_decision_to_db(state["userid"], {"reflection": daily_reflection.reflection})
-    # await state["instance"].send_message(
-    #     {
-    #         "characterId": state["userid"],
-    #         "messageName": "daily_reflection",
-    #         "messageCode": 11,
-    #         "data": {
-    #             "reflection": daily_reflection["reflection"],
-    #         },
-    #     }
-    # )
+    await state["instance"].send_message(
+        {
+            "characterId": state["userid"],
+            "messageName": "daily_reflection",
+            "messageCode": 11,
+            "data": {
+                "reflection": daily_reflection["reflection"],
+            },
+        }
+    )
 
     logger.info(f"🔍 DAILY_REFLECTION INVOKED with {daily_reflection.reflection}")
 
@@ -394,14 +394,14 @@ async def generate_character_arc(state: RunningState):
         "characterId": state["userid"],
         **dict(character_arc),
     }
-    # await state["instance"].send_message(
-    #     {
-    #         "characterId": state["userid"],
-    #         "messageName": "character_arc",
-    #         "messageCode": 12,
-    #         "data": {"character_arc": character_arc_data},
-    #     }
-    # )
+    await state["instance"].send_message(
+        {
+            "characterId": state["userid"],
+            "messageName": "character_arc",
+            "messageCode": 12,
+            "data": {"character_arc": character_arc_data},
+        }
+    )
     logger.info(f"📜 Character Arc: {character_arc_data}")
     make_api_request_sync("POST", "/character_arc/", data=character_arc_data)
 

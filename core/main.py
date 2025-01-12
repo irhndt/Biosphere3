@@ -8,8 +8,10 @@ import ssl
 import json
 import os
 from loguru import logger
+from core.utils.llm_factory import llm_selector
 from utils.character_manager import CharacterManager
 from utils.web_monitor.routes import WebMonitor
+from core.agent_srv.utils import save_token_consumption_to_db
 from core.agents.graph_instance import LangGraphInstance
 from core.agents.conversation_instance import ConversationInstance
 
@@ -155,7 +157,15 @@ class AI_WS_Server:
             }
         )
 
+    async def periodic_saving(self):
+        while True:
+            token_usage = llm_selector.get_token_usage()
+            save_token_consumption_to_db(token_usage)
+            await asyncio.sleep(1800)
+
     async def run(self):
+        asyncio.create_task(self.periodic_saving())
+
         # Heartbeat Monitor
         if self.config.get("monitor_trigger"):
             await self.character_manager.start_monitoring()

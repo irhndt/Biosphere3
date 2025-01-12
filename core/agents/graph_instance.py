@@ -46,7 +46,6 @@ class LangGraphInstance:
 
         # Asynchronous tasks
         self.msg_processor_task = None
-        self.save_states_task = None
         self.event_scheduler_task = None
         self.task = None
         self.routine_tasks = None
@@ -64,7 +63,6 @@ class LangGraphInstance:
         self.start_time = time.time()
 
         self.msg_processor_task = asyncio.create_task(self.msg_processor())
-        self.save_states_task = asyncio.create_task(self.save_states())
         self.event_scheduler_task = asyncio.create_task(self.event_scheduler())
         self.schedule_event("PLAN")
         self.logger.info(f"User {self.user_id} workflow initialized")
@@ -124,21 +122,6 @@ class LangGraphInstance:
                 self.logger.error(
                     f"User {self.user_id}: Unknown message: {message_name}"
                 )
-
-    async def save_states(self):
-        """
-        Saves token consumption data to the database every 30 minutes.
-        """
-        try:
-            while True:
-                await asyncio.sleep(1800)
-                token_usage = llm_selector.get_token_usage()
-                save_token_consumption_to_db(token_usage)
-                self.logger.info(
-                    f"📊 User {self.user_id}: Token consumption: {token_usage}"
-                )
-        except Exception as e:
-            self.logger.error(f"User {self.user_id}: Error in save_states: {e}")
 
     async def event_scheduler(self):
         try:
