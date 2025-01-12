@@ -29,7 +29,7 @@ def create_planner(prompt_template, model_name, output_type, temperature=0.5):
 async def generate_daily_objective(state: RunningState):
     obj_planner = create_planner(
         obj_planner_prompt,
-        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        state.get("character_stats", {}).get("model_type"),
         DailyObjective,
         1.5,
     )
@@ -80,7 +80,7 @@ async def generate_daily_objective(state: RunningState):
 async def generate_meta_action_sequence(state: RunningState):
     meta_action_sequence_planner = create_planner(
         meta_action_sequence_prompt,
-        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        state.get("character_stats", {}).get("model_type"),
         MetaActionSequence,
         0,
     )
@@ -143,7 +143,7 @@ async def sensing_environment(state: RunningState):
 async def replan_action(state: RunningState):
     meta_seq_adjuster = create_planner(
         meta_seq_adjuster_prompt,
-        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        state.get("character_stats", {}).get("model_type"),
         MetaActionSequence,
         0,
     )
@@ -317,7 +317,7 @@ async def generate_mayor_decision(
 async def generate_daily_reflection(state: RunningState):
     daily_reflection_generator = create_planner(
         daily_reflection_prompt,
-        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        state.get("character_stats", {}).get("model_type"),
         Reflection,
         1,
     )
@@ -353,7 +353,7 @@ async def generate_daily_reflection(state: RunningState):
 async def generate_character_arc(state: RunningState):
     character_arc_generator = create_planner(
         generate_character_arc_prompt,
-        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        state.get("character_stats", {}).get("model_type"),
         CharacterArc,
         0.5,
     )
@@ -444,7 +444,7 @@ def format_character_data(character_data: dict) -> str:
 async def generate_accommodation_decision(state: RunningState):
     accommodation_decision_generator = create_planner(
         accommodation_decision_prompt,
-        state.get("character_stats", {}).get("model_type", "deepseek-chat"),
+        state.get("character_stats", {}).get("model_type"),
         AccommodationDecision,
         0.5,
     )

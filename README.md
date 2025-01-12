@@ -108,7 +108,18 @@ pip install -r requirements.txt
 ```bash
 cp .env.example .env
 ```
-- Add the necessary API keys
+In file `.env`, you need to:
+- Add the necessary API keys (Fill in the API KEY that allows gpt-4o-mini to access, as this is the default parameter)
+```
+OPENAI_API_KEY_PLAN="sk-xxxxx"
+OPENAI_API_KEY_CHAT="sk-xxxxx"
+```
+- If you want to use deepseek's API for cheaper prices, you need to fill in the fields below and change the default model to deepseek-chat
+```
+DEEPSEEK_API_KEY_PLAN="sk-xxxxx"
+DEEPSEEK_API_KEY_CHAT="sk-xxxxx"
+DEFAULT_MODEL_TYPE="deepseek-chat"
+```
 - Add database URLs, if you run locally:
 ```
 GAME_BACKEND_URL="http://127.0.0.1:5003"

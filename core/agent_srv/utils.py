@@ -11,6 +11,7 @@ load_dotenv()
 GAME_BACKEND_URL = os.getenv("GAME_BACKEND_URL")
 GAME_BACKEND_TIMEOUT = int(os.getenv("GAME_BACKEND_TIMEOUT"))
 AGENT_BACKEND_URL = os.getenv("AGENT_BACKEND_URL")
+DEFAULT_MODEL_TYPE = os.getenv("DEFAULT_MODEL_TYPE")
 
 
 async def fetch_api_data_async(
@@ -280,7 +281,7 @@ async def get_character_data_async(userid: int) -> dict:
             "short_term_goal": agent_db_response.get("short_term_goal"),
             "language_style": agent_db_response.get("language_style"),
             "biography": agent_db_response.get("biography"),
-            "model_type": model_type_response.get("modelType", "deepseek-chat"),
+            "model_type": model_type_response.get("modelType", DEFAULT_MODEL_TYPE),
         }
 
     except AttributeError:
