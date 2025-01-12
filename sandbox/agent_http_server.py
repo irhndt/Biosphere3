@@ -522,7 +522,7 @@ class HTTPServer:
                 }
             )
 
-        @self.app.route("/decision/", methods=["POST"])
+        @self.app.route("/decision/", methods=["PATCH"])
         def post_decision():
             decision_data = request.get_json()
 

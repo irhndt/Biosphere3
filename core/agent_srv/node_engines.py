@@ -18,6 +18,7 @@ from core.db.game_api_utils import (
     make_api_request_async as make_api_request_async_backend,
     make_api_request_sync as make_api_request_sync_backend,
 )
+from core.agent_srv.utils import save_decision_to_db
 
 
 def create_planner(prompt_template, model_name, output_type, temperature=0.5):
@@ -73,6 +74,9 @@ async def generate_daily_objective(state: RunningState):
     # logger.info("======generate_daily_objective======\n" + full_prompt)
     for item in planner_response.objectives:
         state["decision"]["daily_objective"].append(item)
+    save_decision_to_db(
+        state["userid"], {"daily_objective": planner_response.objectives}
+    )
 
     logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response.objectives}")
 
@@ -117,6 +121,13 @@ async def generate_meta_action_sequence(state: RunningState):
         state["decision"]["meta_seq"].append(item)
     for item in meta_action_sequence.description_sequence:
         state["decision"]["action_description"].append(item)
+    save_decision_to_db(
+        state["userid"],
+        {
+            "meta_seq": meta_action_sequence.meta_action_sequence,
+            "action_description": meta_action_sequence.description_sequence,
+        },
+    )
 
     await state["instance"].send_message(
         {
@@ -192,6 +203,13 @@ async def replan_action(state: RunningState):
         state["decision"]["new_plan"].append(item)
     for item in meta_action_sequence.description_sequence:
         state["decision"]["action_description"].append(item)
+    save_decision_to_db(
+        state["userid"],
+        {
+            "new_plan": meta_action_sequence.meta_action_sequence,
+            "action_description": meta_action_sequence.description_sequence,
+        },
+    )
 
     # Send new action sequence to client
     await state["instance"].send_message(
@@ -336,6 +354,7 @@ async def generate_daily_reflection(state: RunningState):
     # full_prompt = daily_reflection_prompt.format(**payload)
     # logger.info("======generate_daily_reflection======\n" + full_prompt)
     state["decision"]["reflection"].append(daily_reflection.reflection)
+    save_decision_to_db(state["userid"], {"reflection": daily_reflection.reflection})
     # await state["instance"].send_message(
     #     {
     #         "characterId": state["userid"],
@@ -518,9 +537,7 @@ async def generate_accommodation_decision(state: RunningState):
             continue
 
         logger.info(f"🏠 Attempt {retries + 1}:")
-        logger.info(
-            f"🏠 Accommodation ID: {accommodation_decision.accommodation_id}"
-        )
+        logger.info(f"🏠 Accommodation ID: {accommodation_decision.accommodation_id}")
         logger.info(f"🏠 Lease Weeks: {accommodation_decision.lease_weeks}")
         logger.info(f"🏠 Comments: {accommodation_decision.comments}")
 

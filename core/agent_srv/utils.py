@@ -302,7 +302,7 @@ def save_decision_to_db(userid: int, decision: dict):
     url = f"{AGENT_BACKEND_URL}/decision/"
     decision["characterId"] = userid
     try:
-        response = requests.post(
+        response = requests.patch(
             url,
             json=decision,
             timeout=GAME_BACKEND_TIMEOUT,
@@ -345,7 +345,7 @@ def save_token_consumption_to_db(token_consumption: dict):
         except JSONDecodeError:
             logger.error(f"Failed to decode JSON from {url}")
 
-            
+
 def get_occupation(job_id: int) -> str:
     occupation_mapping = {
         "0": "Unemployed",
@@ -407,11 +407,8 @@ def compute_efficiency(character_data: dict) -> float:
 
 
 async def get_initial_state_from_db(userid, websocket):
-    # 获取市场数据
     market_data = get_market_data_from_db()
-    # 获取角色数据
     character_data = await get_character_data_async(userid)
-    # 获取prompt数据
     prompt_data = await get_prompt_data_from_db(userid)
     state = {
         "userid": userid,
@@ -582,8 +579,3 @@ Constraints: Must have enough money, and items must be available in sufficient q
 8. sell [itemType:string] [amount:int]: Sell items to get money (you should check the market data to get the price of different items).
 Constraints: Must have enough items in inventory.
 """
-
-
-if __name__ == "__main__":
-    print(asyncio.run(get_initial_state_from_db(29, "websocket")))
-    # print(generate_initial_state_hardcoded(29, "websocket"))

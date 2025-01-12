@@ -85,6 +85,7 @@ class LangGraphInstance:
                 pass
             elif message_name == "actionresult":
                 self.state["decision"]["action_result"].append(message_data["msg"])
+                save_decision_to_db(self.user_id, message_data)
                 # If the action result is False, put REPLAN into event_queue
                 if msg["data"]["result"] is False:
                     try:
@@ -135,10 +136,6 @@ class LangGraphInstance:
                 save_token_consumption_to_db(token_usage)
                 self.logger.info(
                     f"📊 User {self.user_id}: Token consumption: {token_usage}"
-                )
-                save_decision_to_db(self.user_id, self.state["decision"])
-                self.logger.info(
-                    f"📊 User {self.user_id}: Decision: {self.state['decision']}"
                 )
         except Exception as e:
             self.logger.error(f"User {self.user_id}: Error in save_states: {e}")
