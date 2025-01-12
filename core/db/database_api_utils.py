@@ -7,7 +7,6 @@ dotenv.load_dotenv()
 BASE_URL = os.getenv("AGENT_BACKEND_URL")
 
 
-# 异步函数
 async def make_api_request_async(
     method: str,
     endpoint: str,
@@ -38,7 +37,6 @@ async def make_api_request_async(
             )
 
 
-# 同步函数
 def make_api_request_sync(
     method: str,
     endpoint: str,
@@ -73,9 +71,9 @@ def make_api_request_sync(
             else:
                 response = client.request(method, url, json=data, timeout=timeout)
 
-        response.raise_for_status()  # 如果状态码不是 2xx，会抛出异常
+        response.raise_for_status()
 
-        return response.json()  # 返回 JSON 响应
+        return response.json()
     except httpx.RequestError as e:
         raise Exception(f"API request to {url} failed: {e}")
     except httpx.HTTPStatusError as e:
@@ -106,26 +104,11 @@ if __name__ == "__main__":
         "userid": sample_state["userid"],
         "meta_sequence": sample_state["meta_seq"],
     }
-
-    # # 使用同步函数
-    # endpoint = "/update_meta_seq"
-    # print(make_api_request_sync("POST", endpoint, data=data))
-
-    # # 使用异步函数
-    # async def test_async():
-    #     print(await make_api_request_async("POST", endpoint, data=data))
-
-    # asyncio.run(test_async())
-
-    # 测试存储和检索印象
-
-    # 存储印象
     impression_data = {"from_id": 1, "to_id": 2, "impression": "Seems friendly."}
     endpoint = "/store_impression"
     response = make_api_request_sync("POST", endpoint, data=impression_data)
     print("Storing Impression:", response)
 
-    # 检索印象
     get_impression_data = {
         "from_id": 1,
         "to_id": 2,

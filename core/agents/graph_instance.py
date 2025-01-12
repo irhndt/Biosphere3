@@ -241,7 +241,6 @@ class LangGraphInstance:
                 self.logger.warning(
                     f"User {self.user_id}: WebSocket connection closed during send."
                 )
-                # TODO 这里的逻辑之后再写
                 self.signal = "TERMINATE"
             except Exception as e:
                 self.logger.error(f"User {self.user_id}: Error sending message: {e}")

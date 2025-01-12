@@ -7,7 +7,6 @@ load_dotenv()
 BASE_URL = os.environ.get("GAME_BACKEND_URL")
 
 
-# 异步函数
 async def make_api_request_async(
     method: str,
     endpoint: str,
@@ -34,7 +33,6 @@ async def make_api_request_async(
             )
 
 
-# 同步函数
 def make_api_request_sync(
     method: str,
     endpoint: str,
@@ -51,9 +49,9 @@ def make_api_request_sync(
             else:
                 response = client.request(method, url, json=data)
 
-        response.raise_for_status()  # 如果状态码不是 2xx，会抛出异常
+        response.raise_for_status()
 
-        return response.json()  # 返回 JSON 响应
+        return response.json()
     except httpx.RequestError as e:
         raise Exception(f"API request to {url} failed: {e}")
     except httpx.HTTPStatusError as e:

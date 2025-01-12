@@ -448,13 +448,11 @@ async def generate_accommodation_decision(state: RunningState):
         AccommodationDecision,
         0.5,
     )
-    # 1. 获取当前住宿信息
     current_accommodation_response = await make_api_request_async_backend(
         "GET", f"/characterDormitory/getByCharacterIdNew/{state['userid']}"
     )
     current_accommodation_data = current_accommodation_response.get("data", None)
 
-    # 默认值：如果没有当前住宿数据，使用默认值
     current_accommodation = {"id": 1, "type": "Shelter"}
     if current_accommodation_data:
         current_accommodation["id"] = current_accommodation_data.get("id", 1)
@@ -462,16 +460,13 @@ async def generate_accommodation_decision(state: RunningState):
             "type", "Shelter"
         )
 
-    # 2. 获取角色财务状态
     financial_status = {"money": state["character_stats"].get("money", 0)}
 
-    # 3. 获取所有可用住宿信息并保留必要字段
     accommodations_response = await make_api_request_async_backend(
         "GET", "/dormitory/getAll"
     )
     available_accommodations_raw = accommodations_response.get("data", [])
 
-    # 过滤出必要字段
     necessary_fields = [
         "id",
         "type",
@@ -486,40 +481,36 @@ async def generate_accommodation_decision(state: RunningState):
         for accommodation in available_accommodations_raw
     ]
 
-    # 计算每个住宿的 affordable_weeks
     for acc in available_accommodations:
         weekly_rent = acc["weeklyRent"]
         if weekly_rent == 0:
-            acc["affordable_weeks"] = 12  # 最大租期
+            acc["affordable_weeks"] = 12
         else:
             affordable_weeks = financial_status["money"] // weekly_rent
             affordable_weeks = min(affordable_weeks, 12)
             acc["affordable_weeks"] = int(affordable_weeks)
 
-    # 初始化失败原因列表
     failure_reasons = []
 
     max_retries = 5
     retries = 0
 
     while retries < max_retries:
-        # 为 LLM 构建输入
         payload = {
             "character_stats": format_character_data(state["character_stats"]),
             "current_accommodation": current_accommodation,
             "available_accommodations": available_accommodations,
             "financial_status": financial_status,
-            "failure_reasons": failure_reasons,  # 传递失败原因列表
+            "failure_reasons": failure_reasons,
         }
 
-        # 调用 LLM
         try:
             accommodation_decision = await accommodation_decision_generator.ainvoke(
                 payload
             )
             print("accommodation_decision: ", accommodation_decision)
         except Exception as e:
-            logger.error(f"LLM 调用失败: {e}")
+            logger.error(f"Invoke LLM Failed: {e}")
             failure_reasons.append(
                 f"Attempt {retries + 1}: LLM invocation failed with error: {e}"
             )
@@ -533,7 +524,6 @@ async def generate_accommodation_decision(state: RunningState):
         logger.info(f"🏠 Lease Weeks: {accommodation_decision.lease_weeks}")
         logger.info(f"🏠 Comments: {accommodation_decision.comments}")
 
-        # 验证选择的住宿是否存在
         selected_accommodation = next(
             (
                 acc
@@ -556,7 +546,6 @@ async def generate_accommodation_decision(state: RunningState):
 
         lease_weeks = accommodation_decision.lease_weeks
 
-        # 检查租期是否在1-12周
         if not (1 <= lease_weeks <= 12):
             failure_message = (
                 f"Attempt {retries + 1}: Lease weeks {lease_weeks} is out of allowed range (1-12). "
@@ -571,7 +560,6 @@ async def generate_accommodation_decision(state: RunningState):
         weekly_rent = selected_accommodation["weeklyRent"]
         total_rent = weekly_rent * lease_weeks
 
-        # 检查用户是否能负担得起租金
         if total_rent > financial_status["money"]:
             failure_message = (
                 f"Attempt {retries + 1}: Cannot afford total rent of {total_rent} for accommodation ID "
@@ -584,7 +572,6 @@ async def generate_accommodation_decision(state: RunningState):
             retries += 1
             continue
         else:
-            # 如果可以负担，执行租赁
             rent_data = {
                 "characterId": state["userid"],
                 "money": financial_status["money"],
@@ -592,12 +579,10 @@ async def generate_accommodation_decision(state: RunningState):
                 "leaseWeeks": lease_weeks,
             }
             print("rent_data: ", rent_data)
-            # 游戏端
             logger.info(f"🏠 Successfully rented accommodation.")
             break
 
     else:
-        # 如果重试达到上限，仍未找到合适的住宿
         logger.error(
             f"🏠 Could not find an affordable accommodation after {max_retries} attempts."
         )
@@ -609,7 +594,6 @@ async def generate_accommodation_decision(state: RunningState):
             }
         }
 
-    # 通知游戏客户端有关住宿变更的信息
     await state["instance"].send_message(
         {
             "characterId": state["userid"],

@@ -190,4 +190,3 @@ intimacy_mark_prompt = ChatPromptTemplate.from_template(
     mark2:
     """
 )
-

@@ -741,7 +741,7 @@ class HTTPServer:
                     },
                 }
             )
-        
+
         @self.app.route("/modelToken/add", methods=["POST"])
         def post_modelToken_add():
             data = request.get_json()
