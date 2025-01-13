@@ -543,3 +543,57 @@ available_locations = [
     "supermarket",
     "canteen",
 ]
+
+
+def format_role_actions(roles, data):
+    action_strings = ["Here are the actions you can perform based on your roles:"]
+
+    for index, role in enumerate(roles, start=1):
+        role_data = data.get(role, {})
+        actions = role_data.get("actions", [])
+        cost = role_data.get("cost", 0)
+        materials = role_data.get("materials", {})
+
+        # Format the actions
+        action_str = f"{index}. craft [itemType:string] [num:int]: Craft a certain number of items and cost energy ({cost} per item)\n"
+        action_str += "Constraints: Item must be in ItemType: ("
+        action_str += ", ".join([action.split()[1] for action in actions])
+        action_str += ") and you should have enough materials.\nHere's the rule:\n"
+
+        # Format the materials
+        for item, constraints in materials.items():
+            if not constraints:
+                action_str += f"- {item}: No materials required.\n"
+            else:
+                constraint_str = ", ".join(constraints)
+                action_str += f"- {item}: Required materials: {constraint_str}\n"
+
+        action_strings.append(action_str)
+
+    return "\n".join(action_strings)
+
+
+def format_character_data(character_data: dict) -> str:
+    return (
+        f"Health: {character_data.get('health', 'N/A')} - Represents the character's physical well-being.\n"
+        f"Energy: {character_data.get('energy', 'N/A')} - Indicates how much energy the character has left.\n"
+        f"Hungry: {character_data.get('hungry', 'N/A')} - Indicates the character's level of satiety; the higher, the fuller.\n"
+        f"Education: {character_data.get('education', 'N/A')} - The level of education attained.\n"
+        f"Education Experience: {character_data.get('education_experience', 'N/A')} - Experience points in education.\n"
+        f"Money: {character_data.get('money', 'N/A')} - Current financial status.\n"
+        f"Occupation: {character_data.get('occupation', 'N/A')} - Current job or role work at {character_data.get('work_place')}\n"
+        f"Efficiency: {character_data.get('efficiency', 'N/A'):.2f} - Calculated efficiency based on various factors: "
+        f"Efficiency = (Hungry Factor) * (Energy Factor) * (Health Factor) * (Wisdom Factor), where:\n"
+        f"  - Hungry Factor = hungry / 100 if hungry < 50 else 1\n"
+        f"  - Energy Factor = energy / 100\n"
+        f"  - Health Factor = health / 100\n"
+        f"  - Wisdom Factor = log(education_experience + 10, 10)\n"
+        f"  Efficiency affects the crafting efficiency of items. If the efficiency is too low (lower than 0.2), "
+        f"  it is advisable to improve the basic attributes first.\n"
+        f"Inventory: {character_data.get('inventory', {})} - Items currently held by the character.\n"
+        f"Personality: {character_data.get('personality', 'N/A')} - Describes the character's personality traits.\n"
+        f"Long-term Goal: {character_data.get('long_term_goal', 'N/A')} - The character's long-term aspirations.\n"
+        f"Short-term Goal: {character_data.get('short_term_goal', 'N/A')} - Immediate objectives.\n"
+        f"Language Style: {character_data.get('language_style', 'N/A')} - Preferred communication style.\n"
+        f"Biography: {character_data.get('biography', 'N/A')} - A brief background story.\n"
+    )

@@ -18,7 +18,11 @@ from core.db.game_api_utils import (
     make_api_request_async as make_api_request_async_backend,
     make_api_request_sync as make_api_request_sync_backend,
 )
-from core.agent_srv.utils import save_decision_to_db
+from core.agent_srv.utils import (
+    save_decision_to_db,
+    format_role_actions,
+    format_character_data,
+)
 
 
 def create_planner(prompt_template, model_name, output_type, temperature=0.5):
@@ -32,7 +36,7 @@ async def generate_daily_objective(state: RunningState):
         obj_planner_prompt,
         state.get("character_stats", {}).get("model_type"),
         DailyObjective,
-        1.5,
+        0.9,
     )
     response = make_api_request_sync_backend(
         "GET", f"/characters/getByIdS/{state['userid']}"
@@ -86,7 +90,7 @@ async def generate_meta_action_sequence(state: RunningState):
         meta_action_sequence_prompt,
         state.get("character_stats", {}).get("model_type"),
         MetaActionSequence,
-        0,
+        0.3,
     )
     payload = {
         "daily_objective": (
@@ -129,18 +133,16 @@ async def generate_meta_action_sequence(state: RunningState):
         },
     )
 
-    await state["instance"].send_message(
+    await send_message(
+        state,
+        "actionList",
+        6,
         {
-            "characterId": state["userid"],
-            "messageName": "actionList",
-            "messageCode": 6,
-            "data": {
-                "command": meta_action_sequence.meta_action_sequence,
-                "action_emoji": meta_action_sequence.action_emoji_sequence,
-                "state_emoji": meta_action_sequence.state_emoji_sequence,
-                "description": meta_action_sequence.description_sequence,
-            },
-        }
+            "command": meta_action_sequence.meta_action_sequence,
+            "action_emoji": meta_action_sequence.action_emoji_sequence,
+            "state_emoji": meta_action_sequence.state_emoji_sequence,
+            "description": meta_action_sequence.description_sequence,
+        },
     )
     logger.info(
         f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence.meta_action_sequence}"
@@ -156,7 +158,7 @@ async def replan_action(state: RunningState):
         meta_seq_adjuster_prompt,
         state.get("character_stats", {}).get("model_type"),
         MetaActionSequence,
-        0,
+        0.3,
     )
     false_action = state["false_action_queue"].get_nowait()
     failed_action = false_action.get("actionName")
@@ -212,23 +214,21 @@ async def replan_action(state: RunningState):
     )
 
     # Send new action sequence to client
-    await state["instance"].send_message(
+    await send_message(
+        state,
+        "actionList",
+        6,
         {
-            "characterId": state["userid"],
-            "messageName": "actionList",
-            "messageCode": 6,
-            "data": {
-                "command": meta_action_sequence.meta_action_sequence,
-                "action_emoji": meta_action_sequence.action_emoji_sequence,
-                "state_emoji": meta_action_sequence.state_emoji_sequence,
-                "description": meta_action_sequence.description_sequence,
-            },
-        }
+            "command": meta_action_sequence.meta_action_sequence,
+            "action_emoji": meta_action_sequence.action_emoji_sequence,
+            "state_emoji": meta_action_sequence.state_emoji_sequence,
+            "description": meta_action_sequence.description_sequence,
+        },
     )
 
 
 async def generate_change_job_cv(instance, msg: dict):
-    cv_generator = create_planner(generate_cv_prompt, "gpt-4o-mini", CV, 0.7)
+    cv_generator = create_planner(generate_cv_prompt, "gpt-4o-mini", CV, 0.5)
     available_public_jobs = make_api_request_sync_backend(
         "GET", "/publicWork/getAll"
     ).get("data", [])
@@ -286,7 +286,7 @@ async def generate_mayor_decision(
     cv: CV, user_id: int, experience: int, education: str, week: int = 0
 ):
     mayor_decision_generator = create_planner(
-        mayor_decision_prompt, "gpt-4o-mini", MayorDecision, 0.5
+        mayor_decision_prompt, "gpt-4o-mini", MayorDecision, 0.7
     )
     public_work_info = make_api_request_sync_backend(
         "GET", f"/publicWork/getById/{cv.job_id}"
@@ -337,7 +337,7 @@ async def generate_daily_reflection(state: RunningState):
         daily_reflection_prompt,
         state.get("character_stats", {}).get("model_type"),
         Reflection,
-        1,
+        0.8,
     )
     payload = {
         "character_stats": format_character_data(state["character_stats"]),
@@ -355,15 +355,13 @@ async def generate_daily_reflection(state: RunningState):
     # logger.info("======generate_daily_reflection======\n" + full_prompt)
     state["decision"]["reflection"].append(daily_reflection.reflection)
     save_decision_to_db(state["userid"], {"reflection": daily_reflection.reflection})
-    await state["instance"].send_message(
+    await send_message(
+        state,
+        "daily_reflection",
+        11,
         {
-            "characterId": state["userid"],
-            "messageName": "daily_reflection",
-            "messageCode": 11,
-            "data": {
-                "reflection": daily_reflection["reflection"],
-            },
-        }
+            "reflection": daily_reflection["reflection"],
+        },
     )
 
     logger.info(f"🔍 DAILY_REFLECTION INVOKED with {daily_reflection.reflection}")
@@ -374,7 +372,7 @@ async def generate_character_arc(state: RunningState):
         generate_character_arc_prompt,
         state.get("character_stats", {}).get("model_type"),
         CharacterArc,
-        0.5,
+        0.8,
     )
     character_info_task = make_api_request_async_backend(
         "GET", f"/characters/getById/{state['userid']}"
@@ -394,70 +392,14 @@ async def generate_character_arc(state: RunningState):
         "characterId": state["userid"],
         **dict(character_arc),
     }
-    await state["instance"].send_message(
-        {
-            "characterId": state["userid"],
-            "messageName": "character_arc",
-            "messageCode": 12,
-            "data": {"character_arc": character_arc_data},
-        }
+    await send_message(
+        state,
+        "character_arc",
+        12,
+        {"character_arc": character_arc_data},
     )
     logger.info(f"📜 Character Arc: {character_arc_data}")
     make_api_request_sync("POST", "/character_arc/", data=character_arc_data)
-
-
-def format_role_actions(roles, data):
-    action_strings = ["Here are the actions you can perform based on your roles:"]
-
-    for index, role in enumerate(roles, start=1):
-        role_data = data.get(role, {})
-        actions = role_data.get("actions", [])
-        cost = role_data.get("cost", 0)
-        materials = role_data.get("materials", {})
-
-        # Format the actions
-        action_str = f"{index}. craft [itemType:string] [num:int]: Craft a certain number of items and cost energy ({cost} per item)\n"
-        action_str += "Constraints: Item must be in ItemType: ("
-        action_str += ", ".join([action.split()[1] for action in actions])
-        action_str += ") and you should have enough materials.\nHere's the rule:\n"
-
-        # Format the materials
-        for item, constraints in materials.items():
-            if not constraints:
-                action_str += f"- {item}: No materials required.\n"
-            else:
-                constraint_str = ", ".join(constraints)
-                action_str += f"- {item}: Required materials: {constraint_str}\n"
-
-        action_strings.append(action_str)
-
-    return "\n".join(action_strings)
-
-
-def format_character_data(character_data: dict) -> str:
-    return (
-        f"Health: {character_data.get('health', 'N/A')} - Represents the character's physical well-being.\n"
-        f"Energy: {character_data.get('energy', 'N/A')} - Indicates how much energy the character has left.\n"
-        f"Hungry: {character_data.get('hungry', 'N/A')} - Indicates the character's level of satiety; the higher, the fuller.\n"
-        f"Education: {character_data.get('education', 'N/A')} - The level of education attained.\n"
-        f"Education Experience: {character_data.get('education_experience', 'N/A')} - Experience points in education.\n"
-        f"Money: {character_data.get('money', 'N/A')} - Current financial status.\n"
-        f"Occupation: {character_data.get('occupation', 'N/A')} - Current job or role work at {character_data.get('work_place')}\n"
-        f"Efficiency: {character_data.get('efficiency', 'N/A'):.2f} - Calculated efficiency based on various factors: "
-        f"Efficiency = (Hungry Factor) * (Energy Factor) * (Health Factor) * (Wisdom Factor), where:\n"
-        f"  - Hungry Factor = hungry / 100 if hungry < 50 else 1\n"
-        f"  - Energy Factor = energy / 100\n"
-        f"  - Health Factor = health / 100\n"
-        f"  - Wisdom Factor = log(education_experience + 10, 10)\n"
-        f"  Efficiency affects the crafting efficiency of items. If the efficiency is too low (lower than 0.2), "
-        f"  it is advisable to improve the basic attributes first.\n"
-        f"Inventory: {character_data.get('inventory', {})} - Items currently held by the character.\n"
-        f"Personality: {character_data.get('personality', 'N/A')} - Describes the character's personality traits.\n"
-        f"Long-term Goal: {character_data.get('long_term_goal', 'N/A')} - The character's long-term aspirations.\n"
-        f"Short-term Goal: {character_data.get('short_term_goal', 'N/A')} - Immediate objectives.\n"
-        f"Language Style: {character_data.get('language_style', 'N/A')} - Preferred communication style.\n"
-        f"Biography: {character_data.get('biography', 'N/A')} - A brief background story.\n"
-    )
 
 
 async def generate_accommodation_decision(state: RunningState):
@@ -611,15 +553,33 @@ async def generate_accommodation_decision(state: RunningState):
             }
         }
 
+    await send_message(
+        state,
+        "accommodationChange",
+        8,
+        {
+            "accommodationId": accommodation_decision.accommodation_id,
+            "leaseWeeks": lease_weeks,
+            "comments": accommodation_decision.comments,
+        },
+    )
+
+
+async def send_message(state, message_name, message_code, data):
+    """
+    Send a message to the client.
+
+    Args:
+        state: The current state containing the instance and user ID.
+        message_name (str): The name of the message.
+        message_code (int): The code of the message.
+        data (dict): The data to send in the message.
+    """
     await state["instance"].send_message(
         {
             "characterId": state["userid"],
-            "messageName": "accommodationChange",
-            "messageCode": 8,
-            "data": {
-                "accommodationId": accommodation_decision.accommodation_id,
-                "leaseWeeks": lease_weeks,
-                "comments": accommodation_decision.comments,
-            },
+            "messageName": message_name,
+            "messageCode": message_code,
+            "data": data,
         }
     )
