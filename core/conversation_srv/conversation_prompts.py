@@ -10,7 +10,7 @@ conversation_topic_planner_prompt = ChatPromptTemplate.from_template(
     You are now talking with: {target_profile}.
     
     Now generate one topic for this conversation.
-    The topic should be {style}.
+    The topic style should be {style}.
     The topic should only focus on your action descriptions and reflections.
     Never talk about web3, blockchain, economy, finance, crypto-finance or other similar topics.
     
@@ -19,10 +19,11 @@ conversation_topic_planner_prompt = ChatPromptTemplate.from_template(
     Your new topic should be different from these topics.
     
     There are some other requirements for the topic {topic_requirements}.
-
+    
+    You should generate one topic in English and add an style pattern before.
+    The style pattern must be the same as the style you received.
     Here are some examples.
-    "Discuss food price in the market.", "Insult others on clothing.", "Share good learning habits."
-    Now generate ONE topic in English:
+    "Positive: Discuss food price in the market.", "Negative: Insult others on clothing.", "Positive: Share good learning habits."
     """
 )
 
@@ -47,7 +48,7 @@ conversation_generator_prompt = ChatPromptTemplate.from_template(
     Now you are talking about {topic}.
     Now based on the information of two players and topic, generate your the conversation content.
     The content must closely related to the topic.
-    If the the topic is about criticizing, insulting or debate, the conversation content must be negative.
+    If the the topic is negative, the overall atmosphere of the conversation must be negative, where the two players disagree with each other.
     
     Based on the profile, personality, the impression, determine when should the conversation end.
     The relation and emotion in impressions and personalities can influence the overall round of the conversation.
@@ -60,6 +61,7 @@ conversation_generator_prompt = ChatPromptTemplate.from_template(
     
     In each sentence, never start with words that express agreement or disagreement, such as absolutely, indeed, etc.
     The players don't need to always agree with others. Express their own opinions based on given information.
+    The conversation content should also be interesting, not a discussion.
          
     Each conversation should be a str in the following format:
     Each line start with the speaker's name, after that comes a colon, then his words.

@@ -99,8 +99,8 @@ async def generate_daily_conversation_plan(state: ConversationState):
 
     # generate conversation topics list.
     style_type = [
-        {"positive": "Communicate, share, discuss friendly."},
-        {"negative": "Insult, quarrel, abuse or attack."}
+        {"positive"},
+        {"negative"}
     ]
     topic_list = []
     for target in target_list:
