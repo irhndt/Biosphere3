@@ -698,14 +698,6 @@ def format_daily_obj(daily_objectives: list) -> str:
     for i, obj in enumerate(daily_objectives, start=1):
         formatted_str += f"Objective {i}: {obj}\n"
     return formatted_str
-def format_level_graph(level_graph_data: dict) -> str:
-    formatted_str = ""
-    for goal in level_graph_data:
-        formatted_str += f"Level {goal['goal_number']}:\n"
-        for obj in goal["objectives"]:
-            formatted_str += f"  - {obj['item']} *{obj['quantity']}\n"
-        formatted_str += "\n"
-    return formatted_str.strip()
 
 
 def update_state_daily(state: dict, day: int):

@@ -60,6 +60,7 @@ async def generate_daily_objective(state: RunningState):
     dev_dict = make_api_request_sync("GET", f"/production_path/{state['userid']}").get(
         "data", {}
     )
+    # print(dev_dict)
     state["meta"]["production_graph"] = format_level_graph(
         dev_dict,
         state["character_stats"]["inventory"],
@@ -975,7 +976,7 @@ if __name__ == "__main__":
     import core.agent_srv.utils as utils
     import pprint
 
-    state = asyncio.run(utils.get_initial_state_from_db(448450, "websocket"))
+    state = asyncio.run(utils.get_initial_state_from_db(432543, "websocket"))
     # pprint.pprint(state)
     logger.info(f"🚀 User {state['userid']} starting node engines")
     asyncio.run(generate_daily_objective(state))
