@@ -77,6 +77,7 @@ class RunningState(TypedDict):
     event_queue: asyncio.Queue
     false_action_queue: asyncio.Queue
     public_data: PublicData
+    past_stats: Annotated[CharacterStats, generic_reducer]
     websocket: Any
     current_pointer: str
     instance: Any
@@ -106,10 +107,6 @@ class MetaActionSequence(BaseModel):
         description="emoji sequence that describes states"
     )
     description_sequence: List[str] = Field(description="description sequence")
-
-
-from typing import Optional
-from pydantic import BaseModel, Field
 
 
 class CraftingAndTradingAction(BaseModel):

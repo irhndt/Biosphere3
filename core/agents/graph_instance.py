@@ -25,6 +25,8 @@ from core.agent_srv.utils import (
     get_initial_state_from_db,
     save_decision_to_db,
     save_action_to_db,
+    update_state_daily,
+    clear_decision,
 )
 
 
@@ -112,18 +114,24 @@ class LangGraphInstance:
                 pprint(self.state["event_queue"])
             elif (
                 message_name == "eventInfo"
+                and message_data
                 and message_data.get("msg") == "ActionList Empty"
             ):
                 self.schedule_event("PLAN")
             elif (
                 message_name == "accommodation_event"
-                or message_data.get("msg") == "House rent will expire tomorrow"
+                and message_data
+                and message_data.get("msg") == "House rent will expire tomorrow"
             ):
                 self.schedule_event("ACCOMMODATION_EVENT")
             elif message_name == "new_day":
+                update_state_daily(
+                    self.state, message_data.get("day", self.state["meta"]["day"] + 1)
+                )
                 self.schedule_event("CHARACTER_ARC")
                 self.schedule_event("DAILY_REFLECTION")
-                self.state["meta"]["day"] = message_data.get("day", 1)
+                await asyncio.sleep(60)
+                clear_decision(self.state)
             else:
                 self.logger.error(
                     f"User {self.user_id}: Unknown message: {message_name}"

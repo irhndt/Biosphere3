@@ -40,12 +40,14 @@ Remind:
 2. For the production graph, you should fully consider what stage you are currently in and what you need to do next.
 
 Output Specifications:
-1. The final output consists of two parts. One part is a string describing the current progress of manufacturing items and what should be considered for the next step, the other part should be a list of daily objectives.
-2. you SHOULD NOT output other formats or other description words
-3. There is no limit to the length of the resulting list.
-4. Make sure the daily objectives are `achievable` and help the user progress in the game. 
+1. The final output consists of two parts.
+2. The first part is a string describing the current progress of manufacturing items and what should be considered for the next step.
+3. The second part should be a list of daily objectives (arranged in order of importance, craft and trade are generally considered more important).
+4. you SHOULD NOT output other formats or other description words
+5. There is no limit to the length of the resulting list.
+6. Don't copy the examples I give, judge according to the actual situation.
 
-Example Output Format:
+Example Output:
 {{
     "progress": "Based on my current inventory items, if I need to go further to the next level, I still need to collect...",
     "objectives": ["Crafting: Craft some copper_ore", "Trading: Buy some fish from the market to use", "General: Sleep to get energy"]
@@ -102,7 +104,6 @@ Here are some information you need to know:
 Current Meta Action Sequence: {meta_seq}
 Tool Functions: {tool_functions}
 Available Locations: {locations}
-
 The following action has failed and needs to be replanned:
 Failed Action: {failed_action}
 Error Message: {error_message}
@@ -181,6 +182,7 @@ daily_reflection_prompt = ChatPromptTemplate.from_template(
     """
 You are a daily reflection generator in a RPG game. Your job is to generate a diary-like daily reflection for the user.
 Here are some information you need to know:
+Changes in User Status: {status_changes}
 Recent Daily Objectives: {daily_objectives}
 Recent Action Results: {action_results}
 Failed Actions: {failed_actions}
@@ -188,7 +190,7 @@ Some additional Requirements: {reflection_ar}
 Conversation Memory: {conversation_memory}
 
 Remind:
-1. You should summarize the user's daily objective, failed actions and conversation in the reflection.
+1. You should summarize the user's changes in status, daily objective, failed actions and conversation in the reflection.
 2. You should mainly focus on how to improve future planning.
 3. You should focus on these topics in a descending order: {focus_topic}.
 4. Depth of reflection: {depth_of_reflection}.

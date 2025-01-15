@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import aiohttp
 from loguru import logger
 import math
+import copy
 
 load_dotenv()
 GAME_BACKEND_URL = os.getenv("GAME_BACKEND_URL")
@@ -157,7 +158,6 @@ def get_market_data_from_db() -> dict:
         _logger=logger,
         error_message="Failed to get market data from AMM pool",
     )
-    # print(price_response)
     market_data_dict = dict({x["name"]: x["averagePrice"] for x in price_response})
     return market_data_dict
 
@@ -453,6 +453,7 @@ async def get_initial_state_from_db(userid, websocket):
             "day": 0,
             "available_locations": available_locations,
         },
+        "past_stats": {},
         "prompts": prompt_data,
         "message_queue": asyncio.Queue(),
         "event_queue": asyncio.Queue(),
@@ -461,61 +462,6 @@ async def get_initial_state_from_db(userid, websocket):
         "current_pointer": "Sensing_Route",
     }
     return state
-
-
-def generate_initial_state_hardcoded(userid, websocket):
-    initial_state = {
-        "userid": userid,
-        "character_stats": {
-            "name": "Alice",
-            "gender": "Female",
-            "slogan": "Need to be rich!Need to be educated!",
-            "description": "A risk lover. Always looking for the next big thing.",
-            "role": "Investor",
-            "inventory": get_inventory(userid),
-            "health": 100,
-            "energy": 100,
-        },
-        "decision": {
-            "need_replan": False,
-            "action_description": [],
-            "action_result": [],
-            "new_plan": [],
-            "daily_objective": [],
-            "meta_seq": [],
-            "reflection": [],
-        },
-        "meta": {
-            "tool_functions": tool_functions_live,
-            "day": "",
-            "available_locations": available_locations,
-        },
-        "prompts": {
-            "daily_goal": "",
-            "refer_to_previous": False,
-            "life_style": "Casual",
-            "daily_objective_ar": "",
-            "task_priority": [],
-            "max_actions": 10,
-            "meta_seq_ar": "",
-            "replan_time_limit": 3,
-            "meta_seq_adjuster_ar": "",
-            "focus_topic": [],
-            "depth_of_reflection": "Moderate",
-            "reflection_ar": "",
-            "level_of_detail": "Moderate",
-            "tone_and_style": "",
-        },
-        "public_data": {
-            "market_data": get_market_data_from_db(),
-        },
-        "message_queue": asyncio.Queue(),
-        "event_queue": asyncio.Queue(),
-        "false_action_queue": asyncio.Queue(),
-        "websocket": websocket,
-        "current_pointer": "Sensing_Route",
-    }
-    return initial_state
 
 
 tool_functions_live = """
@@ -752,3 +698,71 @@ def format_daily_obj(daily_objectives: list) -> str:
     for i, obj in enumerate(daily_objectives, start=1):
         formatted_str += f"Objective {i}: {obj}\n"
     return formatted_str
+def format_level_graph(level_graph_data: dict) -> str:
+    formatted_str = ""
+    for goal in level_graph_data:
+        formatted_str += f"Level {goal['goal_number']}:\n"
+        for obj in goal["objectives"]:
+            formatted_str += f"  - {obj['item']} *{obj['quantity']}\n"
+        formatted_str += "\n"
+    return formatted_str.strip()
+
+
+def update_state_daily(state: dict, day: int):
+    state["meta"]["day"] = day
+    state["past_stats"] = copy.deepcopy(state["character_stats"])
+
+
+def clear_decision(state: dict):
+    state["decision"]["action_description"] = []
+    state["decision"]["action_result"] = []
+    state["decision"]["new_plan"] = []
+    state["decision"]["daily_objective"] = []
+    state["decision"]["meta_seq"] = []
+    state["decision"]["reflection"] = []
+
+
+def format_status_changes(past_status: dict, status: dict, fields: list = None) -> str:
+    if fields is None:
+        fields = status.keys()
+
+    formatted_data = []
+
+    if "health" in fields and "health" in past_status and "health" in status:
+        formatted_data.append(
+            f"Health: {past_status.get('health', 'N/A')} -> {status.get('health', 'N/A')}"
+        )
+    if "energy" in fields and "energy" in past_status and "energy" in status:
+        formatted_data.append(
+            f"Energy: {past_status.get('energy', 'N/A')} -> {status.get('energy', 'N/A')}"
+        )
+    if "hungry" in fields and "hungry" in past_status and "hungry" in status:
+        formatted_data.append(
+            f"Hungry: {past_status.get('hungry', 'N/A')} -> {status.get('hungry', 'N/A')}"
+        )
+    if "education" in fields and "education" in past_status and "education" in status:
+        formatted_data.append(
+            f"Education: {past_status.get('education', 'N/A')} -> {status.get('education', 'N/A')}"
+        )
+    if "education_experience" in fields and "education_experience" in past_status and "education_experience" in status:
+        formatted_data.append(
+            f"Education Experience: {past_status.get('education_experience', 'N/A')} -> {status.get('education_experience', 'N/A')}"
+        )
+    if "money" in fields and "money" in past_status and "money" in status:
+        formatted_data.append(
+            f"Money: {past_status.get('money', 'N/A')} -> {status.get('money', 'N/A')}"
+        )
+    if "occupation" in fields and "occupation" in past_status and "occupation" in status:
+        formatted_data.append(
+            f"Occupation: {past_status.get('occupation', 'N/A')} -> {status.get('occupation', 'N/A')}"
+        )
+    if "efficiency" in fields and "efficiency" in past_status and "efficiency" in status:
+        formatted_data.append(
+            f"Efficiency: {past_status.get('efficiency', 'N/A')} -> {status.get('efficiency', 'N/A')}"
+        )
+    if "inventory" in fields and "inventory" in past_status and "inventory" in status:
+        formatted_data.append(
+            f"Inventory: {past_status.get('inventory', 'N/A')} -> {status.get('inventory', 'N/A')}"
+        )
+
+    return "\n".join(formatted_data)
