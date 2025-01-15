@@ -4,6 +4,7 @@ from typing import Dict, DefaultDict, Literal
 from dotenv import load_dotenv
 import os
 from langchain.callbacks.base import BaseCallbackHandler
+from core.db.game_api_utils import make_api_request_sync
 
 load_dotenv()
 
@@ -14,6 +15,18 @@ class LLMSelector:
     token_usage: DefaultDict[str, Dict[str, int]] = defaultdict(
         lambda: {"prompt": 0, "completion": 0, "total": 0}
     )
+
+    @classmethod
+    def initialize_token_usage(cls):
+        modelToken = make_api_request_sync("GET", "/modelToken/getLatestModelToken")
+        data = modelToken.get("data", [])
+        for item in data:
+            model_type = item.get("modelType")
+            cls.token_usage[model_type] = {
+                "prompt": item.get("prompt", 0),
+                "completion": item.get("completion", 0),
+                "total": item.get("total", 0),
+            }
 
     @classmethod
     def get_token_usage(cls) -> Dict[str, Dict[str, int]]:
@@ -75,3 +88,4 @@ class TokenUsageHandler(BaseCallbackHandler):
 
 
 llm_selector = LLMSelector()
+llm_selector.initialize_token_usage()
