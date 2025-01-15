@@ -649,8 +649,8 @@ def format_level_graph(level_graph_data: dict) -> str:
     return formatted_str.strip()
 
 
-def update_state_daily(state: dict):
-    state["meta"]["day"] += 1
+def update_state_daily(state: dict, day: int):
+    state["meta"]["day"] = day
     state["past_stats"] = copy.deepcopy(state["character_stats"])
 
 

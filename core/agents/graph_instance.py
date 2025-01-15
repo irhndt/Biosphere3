@@ -124,7 +124,7 @@ class LangGraphInstance:
             ):
                 self.schedule_event("ACCOMMODATION_EVENT")
             elif message_name == "new_day":
-                update_state_daily(self.state)
+                update_state_daily(self.state, message_data.get("day", self.state["meta"]["day"] + 1))
                 self.schedule_event("CHARACTER_ARC")
                 self.schedule_event("DAILY_REFLECTION")
                 await asyncio.sleep(60)
