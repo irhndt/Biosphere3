@@ -1,0 +1,13 @@
+{
+    "study": {
+        "money": 100,
+        "energy": 10
+    },
+    "seedoctor": {
+        "money": 100,
+        "health": 10
+    },
+    "work": {
+        "energy": 10
+    }
+}

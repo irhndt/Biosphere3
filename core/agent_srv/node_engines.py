@@ -1,0 +1,953 @@
+import json
+from loguru import logger
+import sys
+from pprint import pprint
+
+sys.path.append(".")
+
+from core.agent_srv.node_model import (
+    DailyObjective,
+    MetaActionSequence,
+    CV,
+    MayorDecision,
+    RunningState,
+    CharacterArc,
+    Reflection,
+    AccommodationDecision,
+    CraftingAndTradingActionSequence,
+    RefinedMetaActionSequence,
+    EmojiSequence,
+)
+from core.agent_srv.prompts import *
+from core.utils.llm_factory import llm_selector
+from core.db.database_api_utils import make_api_request_sync
+from core.db.game_api_utils import (
+    make_api_request_async as make_api_request_async_backend,
+    make_api_request_sync as make_api_request_sync_backend,
+)
+from core.agent_srv.utils import (
+    format_dict,
+    save_decision_to_db,
+    format_role_actions,
+    format_market,
+    format_character_data,
+    format_conversation_data,
+    format_queue_data,
+    format_trade_and_craft_sequence,
+    format_level_graph,
+    format_daily_obj,
+)
+from core.agent_srv.action_filter import ActionFilter
+
+
+def create_planner(prompt_template, model_name, output_type, temperature=0.5):
+    return prompt_template | llm_selector.get_llm(
+        model_name=model_name, temperature=temperature
+    ).with_structured_output(output_type)
+
+
+async def generate_daily_objective(state: RunningState):
+    obj_planner = create_planner(
+        obj_planner_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        DailyObjective,
+        0.7,
+    )
+    dev_dict = make_api_request_sync("GET", f"/production_path/{state['userid']}").get(
+        "data", {}
+    )
+    state["meta"]["production_graph"] = format_level_graph(
+        dev_dict,
+        state["character_stats"]["inventory"],
+        state["character_stats"]["energy"],
+    )
+    decision_response = make_api_request_sync(
+        "GET", "/decision/", params={"characterId": state["userid"], "count": 10}
+    )
+    last_decision = decision_response.get("data", {})
+    retry_count = 0
+    payload = {
+        "character_stats": format_character_data(
+            state["character_stats"],
+            fields=["money", "inventory"],
+        ),
+        "past_objectives": last_decision.get("daily_objective", []),
+        "life_style": state["prompts"]["life_style"],
+        "past_reflection": last_decision.get("reflection", []),
+        "production_graph": state["meta"]["production_graph"],
+    }
+    while retry_count < 3:
+        try:
+            planner_response = await obj_planner.ainvoke(payload)
+            break
+        except Exception as e:
+            logger.error(
+                f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
+            )
+            retry_count += 1
+            continue
+    full_prompt = obj_planner_prompt.format(**payload)
+    logger.info("======generate_daily_objective======\n" + full_prompt)
+    for item in planner_response.objectives:
+        state["decision"]["daily_objective"].append(item)
+    save_decision_to_db(
+        state["userid"], {"daily_objective": planner_response.objectives}
+    )
+
+    logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response.progress}")
+    logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response.objectives}")
+
+
+async def generate_crafting_and_trading_sequence(state: RunningState):
+    crafting_and_trading_planner = create_planner(
+        crafting_and_trading_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        CraftingAndTradingActionSequence,
+        0.3,
+    )
+    forbidden_example_out = """### Forbidden Example Output 1: The latter effect of the action is not allowed (latter energy/money is negative)
+>> suppose the current or initial energy is 20, and the action costs 25 energy, the latter energy is -5, which is not allowed.
+{
+    "result": [
+        {
+            "action": "craft feed 5",
+            "reason": "Reason: Craft feed from rice to prepare for making chicken/beef.",
+            "cost": "25 energy total (5 energy per item × 5)"
+            "status_before": "Current energy is 20/100",
+            "status_after": "Later energy is -5/100" # This is not allowed!
+            "inventory_before": "Current inventory is {apple: 2, rice: 7}",
+            "inventory_after": "Later inventory is {apple: 2, rice: 2}"
+        }
+    ]
+}
+
+>> suppose the current or initial money is 20, and the action costs 100 money, the latter money is -80, which is not allowed.
+{
+    "result": [
+        {
+            "action": "study 1",
+            "reason": "Reason: Study to gain experience.",
+            "cost": "100 money total (100 money per item × 1), 10 energy total (10 energy per item × 1)"
+            "status_before": "Current money is 20; Current energy is 20/100",
+            "status_after": "Later money is -80; Later energy is 10/100" # This is not allowed!
+        }
+    ]
+}
+
+### Forbidden Example Output 2: Take `craft action` but the user doesn't have enough materials
+>> suppose the user current inventory is {apple: 2, rice: 3}, and the action is `craft chicken 2`, which requires 2 feed, but the user doesn't have enough rice.
+{
+    "result": [
+        {
+            "action": "craft feed 5",
+            "reason": "Reason: Craft feed from rice to prepare for making chicken/beef.",
+            "cost": "25 energy total (5 energy per item × 5); 5 rice total (1 rice per item × 5)"
+            "status_before": "Current energy is 20/100",   
+            "status_after": "Later energy is 0/100",
+            "inventory_before": "Current inventory is {apple: 2, rice: 3}",
+            "inventory_after": "Later inventory is {apple: 2, rice: -2}" # This is not allowed!
+        }
+    ]
+}
+
+### Forbidden Example Output 3: `Craft Action` CAN NOT craft more than ***10 items*** at an action list.
+>> suppose the user have enough energy to craft 20 iron_ore. Even in this case, the user can only craft 10 iron_ore at an action list.
+{
+    "result": [
+        {
+            "action": "craft iron_ore 20",  # This is not allowed!!
+            ...
+        }
+    ]
+}
+
+Remember, you should not output any forbidden situation in the result!
+"""
+    payload = {
+        "character_stats": format_character_data(
+            state["character_stats"],
+            fields=[
+                "money",
+                "energy",
+                "health",
+                "hungry",
+                "education",
+                "education_experience",
+                "occupation",
+                "effciency",
+                "inventory",
+            ],
+        ),
+        "market_data": format_market(state["public_data"]["market_data"]),
+        "daily_objectives": format_daily_obj(state["decision"]["daily_objective"]),
+        "production_graph": state["meta"]["production_graph"],
+        "example_output": """
+{
+    "result": [
+            {
+                "action": "action1",,
+                "cost": "25 energy total (5 energy per item × 5)",
+                "status_before": "Current energy is 65/100",
+                "status_after": "Later energy is 40/100",
+                "reason": "Reason for action1"
+            },
+            {
+                "action": "action2",
+                "cost": "10 energy total (5 energy per item × 2)",
+                "status_before": "Current energy is 40/100",
+                "status_after": "Later energy is 30/100",
+                "inventory_before": "Current inventory is {apple: 2, rice: 3}",
+                "inventory_after": "Later inventory is {apple: 2, rice: 1}",
+                "reason": "Reason for action2"
+            },
+            {
+                "action": "goto home",
+                "cost": "None",
+                "reason": "Go home to rest and recover energy"
+            },
+            {
+                "action": "sleep 6",
+                "cost": "None",
+                "status_before": "Current energy is 30/100",
+                "status_after": "Later energy is 90/100",
+                "reason": "The energy is too low, need to sleep to recover energy"
+            },
+            {
+                "action": "action3",
+                "expected_revenue": "23.7 gold",
+                "status_before": "Current gold is 100",
+                "status_after": "Later gold is 123.7",
+                "reason": "Reason for action3"
+            },
+            ...(more actions)...
+        ]
+}""",
+        "forbidden_example_output": forbidden_example_out,
+    }
+    print(crafting_and_trading_prompt.format(**payload))
+    for _ in range(3):
+        try:
+            crafting_and_trading_sequence = await crafting_and_trading_planner.ainvoke(
+                payload
+            )
+            # print("crafting_and_trading_sequence: \n", crafting_and_trading_sequence)
+            break
+        except Exception as e:
+            logger.error(
+                f"⛔ User {state['userid']} Error in generate_crafting_and_trading_sequence: {e}"
+            )
+            continue
+
+    state["decision"]["detailed_meta_seq"] = []
+    for craft_and_trade in crafting_and_trading_sequence.action_sequence:
+        state["decision"]["detailed_meta_seq"].append(craft_and_trade.model_dump())
+
+    pprint.pprint(
+        state["decision"]["detailed_meta_seq"],
+    )
+    state["decision"]["meta_seq"] = [
+        action.action for action in crafting_and_trading_sequence.action_sequence
+    ]
+
+    emoji_seq_generator = create_planner(
+        generate_emoji_sequence_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        EmojiSequence,
+        0.8,
+    )
+
+    squence_format = """{"response": [{"content": "I hate work overtime!", "emoji": "🥺😭"}, {"content": "So tired, but got lots of fishes", "emoji": "🐟😆"}]}"""
+
+    pay_load = {
+        "personality": state["character_stats"]["personality"],
+        "action_list": state["decision"]["meta_seq"],
+        "sequence_format": squence_format,
+    }
+    retry_count = 0
+    while retry_count < 3:
+        try:
+            emoji_sequence = await emoji_seq_generator.ainvoke(pay_load)
+            if emoji_sequence.response:
+                break
+        except Exception as e:
+            logger.error(
+                f"⛔ User {state['userid']} Error in generate_emoji_sequence: {e}"
+            )
+            retry_count += 1
+            continue
+
+    for emoji_and_description in emoji_sequence.response:
+        state["decision"]["action_description"].append(emoji_and_description.content)
+
+    meta_action_sequence = [
+        action.action for action in crafting_and_trading_sequence.action_sequence
+    ]
+
+    save_decision_to_db(
+        state["userid"],
+        {
+            "meta_seq": meta_action_sequence,
+            "action_description": state["decision"]["action_description"],
+        },
+    )
+
+    # await send_message(
+    #     state,
+    #     "actionList",
+    #     6,
+    #     {
+    #         "command": meta_action_sequence,
+    #         "emoji": [desc.emoji for desc in emoji_sequence.response],
+    #         "description": state["decision"]["action_description"],
+    #     },
+    # )
+    logger.info(f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence}")
+    pprint.pprint(
+        {
+            "command": meta_action_sequence,
+            "emoji": [desc.emoji for desc in emoji_sequence.response],
+            "description": state["decision"]["action_description"],
+        },
+    )
+
+
+async def generate_meta_action_sequence(state: RunningState):
+    meta_action_sequence_planner = create_planner(
+        meta_action_sequence_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        MetaActionSequence,
+        0.3,
+    )
+    payload = {
+        "daily_objective": (
+            state["decision"]["daily_objective"][-1]
+            if state["decision"]["daily_objective"]
+            else []
+        ),
+        "tool_functions": state["meta"]["tool_functions"],
+        "locations": state["meta"]["available_locations"],
+        "inventory": state["character_stats"]["inventory"],
+        "market_data": state["public_data"]["market_data"],
+        "task_priority": state["prompts"]["task_priority"],
+        "max_actions": state["prompts"]["max_actions"],
+        "additional_requirements": state["prompts"]["meta_seq_ar"],
+    }
+
+    retry_count = 0
+    while retry_count < 3:
+        try:
+            meta_action_sequence = await meta_action_sequence_planner.ainvoke(payload)
+            break
+        except Exception as e:
+            logger.error(
+                f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
+            )
+            retry_count += 1
+            continue
+
+    # full_prompt = meta_action_sequence_prompt.format(**payload)
+    # logger.info("======generate_meta_action_sequence======\n" + full_prompt)
+    for item in meta_action_sequence.meta_action_sequence:
+        state["decision"]["meta_seq"].append(item)
+    for item in meta_action_sequence.description_sequence:
+        state["decision"]["action_description"].append(item)
+    save_decision_to_db(
+        state["userid"],
+        {
+            "meta_seq": meta_action_sequence.meta_action_sequence,
+            "action_description": meta_action_sequence.description_sequence,
+        },
+    )
+
+    await send_message(
+        state,
+        "actionList",
+        6,
+        {
+            "command": meta_action_sequence.meta_action_sequence,
+            "action_emoji": meta_action_sequence.action_emoji_sequence,
+            "state_emoji": meta_action_sequence.state_emoji_sequence,
+            "description": meta_action_sequence.description_sequence,
+        },
+    )
+    logger.info(
+        f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence.meta_action_sequence}"
+    )
+
+
+async def sensing_environment(state: RunningState):
+    return {"current_pointer": "Process_Event"}
+
+
+async def replan_action(state: RunningState):
+    meta_seq_adjuster = create_planner(
+        meta_seq_adjuster_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        MetaActionSequence,
+        0.3,
+    )
+    false_action = state["false_action_queue"].get_nowait()
+    failed_action = false_action.get("actionName")
+    error_message = false_action.get("msg")
+
+    logger.info(f"🔄 User {state['userid']}: Replanning failed action: {failed_action}")
+
+    # Analyze error type and context
+    error_context = {
+        "failed_action": failed_action,
+        "error_message": error_message,
+        "current_meta_seq": state["decision"]["meta_seq"][-1],
+        "daily_objective": state["decision"]["daily_objective"][-1],
+    }
+    logger.info(f"🔧 User {state['userid']}: Error context: {error_context}")
+    # try:
+    # Generate new meta sequence with error context
+    retry_count = 0
+    while retry_count < 3:
+        try:
+            meta_action_sequence = await meta_seq_adjuster.ainvoke(
+                {
+                    "meta_seq": state["decision"]["meta_seq"][-1],
+                    "tool_functions": state["meta"]["tool_functions"],
+                    "locations": state["meta"]["available_locations"],
+                    "failed_action": failed_action,
+                    "error_message": error_message,
+                    "replan_time_limit": state["prompts"]["replan_time_limit"],
+                    "additional_requirements": state["prompts"]["meta_seq_adjuster_ar"],
+                }
+            )
+            break
+        except Exception as e:
+            logger.error(
+                f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
+            )
+            retry_count += 1
+            continue
+
+    logger.info(
+        f"✨ User {state['userid']}: Generated new action sequence: {meta_action_sequence.meta_action_sequence}"
+    )
+    for item in meta_action_sequence.meta_action_sequence:
+        state["decision"]["new_plan"].append(item)
+    for item in meta_action_sequence.description_sequence:
+        state["decision"]["action_description"].append(item)
+    save_decision_to_db(
+        state["userid"],
+        {
+            "new_plan": meta_action_sequence.meta_action_sequence,
+            "action_description": meta_action_sequence.description_sequence,
+        },
+    )
+
+    # Send new action sequence to client
+    await send_message(
+        state,
+        "actionList",
+        6,
+        {
+            "command": meta_action_sequence.meta_action_sequence,
+            "action_emoji": meta_action_sequence.action_emoji_sequence,
+            "state_emoji": meta_action_sequence.state_emoji_sequence,
+            "description": meta_action_sequence.description_sequence,
+        },
+    )
+
+
+async def generate_change_job_cv(instance, msg: dict):
+    cv_generator = create_planner(generate_cv_prompt, "gpt-4o-mini", CV, 0.5)
+    available_public_jobs = make_api_request_sync_backend(
+        "GET", "/publicWork/getAll"
+    ).get("data", [])
+
+    user_id = msg.get("characterId")
+    msg_data = msg.get("data", {})
+    health = msg_data.get("health", 0)
+    studyXp = msg_data.get("studyXp", 0)
+    education = msg_data.get("education", "None")
+    week = msg_data.get("week", 0)
+    date = msg_data.get("date", 0)
+
+    payload = {
+        "available_public_jobs": available_public_jobs,
+        "health": health,
+        "experience": studyXp,
+        "education": education,
+    }
+    cv = await cv_generator.ainvoke(payload)
+
+    logger.info(f"📃 CV: {cv}")
+
+    job_detail = make_api_request_sync_backend(
+        "GET", f"/publicWork/getById/{cv.job_id}"
+    )
+    job_name = job_detail.get("data", {}).get("jobName", "")
+    cv_request = {
+        "jobid": cv.job_id,
+        "characterId": user_id,
+        "CV_content": cv.cv,
+        "week": week,
+        "health": health,
+        "studyxp": studyXp,
+        "date": date,
+        "jobName": job_name,
+        "election_status": "not_yet",
+    }
+    make_api_request_sync("POST", "/cv/", data=cv_request)
+
+    mayor_decision = await generate_mayor_decision(
+        cv, user_id, studyXp, education, date
+    )
+    if instance:
+        await instance.send_message(
+            {
+                "characterId": user_id,
+                "messageName": "mayor_decision",
+                "messageCode": 10,
+                "data": {"jobId": cv.job_id, "cv": cv.cv, **mayor_decision},
+            }
+        )
+
+
+async def generate_mayor_decision(
+    cv: CV, user_id: int, experience: int, education: str, week: int = 0
+):
+    mayor_decision_generator = create_planner(
+        mayor_decision_prompt, "gpt-4o-mini", MayorDecision, 0.7
+    )
+    public_work_info = make_api_request_sync_backend(
+        "GET", f"/publicWork/getById/{cv.job_id}"
+    ).get("data", {})
+
+    check_result = make_api_request_sync_backend(
+        "POST",
+        "/publicWork/checkWork",
+        data={
+            "characterId": user_id,
+            "newJobId": cv.job_id,
+            "experience": experience,
+            "education": education,
+        },
+    )
+    code = check_result.get("code", 0)
+    message = check_result.get("message", "")
+    payload = {
+        "cv": cv.cv,
+        "public_work_info": public_work_info,
+        "meet_requirements": {"meet": code == 1, "message": message},
+    }
+    mayor_decision = await mayor_decision_generator.ainvoke(payload)
+    logger.info(f"🧔 Mayor decision: {mayor_decision.decision}")
+    logger.info(f"🧔 Mayor comments: {mayor_decision.comments}")
+
+    make_api_request_sync(
+        "PUT",
+        "/cv/election_status",
+        data={
+            "characterId": user_id,
+            "jobid": cv.job_id,
+            "week": week,
+            "election_status": (
+                "succeeded" if mayor_decision.decision == "yes" else "failed"
+            ),
+        },
+    )
+
+    return {
+        "mayor_decision": mayor_decision.decision,
+        "mayor_comments": mayor_decision.comments,
+    }
+
+
+async def generate_daily_reflection(state: RunningState):
+    daily_reflection_generator = create_planner(
+        daily_reflection_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        Reflection,
+        0.8,
+    )
+    decision = make_api_request_sync(
+        "GET",
+        "/decision/",
+        params={"characterId": state["userid"], "count": 10},
+    )
+    conversation = make_api_request_sync(
+        "GET",
+        "/conversation/",
+        params={"characterId": state["userid"], "start_day": state["meta"]["day"]},
+    )
+    failed_actions = await format_queue_data(state["false_action_queue"])
+    payload = {
+        "daily_objectives": decision.get("data", {}).get("daily_objective", []),
+        "action_results": decision.get("data", {}).get("action_result", []),
+        "failed_actions": failed_actions,
+        "reflection_ar": state["prompts"]["reflection_ar"],
+        "focus_topic": state["prompts"]["focus_topic"],
+        "depth_of_reflection": state["prompts"]["depth_of_reflection"],
+        "level_of_detail": state["prompts"]["level_of_detail"],
+        "tone_and_style": state["prompts"]["tone_and_style"],
+        "conversation_memory": format_conversation_data(
+            state["userid"], conversation.get("data", [])
+        ),
+    }
+    daily_reflection = await daily_reflection_generator.ainvoke(payload)
+
+    full_prompt = daily_reflection_prompt.format(**payload)
+    logger.info("======generate_daily_reflection======\n" + full_prompt)
+    state["decision"]["reflection"].append(daily_reflection.reflection)
+    save_decision_to_db(state["userid"], {"reflection": daily_reflection.reflection})
+    # await send_message(
+    #     state,
+    #     "daily_reflection",
+    #     11,
+    #     {
+    #         "reflection": daily_reflection.reflection,
+    #     },
+    # )
+
+    logger.info(f"🔍 DAILY_REFLECTION INVOKED with {daily_reflection.reflection}")
+
+
+async def generate_character_arc(state: RunningState):
+    character_arc_generator = create_planner(
+        generate_character_arc_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        CharacterArc,
+        0.8,
+    )
+    character_info_task = make_api_request_async_backend(
+        "GET", f"/characters/getById/{state['userid']}"
+    )
+    character_info_response = await character_info_task
+    character_info = character_info_response.get("data", {})
+    character_arc = await character_arc_generator.ainvoke(
+        {
+            "character_stats": format_character_data(state["character_stats"]),
+            "character_info": character_info,
+            "daily_objectives": state["decision"]["daily_objective"],
+            "daily_reflection": state["decision"]["reflection"],
+            "action_results": state["decision"]["action_result"],
+        }
+    )
+    character_arc_data = {
+        "characterId": state["userid"],
+        **dict(character_arc),
+    }
+    await send_message(
+        state,
+        "character_arc",
+        12,
+        {"character_arc": character_arc_data},
+    )
+    logger.info(f"📜 Character Arc: {character_arc_data}")
+    make_api_request_sync("POST", "/character_arc/", data=character_arc_data)
+
+
+async def generate_accommodation_decision(state: RunningState):
+    accommodation_decision_generator = create_planner(
+        accommodation_decision_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        AccommodationDecision,
+        0.5,
+    )
+    current_accommodation_response = await make_api_request_async_backend(
+        "GET", f"/characterDormitory/getByCharacterIdNew/{state['userid']}"
+    )
+    current_accommodation_data = current_accommodation_response.get("data", None)
+
+    current_accommodation = {"id": 1, "type": "Shelter"}
+    if current_accommodation_data:
+        current_accommodation["id"] = current_accommodation_data.get("id", 1)
+        current_accommodation["type"] = current_accommodation_data.get(
+            "type", "Shelter"
+        )
+
+    financial_status = {"money": state["character_stats"].get("money", 0)}
+
+    accommodations_response = await make_api_request_async_backend(
+        "GET", "/dormitory/getAll"
+    )
+    available_accommodations_raw = accommodations_response.get("data", [])
+
+    necessary_fields = [
+        "id",
+        "type",
+        "weeklyRent",
+        "energyRecovery",
+        "maxEnergy",
+        "maxHealth",
+        "maxHungry",
+    ]
+    available_accommodations = [
+        {key: accommodation[key] for key in necessary_fields}
+        for accommodation in available_accommodations_raw
+    ]
+
+    for acc in available_accommodations:
+        weekly_rent = acc["weeklyRent"]
+        if weekly_rent == 0:
+            acc["affordable_weeks"] = 12
+        else:
+            affordable_weeks = financial_status["money"] // weekly_rent
+            affordable_weeks = min(affordable_weeks, 12)
+            acc["affordable_weeks"] = int(affordable_weeks)
+
+    failure_reasons = []
+
+    max_retries = 5
+    retries = 0
+
+    while retries < max_retries:
+        payload = {
+            "character_stats": format_character_data(state["character_stats"]),
+            "current_accommodation": current_accommodation,
+            "available_accommodations": available_accommodations,
+            "financial_status": financial_status,
+            "failure_reasons": failure_reasons,
+        }
+
+        try:
+            accommodation_decision = await accommodation_decision_generator.ainvoke(
+                payload
+            )
+            print("accommodation_decision: ", accommodation_decision)
+        except Exception as e:
+            logger.error(f"Invoke LLM Failed: {e}")
+            failure_reasons.append(
+                f"Attempt {retries + 1}: LLM invocation failed with error: {e}"
+            )
+            retries += 1
+            continue
+
+        logger.info(f"🏠 Attempt {retries + 1}:")
+        logger.info(f"🏠 Accommodation ID: {accommodation_decision.accommodation_id}")
+        logger.info(f"🏠 Lease Weeks: {accommodation_decision.lease_weeks}")
+        logger.info(f"🏠 Comments: {accommodation_decision.comments}")
+
+        selected_accommodation = next(
+            (
+                acc
+                for acc in available_accommodations
+                if acc["id"] == accommodation_decision.accommodation_id
+            ),
+            None,
+        )
+
+        if not selected_accommodation:
+            failure_message = (
+                f"Attempt {retries + 1}: Selected accommodation ID {accommodation_decision.accommodation_id} "
+                f"does not exist. Please choose a valid accommodation."
+            )
+
+            failure_reasons.append(failure_message)
+            logger.warning(f"🏠 {failure_message}")
+            retries += 1
+            continue
+
+        lease_weeks = accommodation_decision.lease_weeks
+
+        if not (1 <= lease_weeks <= 12):
+            failure_message = (
+                f"Attempt {retries + 1}: Lease weeks {lease_weeks} is out of allowed range (1-12). "
+                f"Please choose a valid number of weeks."
+            )
+
+            failure_reasons.append(failure_message)
+            logger.warning(f"🏠 {failure_message}")
+            retries += 1
+            continue
+
+        weekly_rent = selected_accommodation["weeklyRent"]
+        total_rent = weekly_rent * lease_weeks
+
+        if total_rent > financial_status["money"]:
+            failure_message = (
+                f"Attempt {retries + 1}: Cannot afford total rent of {total_rent} for accommodation ID "
+                f"{accommodation_decision.accommodation_id} over {lease_weeks} weeks. "
+                f"Available money: {financial_status['money']}."
+            )
+
+            failure_reasons.append(failure_message)
+            logger.warning(f"🏠 {failure_message}")
+            retries += 1
+            continue
+        else:
+            rent_data = {
+                "characterId": state["userid"],
+                "money": financial_status["money"],
+                "dormitoryId": accommodation_decision.accommodation_id,
+                "leaseWeeks": lease_weeks,
+            }
+            print("rent_data: ", rent_data)
+            logger.info(f"🏠 Successfully rented accommodation.")
+            break
+
+    else:
+        logger.error(
+            f"🏠 Could not find an affordable accommodation after {max_retries} attempts."
+        )
+        return {
+            "decision": {
+                "accommodation_id": None,
+                "lease_weeks": None,
+                "accommodation_comments": "Could not find an affordable accommodation.",
+            }
+        }
+
+    await send_message(
+        state,
+        "accommodationChange",
+        8,
+        {
+            "accommodationId": accommodation_decision.accommodation_id,
+            "leaseWeeks": lease_weeks,
+            "comments": accommodation_decision.comments,
+        },
+    )
+
+
+async def send_message(state, message_name, message_code, data):
+    """
+    Send a message to the client.
+
+    Args:
+        state: The current state containing the instance and user ID.
+        message_name (str): The name of the message.
+        message_code (int): The code of the message.
+        data (dict): The data to send in the message.
+    """
+    await state["instance"].send_message(
+        {
+            "characterId": state["userid"],
+            "messageName": message_name,
+            "messageCode": message_code,
+            "data": data,
+        }
+    )
+
+
+async def generate_emoji_seq(state):
+
+    emoji_seq_generator = create_planner(
+        generate_emoji_sequence_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        EmojiSequence,
+        0.8,
+    )
+
+    squence_format = """{"response": [{"content": "I hate work overtime!", "emoji": "🥺😭"}, {"content": "So tired, but got lots of fishes", "emoji": "🐟😆"}]}"""
+
+    meta_seq = [action["action"] for action in state["decision"]["refined_meta_seq"]]
+
+    pay_load = {
+        "personality": state["character_stats"]["personality"],
+        "action_list": meta_seq,
+        "sequence_format": squence_format,
+    }
+
+    emoji_sequence = await emoji_seq_generator.ainvoke(pay_load)
+    print("emoji_sequence: ", emoji_sequence)
+    # return emoji_sequence
+
+
+async def refine_meta_action_sequence(state: RunningState):
+    meta_action_general_part_refiner = create_planner(
+        meta_action_general_part_refiner_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        RefinedMetaActionSequence,
+        0.5,
+    )
+
+    example_out = """
+[
+    {
+        "action": "action1",
+        "cost": "25 energy total (5 energy per item × 5 items)",
+        "expected_effect": "Get X <item> from crafting"
+    },
+    {
+        "action": "action2",
+        "cost": "None",
+        "expected_effect": "Get X gold refund from selling"
+    },
+    {
+        "action": "sleep 3,
+        "cost": "None",
+        "expected_effect": "Recover energy 30 (3x10) from sleeping"
+    }
+    {
+        "action": "action3",
+        "cost": "X gold",
+        "expected_effect": ""
+    },
+    {
+        "action": "goto school",
+        "cost": "None",
+        "expected_effect": "Get to school, ready to study"
+    },
+    ...
+]
+    """
+    payload = {
+        "daily_objectives": (state["decision"]["daily_objective"]),
+        "character_stats": format_character_data(
+            state["character_stats"],
+            fields=[
+                "money",
+                "energy",
+                "health",
+                "hunger",
+                "education",
+                "education_experience",
+                "occupation",
+                "effciency",
+            ],
+        ),
+        "market_data": format_dict(state["public_data"]["market_data"]),
+        "inventory": format_dict(state["character_stats"]["inventory"]),
+        "current_trade_and_craft_sequence": format_trade_and_craft_sequence(
+            state["decision"]["crafting_and_trading"]
+        ),
+        "example_output": example_out,
+    }
+
+    print(meta_action_general_part_refiner_prompt.format(**payload))
+
+    retry_count = 0
+    while retry_count < 3:
+        try:
+            meta_action_sequence = await meta_action_general_part_refiner.ainvoke(
+                payload
+            )
+            break
+        except Exception as e:
+            logger.error(
+                f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
+            )
+            retry_count += 1
+            continue
+
+    print("meta_action_sequence: ", meta_action_sequence)
+
+    meta_seq_list = []
+    for item in meta_action_sequence.meta_action_sequence:
+        meta_seq_list.append(item.model_dump())
+
+    state["decision"]["refined_meta_seq"] = meta_seq_list
+
+
+if __name__ == "__main__":
+    import asyncio
+    import core.agent_srv.utils as utils
+    import pprint
+
+    state = asyncio.run(utils.get_initial_state_from_db(448450, "websocket"))
+    # pprint.pprint(state)
+    logger.info(f"🚀 User {state['userid']} starting node engines")
+    asyncio.run(generate_daily_objective(state))
+    logger.success(f"🌞 User {state['userid']} finished daily objective")
+    asyncio.run(generate_crafting_and_trading_sequence(state))
+    logger.success(f"🌞 User {state['userid']} finished crafting and trading")
+    # asyncio.run(refine_meta_action_sequence(state))
+    # logger.success(f"🌞 User {state['userid']} finished refining meta action sequence")
+    # asyncio.run(generate_emoji_seq(state))
+    # logger.success(f"🌞 User {state['userid']} finished emoji sequence")

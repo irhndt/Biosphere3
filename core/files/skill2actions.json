@@ -1,0 +1,163 @@
+{
+    "Farmer": {
+        "actions": [
+            "craft apple <num>",
+            "craft wheat <num>",
+            "craft pear <num>",
+            "craft rice <num>",
+            "craft chicken <num>",
+            "craft beef <num>",
+            "craft fish <num>"
+        ],
+        "cost": 5,
+        "materials": {
+            "apple": [],
+            "wheat": [],
+            "pear": [],
+            "rice": [],
+            "chicken": [
+                "2 feed"
+            ],
+            "beef": [
+                "3 feed"
+            ],
+            "fish": []
+        }
+    },
+    "FoodFactoryOwner": {
+        "actions": [
+            "craft feed <num>",
+            "craft flour <num>",
+            "craft bread <num>",
+            "craft apple_pie <num>",
+            "craft fruit_salad <num>",
+            "craft chicken_salad <num>",
+            "craft beef_rice <num>",
+            "craft sushi <num>"
+        ],
+        "cost": 10,
+        "materials": {
+            "feed": [
+                "2 rice"
+            ],
+            "flour": [
+                "2 wheat"
+            ],
+            "bread": [
+                "2 flour"
+            ],
+            "apple_pie": [
+                "1 apple",
+                "1 flour"
+            ],
+            "fruit_salad": [
+                "1 apple",
+                "1 pear"
+            ],
+            "chicken_salad": [
+                "2 chicken",
+                "1 fruit_salad"
+            ],
+            "beef_rice": [
+                "1 beef",
+                "2 rice"
+            ],
+            "sushi": [
+                "1 fish",
+                "1 rice"
+            ]
+        }
+    },
+    "MineOwner": {
+        "actions": [
+            "craft iron_ore <num>",
+            "craft wood <num>",
+            "craft copper_ore <num>",
+            "craft silicon_ore <num>"
+        ],
+        "cost": 5,
+        "materials": {
+            "iron_ore": [],
+            "wood": [],
+            "copper_ore": [],
+            "silicon_ore": []
+        }
+    },
+    "FactoryOwner": {
+        "actions": [
+            "craft iron_ingot <num>",
+            "craft wooden_board <num>",
+            "craft copper_ingot <num>",
+            "craft pure_silicon <num>",
+            "craft pickax <num>",
+            "craft iron_plate <num>",
+            "craft paper_pulp <num>",
+            "craft books <num>",
+            "craft copper_wire <num>",
+            "craft transistor <num>"
+        ],
+        "cost": 10,
+        "materials": {
+            "iron_ingot": [
+                "3 iron_ore"
+            ],
+            "wooden_board": [
+                "3 wood"
+            ],
+            "copper_ingot": [
+                "3 copper_ore"
+            ],
+            "pure_silicon": [
+                "3 silicon_ore"
+            ],
+            "pickax": [
+                "1 iron_ingot",
+                "2 wooden_board"
+            ],
+            "iron_plate": [
+                "2 iron_ingot"
+            ],
+            "paper_pulp": [
+                "2 wooden_board"
+            ],
+            "books": [
+                "3 paper_pulp"
+            ],
+            "copper_wire": [
+                "2 copper_ingot"
+            ],
+            "transistor": [
+                "2 pure_silicon"
+            ]
+        }
+    },
+    "Scientist": {
+        "actions": [
+            "craft circuit_board <num>",
+            "craft a100 <num>",
+            "craft h100 <num>",
+            "craft h200 <num>",
+            "craft b200 <num>"
+        ],
+        "cost": 20,
+        "materials": {
+            "circuit_board": [
+                "2 iron_plate",
+                "2 copper_wire"
+            ],
+            "a100": [
+                "2 circuit_board",
+                "2 transistor"
+            ],
+            "h100": [
+                "2 a100"
+            ],
+            "h200": [
+                "2 h100"
+            ],
+            "b200": [
+                "2 h200"
+            ]
+        }
+    }
+}
