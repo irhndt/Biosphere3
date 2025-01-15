@@ -682,7 +682,7 @@ async def main():
     # state["prompts"]["focus_topic"] = ["Crafting", "Trading"]
     # await generate_daily_reflection(state)
 
-    # await generate_daily_objective(state)
+    await generate_daily_objective(state)
 
 
 if __name__ == "__main__":

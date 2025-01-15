@@ -26,10 +26,12 @@ Remind:
 2. For the production graph, you should fully consider what stage you are currently in and what you need to do next.
 
 Output Specifications:
-1. The final output consists of two parts. One part is a string describing the current progress of manufacturing items and what should be considered for the next step, the other part should be a list of daily objectives.
-2. you SHOULD NOT output other formats or other description words
-3. There is no limit to the length of the resulting list.
-4. Don't copy the examples I give, judge according to the actual situation.
+1. The final output consists of two parts.
+2. The first part is a string describing the current progress of manufacturing items and what should be considered for the next step.
+3. The second part should be a list of daily objectives (arranged in order of importance, craft and trade are generally considered more important).
+4. you SHOULD NOT output other formats or other description words
+5. There is no limit to the length of the resulting list.
+6. Don't copy the examples I give, judge according to the actual situation.
 
 Example Output:
 {{
