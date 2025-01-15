@@ -166,6 +166,7 @@ daily_reflection_prompt = ChatPromptTemplate.from_template(
     """
 You are a daily reflection generator in a RPG game. Your job is to generate a diary-like daily reflection for the user.
 Here are some information you need to know:
+Changes in User Status: {status_changes}
 Recent Daily Objectives: {daily_objectives}
 Recent Action Results: {action_results}
 Failed Actions: {failed_actions}
@@ -173,7 +174,7 @@ Some additional Requirements: {reflection_ar}
 Conversation Memory: {conversation_memory}
 
 Remind:
-1. You should summarize the user's daily objective, failed actions and conversation in the reflection.
+1. You should summarize the user's changes in status, daily objective, failed actions and conversation in the reflection.
 2. You should mainly focus on how to improve future planning.
 3. You should focus on these topics in a descending order: {focus_topic}.
 4. Depth of reflection: {depth_of_reflection}.

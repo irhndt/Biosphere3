@@ -27,6 +27,10 @@ from core.agent_srv.utils import (
     format_character_data,
     format_conversation_data,
     format_queue_data,
+    get_character_data_async,
+    get_prompt_data_from_db,
+    get_market_data_from_db,
+    format_status_changes,
 )
 
 
@@ -57,7 +61,7 @@ async def generate_daily_objective(state: RunningState):
     state["meta"]["tool_functions"] += role_specific_actions
 
     decision_response = make_api_request_sync(
-        "GET", "/decision/", params={"characterId": state["userid"], "count": 10}
+        "GET", "/decision/", params={"characterId": state["userid"], "count": 5}
     )
     last_decision = decision_response.get("data", {})
     retry_count = 0
@@ -119,6 +123,8 @@ Level 7:
 
     logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response.progress}")
     logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response.objectives}")
+
+    return {"current_pointer": "Objectives_planner"}
 
 
 async def generate_meta_action_sequence(state: RunningState):
@@ -184,9 +190,19 @@ async def generate_meta_action_sequence(state: RunningState):
         f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence.meta_action_sequence}"
     )
 
+    return {"current_pointer": "meta_action_sequence"}
+
 
 async def sensing_environment(state: RunningState):
-    return {"current_pointer": "Process_Event"}
+    # update the latest state from db
+    character_data = await get_character_data_async(state["userid"])
+    prompt_data = await get_prompt_data_from_db(state["userid"])
+    market_data = get_market_data_from_db()
+    state["character_stats"] = character_data
+    state["prompts"] = prompt_data
+    state["public_data"]["market_data"] = market_data
+
+    return {"current_pointer": "Sensing_Route"}
 
 
 async def replan_action(state: RunningState):
@@ -261,6 +277,8 @@ async def replan_action(state: RunningState):
             "description": meta_action_sequence.description_sequence,
         },
     )
+
+    return {"current_pointer": "Replan_Action"}
 
 
 async def generate_change_job_cv(instance, msg: dict):
@@ -375,26 +393,36 @@ async def generate_daily_reflection(state: RunningState):
         Reflection,
         0.8,
     )
-    decision = make_api_request_sync(
-        "GET",
-        "/decision/",
-        params={"characterId": state["userid"], "count": 10},
-    )
     conversation = make_api_request_sync(
         "GET",
         "/conversation/",
-        params={"characterId": state["userid"], "start_day": state["meta"]["day"]},
+        params={"characterId": state["userid"], "start_day": state["meta"]["day"] - 1},
     )
     failed_actions = await format_queue_data(state["false_action_queue"])
     payload = {
-        "daily_objectives": decision.get("data", {}).get("daily_objective", []),
-        "action_results": decision.get("data", {}).get("action_result", []),
+        "daily_objectives": state["decision"]["daily_objective"],
+        "action_results": state["decision"]["action_result"],
         "failed_actions": failed_actions,
         "reflection_ar": state["prompts"]["reflection_ar"],
         "focus_topic": state["prompts"]["focus_topic"],
         "depth_of_reflection": state["prompts"]["depth_of_reflection"],
         "level_of_detail": state["prompts"]["level_of_detail"],
         "tone_and_style": state["prompts"]["tone_and_style"],
+        "status_changes": format_status_changes(
+            state["past_stats"],
+            state["character_stats"],
+            fields=[
+                "health",
+                "energy",
+                "hungry",
+                "education",
+                "education_experience",
+                "money",
+                "occupation",
+                "efficiency",
+                "inventory",
+            ],
+        ),
         "conversation_memory": format_conversation_data(
             state["userid"], conversation.get("data", [])
         ),
@@ -415,6 +443,8 @@ async def generate_daily_reflection(state: RunningState):
     # )
 
     logger.info(f"🔍 DAILY_REFLECTION INVOKED with {daily_reflection.reflection}")
+
+    return {"current_pointer": "Daily_Reflection"}
 
 
 async def generate_character_arc(state: RunningState):
@@ -450,6 +480,8 @@ async def generate_character_arc(state: RunningState):
     )
     logger.info(f"📜 Character Arc: {character_arc_data}")
     make_api_request_sync("POST", "/character_arc/", data=character_arc_data)
+
+    return {"current_pointer": "Character_Arc"}
 
 
 async def generate_accommodation_decision(state: RunningState):
@@ -614,6 +646,8 @@ async def generate_accommodation_decision(state: RunningState):
         },
     )
 
+    return {"current_pointer": "Accommodation_Decision"}
+
 
 async def send_message(state, message_name, message_code, data):
     """
@@ -637,13 +671,18 @@ async def send_message(state, message_name, message_code, data):
 
 async def main():
     from core.agent_srv.utils import get_initial_state_from_db
+    import copy
 
     state = await get_initial_state_from_db(448450, None)
     # state["meta"]["day"] = 4
+    # state["past_stats"] = copy.deepcopy(state["character_stats"])
+    # state["past_stats"]["energy"] = 80
+    # state["past_stats"]["hungry"] = 60
+    # state["past_stats"]["education"] = "SecondarySchool"
     # state["prompts"]["focus_topic"] = ["Crafting", "Trading"]
     # await generate_daily_reflection(state)
 
-    await generate_daily_objective(state)
+    # await generate_daily_objective(state)
 
 
 if __name__ == "__main__":
