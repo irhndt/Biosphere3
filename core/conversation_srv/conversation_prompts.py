@@ -33,36 +33,34 @@ conversation_generator_prompt = ChatPromptTemplate.from_template(
     
     This is the information about the first player, from_player.
     The name of from_player is: {my_name}.
-    The personal profile of from_player is: {character_stats_from}.
+    The latest actions of from_player is: {character_stats_from}.
     The tone and language style of from_player is: {style_from}.
     The current personality of from_player is: {personality_from}.
     The impression of from_player towards the other player is: {impression_from}
     
     This is the information about the second player, to_player.
     The name of to_player is: {target_name}.
-    The personal profile of to_player is: {character_stats_to}.
+    The latest actions of to_player is: {character_stats_to}.
     The tone and language style of to_player is: {style_to}.
     The current personality of to_player is: {personality_to}.
     The impression of to_player towards the from_player is: {impression_to}.
     
     Now you are talking about {topic}.
     Now based on the information of two players and topic, generate your the conversation content.
-    The content must closely related to the topic.
-    If the the topic is negative, the overall atmosphere of the conversation must be negative, where the two players disagree with each other.
-    
+    The content must closely related to the given topic and actions of both players.
+    If the the topic is negative, the overall atmosphere of the conversation must be negative.
+         
     Based on the profile, personality, the impression, determine when should the conversation end.
     The relation and emotion in impressions and personalities can influence the overall round of the conversation.
-    For example, if two speakers are close friends, they may talk until 7 or 8 rounds.
-    If they are in bad relation or bad emotion, the conversation may end very soon, say after 3 rounds.
+    For example, if two speakers are close friends, they may talk until 5 rounds.
+    If they are in bad relation or bad emotion, the conversation may end very soon, say after 2 or 3 rounds.
+    The overall rounds of conversation must be less than 6 rounds.
     
-    You must make sure that the content is generated based on the tone and language_style of the players.
-    Their words must closely follow their language style.
+    You must make sure that the the words of two players follows their tone and language_style of the players.
     Also consider the impact of each impression item on the conversation content.
-    
     In each sentence, never start with words that express agreement or disagreement, such as absolutely, indeed, etc.
     The players don't need to always agree with others. Express their own opinions based on given information.
-    The conversation content should also be interesting, not a discussion.
-         
+    
     Each conversation should be a str in the following format:
     Each line start with the speaker's name, after that comes a colon, then his words.
     If one speaker finish his sentence, start a new line for the next speaker.
@@ -76,6 +74,25 @@ conversation_generator_prompt = ChatPromptTemplate.from_template(
     """
 )
 
+simple_content_prompt = ChatPromptTemplate.from_template(
+    """
+    Generate a conversation about {type} between two celebrities: from {from_name} to {to_name}.
+     
+    The conversation should be explosive, intense, and create a huge buzz among the public.
+    The topic is {topic}.
+    
+    The conversation should not exceed 5 rounds, and each person should speak no more than 20 words.:
+    
+    Each conversation should be a str in the following format:
+    Each line start with the speaker's name, after that comes a colon, then his words.
+    If one speaker finish his sentence, start a new line for the next speaker.
+    Here is an example: 
+    from_player name: sentence1
+    to_player name: sentence2
+    from_player name: sentence3
+    to_player name: sentence4
+   """
+)
 
 conversation_check_prompt = ChatPromptTemplate.from_template(
     """
@@ -145,11 +162,11 @@ intimacy_mark_prompt = ChatPromptTemplate.from_template(
     Now give an intimacy mark for each player respectively.
     The intimacy mark should be an integer ranging from 1 to 5.
     There are five levels with different marks: 
-    Very close and friendly is 5, 
-    positive but not so close is 4, 
-    neutral is 3, 
-    a little negative is 2, 
-    hate each other, about to quarrel is 1.
+    5 marks: The two people have completely aligned views, and their dialogue is very friendly.
+    4 marks: Positive, with some consensus, the tone is not very close. 
+    3 marks: Neutral. There is no obvious positive or negative inclination.
+    2 marks: Negative, with some disagreements; the attitudes and tones are not very friendly. 
+    1 mark: Very negative, with lots of opposing views or emotional conflicts, about to quarrel.
 
     You need to give mark one by one to two players.
     Their mark towards the conversation do not need to be the same.
