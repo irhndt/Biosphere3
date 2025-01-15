@@ -758,3 +758,9 @@ def format_status_changes(past_status: dict, status: dict, fields: list = None) 
         )
 
     return "\n".join(formatted_data)
+
+def format_false_action_info(false_action_info: dict) -> str:
+    formatted_str = "Failed Action: " + false_action_info["actionName"] + "\n"
+    formatted_str += "| Result: " + false_action_info["result"] + "\n"
+    formatted_str += "------\n"
+    return formatted_str 

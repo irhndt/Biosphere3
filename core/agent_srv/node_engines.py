@@ -40,6 +40,7 @@ from core.agent_srv.utils import (
     get_prompt_data_from_db,
     get_market_data_from_db,
     format_status_changes,
+    format_false_action_info,
 )
 from core.agent_srv.action_filter import ActionFilter
 
@@ -969,6 +970,106 @@ async def refine_meta_action_sequence(state: RunningState):
         meta_seq_list.append(item.model_dump())
 
     state["decision"]["refined_meta_seq"] = meta_seq_list
+
+
+async def replan_meta_action_seq(state: RunningState):
+    meta_action_replanner = create_planner(
+        replanner_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        RefinedMetaActionSequence,
+        0.3,
+    )
+
+    payload = {
+        "character_stats": format_character_data(
+            state["character_stats"],
+            fields=[
+                "money",
+                "energy",
+                "health",
+                "hunger",
+                "education",
+                "education_experience",
+                "occupation",
+                "effciency",
+                "inventory",
+            ],
+        ),
+        "market_data": format_dict(state["public_data"]["market_data"]),
+        "current_meta_seq": state["decision"]["meta_seq"],
+        "false_action_info": format_false_action_info(
+            state["false_action_queue"].get_nowait()
+        ),
+    }
+
+    retry_count = 0
+    while retry_count < 3:
+        try:
+            meta_action_sequence = await meta_action_replanner.ainvoke(payload)
+            break
+        except Exception as e:
+            logger.error(
+                f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
+            )
+            retry_count += 1
+            continue
+
+    meta_seq_list = []
+    for item in meta_action_sequence.meta_action_sequence:
+        meta_seq_list.append(item.action)
+
+    state["decision"]["meta_seq"] = meta_seq_list
+
+    emoji_sequence_generator = create_planner(
+        generate_emoji_sequence_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        EmojiSequence,
+        0.7,
+    )
+
+    squence_format = """{"response": [{"content": "I hate work overtime!", "emoji": "🥺😭"}, {"content": "So tired, but got lots of fishes", "emoji": "🐟😆"}]}"""
+
+    pay_load = {
+        "personality": state["character_stats"]["personality"],
+        "action_list": state["decision"]["meta_seq"],
+        "sequence_format": squence_format,
+    }
+
+    retry_count = 0
+    while retry_count < 3:
+        try:
+            emoji_sequence = await emoji_sequence_generator.ainvoke(pay_load)
+            break
+        except Exception as e:
+            logger.error(
+                f"⛔ User {state['userid']} Error in generate_emoji_sequence: {e}"
+            )
+            retry_count += 1
+            continue
+
+    for emoji_and_description in emoji_sequence.response:
+        state["decision"]["action_description"].append(emoji_and_description.content)
+
+    save_decision_to_db(
+        state["userid"],
+        {
+            "meta_seq": state["decision"]["meta_seq"],
+            "action_description": state["decision"]["action_description"],
+        },
+    )
+
+    await send_message(
+        state,
+        "actionList",
+        6,
+        {
+            "command": state["decision"]["meta_seq"],
+            "emoji": [desc.emoji for desc in emoji_sequence.response],
+            "description": state["decision"]["action_description"],
+        },
+    )
+
+    return {"current_pointer": "Replan_Meta_Action"}
 
 
 if __name__ == "__main__":

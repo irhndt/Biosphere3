@@ -895,180 +895,149 @@ example_refine_action_sequence = """
 """
 
 replanner_prompt = ChatPromptTemplate.from_template(
-    """You are an advanced Action List RePlanner in a RPG. Your objective is to find out the current errors in the action list and correct them to make the list executable. Here is the information you need to consider below:
+    """You are an Action List Re-Planner for an RPG. You will receive the following data:
 
-1. **User Stats info**  
+1. **Character Stats**:
 {character_stats}
 
-2. **Market Data**  
+2. **Inventory**:
+{inventory}
+
+3. **Market Data**:
 {market_data}
 
-3. **Current Action List**
+4. **Current Action List**:
 {current_action_list}
 
-4. **Fail Action Info**
+5. **Fail Action Info**:
 {fail_action_info}
 
 ---
 
-### Action System Details
-Below are detailed explanations of each possible action, including constraints and requirements. **You must validate that all constraints (location, energy, money, item availability) are satisfied before add an action to list.**
+### Your Task
+
+- **Analyze** all the provided information and the reason for the most recent failed action.
+- **Identify** any problems (constraint violations) in the **entire** Current Action List.
+- **Produce** a **new Action List** that is valid and executable.  
+  - Fix or replace any erroneous/infeasible actions.
+  - Validate all constraints (energy, money, location, inventory, etc.) before confirming any action.
+- **No** action should violate the rules.  
+
+### **Important Constraints to Check**
+
+1. **No Negative Energy/Money**  
+   - Actions cannot make energy or money go below zero.
+
+2. **Inventory Requirements**  
+   - Must have enough items for use, sell, or craft actions.
+
+3. **Market Requirements**  
+   - Must have enough money to buy items.
+   - Must ensure the market has enough stock for the intended purchase.
+
+4. **Location Requirements**  
+   - Some actions require being at a specific location (e.g., `sleep` at home, `study` at school).
+   - Must use `goto [location]` when relocating before an action if needed.
+
+5. **Occupation Requirements**  
+   - `work` only if the user has an occupation and is at the occupation’s location.
+
+6. **Crafting Limits**  
+   - Cannot craft more than **10** of any item per craft action.
+   - Must have all required materials in the inventory.
+   - Must be in the correct location to craft.
+   - Must have enough energy (item’s energy cost × quantity).
+
+---
+
+### **Action System & Crafting System Details**  
+(Use these rules to validate actions.)
 
 1. **goto [placeName:string]**  
-   - **Action Effect**: Moves the character to a specific location, only change the location. 
-   - **Constraints**: The placeName must be one of the following:  
+   - Moves the character to `placeName`. Valid places include:  
      (school, workshop, home, farm, mall, square, councilHall, hospital, fruit, harvest, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
 
 2. **sleep [hours:int]**  
-   - **Action Effect**: Recover energy (10 per hour).  
-   - **Constraints**: Must be at home.
+   - Recover energy (10 per hour).
+   - Must be at home.
 
 3. **study [hours:int]**  
-   - **Action Effect**:  
-     - Costs money (100 per hour).  
-     - Consumes energy (10 per hour).  
-     - Gains education experience (10 per hour).  
-   - **Constraints**:  
-     - Must be in school.  
-     - Must have enough money to afford the session.
+   - Costs 100 money/hour, consumes 10 energy/hour, grants 10 education XP/hour.
+   - Must be in school and have enough money.
 
 4. **seedoctor [hours:int]**  
-   - **Action Effect**:  
-     - Costs money (100 per hour).  
-     - Gains health (10 per hour).  
-   - **Constraints**:  
-     - Must be in the hospital.  
-     - Must have enough money to afford the session.
+   - Costs 100 money/hour, grants 10 health/hour.
+   - Must be in hospital and have enough money.
 
 5. **work [hours:int]**  
-   - **Action Effect**:  
-     - Earns money (based on salary per hour).  
-     - Consumes energy (10 per hour).  
-   - **Constraints**:  
-     - Must have an occupation.  
-     - Must be in the corresponding workplace to that occupation.
+   - Earns money (based on hourly salary), consumes 10 energy/hour.
+   - Must have an occupation and be at its corresponding workplace.
 
 6. **use [itemType:string] [amount:int]**  
-   - **Action Effect**: Consumes items from inventory to yield various benefits.  
-   - **Item Effects**:  
-     - apple: +10 hungry
+   - Consumes items from inventory for benefits:  
+     - apple: +10 hungry  
      - pear: +15 hungry  
      - bread: +25 hungry  
      - apple_pie: +20 hungry  
      - fruit_salad: +35 hungry  
-     - chicken_salad: +35 hungry, +10 energy
-     - beef_rice: +50 hungry, +5 energy
-     - sushi: +30 hungry
-     - books: +10 education experience
-   - **Constraints**:  
-     - Must have enough items in the inventory.
+     - chicken_salad: +35 hungry, +10 energy  
+     - beef_rice: +50 hungry, +5 energy  
+     - sushi: +30 hungry  
+     - books: +10 education experience  
 
 7. **buy [itemType:string] [amount:int]**  
-   - **Action Effect**: Purchases items from the market, costing money according to the market price.  
-   - **Constraints**:  
-     - Must have enough money.  
-     - The market must have sufficient stock (consult Market Data).
+   - Purchases items from market, costs money according to market price.
+   - Must have enough money, and market must have enough stock.
 
 8. **sell [itemType:string] [amount:int]**  
-   - **Action Effect**: Sells items to the market to earn money according to the market price.  
-   - **Constraints**:  
-     - Must have the items in the inventory.
----
+   - Sells items to market, earning money at the market price.
+   - Must have those items in the inventory.
 
-### Crafting System Details
+#### **Crafting System**
 
-You can **craft** items if you have the required materials and enough energy. Each recipe has specific constraints on the required materials, how much energy it costs, and the resulting product.
-Action format: `craft [itemType:string] [amount:int]` (remember, the amount should not exceed 10).
+**Action**: `craft [itemType:string] [amount:int]` (max 10 items per action)
 
-- **Basic Energy Cost** for certain items (5 per item):
-1. apple (no materials required, be in farm)
-2. wheat (no materials required, be in farm)
-3. pear (no materials required, be in farm)
-4. rice (no materials required, be in farm)
-5. chicken (requires 1 feed, be in farm)
-6. beef (requires 3 feed, be in farm)
-7. fish (no materials required, be in farm)
+- **Basic Energy Cost** (5 per item) for items like:  
+  apple, wheat, pear, rice, chicken (needs 1 feed), beef (needs 3 feed), fish, iron_ore, wood, copper_ore, silicon_ore.  
+  - Must be at farm for apple, wheat, pear, rice, chicken, beef, fish.  
+  - Must be at mine for iron_ore, wood, copper_ore, silicon_ore.
 
+- **Moderate Energy Cost** (10 per item) for items like:  
+  feed (needs 1 rice), flour (needs 1 wheat), bread (1 flour), apple_pie (1 apple + 1 flour), fruit_salad (1 apple + 1 pear), chicken_salad (1 chicken + 1 fruit_salad), beef_rice (1 beef + 1 rice), sushi (1 fish + 1 rice), iron_ingot (3 iron_ore), wooden_board (3 wood), copper_ingot (3 copper_ore), pure_silicon (3 silicon_ore), pickaxes (1 iron_ingot + 1 wood_boards), iron_plate (1 iron_ingot), paper_pulp (1 wood_boards), books (3 paper_pulp), copper_wire (1 copper_ingots), transistor (1 pure_silicon).  
+  - Must be at foodfactory for food recipes.  
+  - Must be at factory for metal/tech recipes.
 
-8. iron_ore (no materials required, be in mine)
-9. wood (no materials required, be in mine)
-10. copper_ore (no materials required, be in mine)
-11. silicon_ore (no materials required, be in mine)
-
-- **Moderate Energy Cost** for certain items (10 per item):
-1. feed (requires 1 rice, be in foodfactory)
-2. flour (requires 1 wheat, be in foodfactory)
-3. bread (requires 1 flour, be in foodfactory)
-4. apple_pie (requires 1 apple, 1 flour, be in foodfactory)
-5. fruit_salad (requires 1 apple, 1 pear, be in foodfactory)
-6. chicken_salad (requires 1 chicken, 1 fruit_salad, be in foodfactory)
-7. beef_rice (requires 1 beef, 1 rice, be in foodfactory)
-8. sushi (requires 1 fish, 1 rice, be in foodfactory)
-
-9. iron_ingot (requires 3 iron_ore, be in factory)
-10. wooden_board (requires 3 wood, be in factory)
-11. copper_ingot (requires 3 copper_ore, be in factory)
-12. pure_silicon (requires 3 silicon_ore, be in factory)
-13. pickaxes (requires 1 iron_ingot, 1 wood_boards, be in factory)
-14. iron_plate (requires 1 iron_ingot, be in factory)
-15. paper_pulp (requires 1 wood_boards, be in factory)
-16. books (requires 3 paper_pulp, be in factory)
-17. copper_wire (requires 1 copper_ingots, be in factory)
-18. transistor (requires 1 pure_silicon, be in factory)
-
-- **High Energy Cost** for advanced items (20 per item):
-1. circuit_board (requires 1 iron_plates, 2 copper_wire, be in factory)
-2. a100 (requires 2 circuit_board, 2 transistors, be in factory)
-3. h100 (requires 2 a100, be in factory)
-4. h200 (requires 2 h100, be in factory)
-5. b200 (requires 2 h200, be in factory)
+- **High Energy Cost** (20 per item) for advanced items:  
+  circuit_board (1 iron_plates + 2 copper_wire), a100 (2 circuit_board + 2 transistors), h100 (2 a100), h200 (2 h100), b200 (2 h200).  
+  - Must be at factory.
 
 ---
 
-### Reference production graph:
+### **Forbidden Error Examples**
 
-{production_graph}
+1. **Negative Energy/Money After Action**  
+   - E.g., trying to craft something costing 25 energy when current energy is only 20 → leaves -5 energy (not allowed).
 
-You should not sell any items in the production graph, as they are required for crafting higher-level items.
+2. **Insufficient Inventory**  
+   - E.g., attempting `craft chicken` without enough `feed`, or `use [item]` without having that item in inventory.
 
-### Instructions
+3. **Craft More Than 10 Items**  
+   - E.g., `craft iron_ore 20` in a single action is forbidden.
 
-1. **Consider the User's State and Goals**  
-   - Look at `User Stats Info` for energy, money, location, health, inventory and any skill or stat that might limit crafting or working.  
-   - Use `Market Data` to determine profitable buy/sell strategies.  
-   - Align the actions with `Daily Objectives` to meet or exceed the user's goals.
-   - If the daily objectives are not achievable, prioritize the most important one.
-
-2. **Validate and Adjust Action Conditions**  
-   - **Location Constraints**:  
-     - Ensure each action is performed at the required location.  
-     - If not already at the necessary location, insert a `goto [placeName]` action before the required action.
-   - **Energy Constraints**:
-     - Check if there is sufficient energy to execute each action. The range of energy status is 0-100.
-   - **Money and Resource Constraints**:  
-     - Verify that the user has enough money for actions that require expenditure (e.g., `buy`, `study`, `seedoctor`).  
-     - Ensure there are enough materials in the inventory for crafting actions. 
-
-3. **Generate an Action Plan**  
-   - Create a list of recommended **action steps** in chronological order.  
-   - For each action, **explain briefly why** it is recommended (e.g., “sleep 5 hours to replenish energy before crafting”).
-   - If cost energy, you should compute the cost of each action and make sure the user has enough energy to complete the actions.  
-   - If relevant, factor in travel steps (`goto`) to move to the correct location.  
-   - Specify how many items to buy or sell, or how many hours to work/study/sleep, etc.  
-   - Include the **expected cost** in money or energy (where applicable) and the **expected profit** or benefit.
-
-4. **Build Crafting Chains**
-   - Notice that some items require other items as materials, you can craft only if you have the required materials.
-   - If you don't have the required materials, you can buy them from the market or craft them from the basic materials.
-   - The length of the actionlist is not limited, you can choose any number of actions to achieve the daily objectives.
 ---
 
-### Example of How to Structure the Output
+### **Final Output Requirements**
 
-{example_output}
+Output your **corrected** Action List in a structured JSON (or similar) format where **each step** contains:
+- **action** (e.g., `"craft feed 5"`)
+- **reason** (brief explanation)
+- **status_before** (key stats, inventory)
+- **status_after** (updated stats, inventory)
 
-{forbidden_example_output}
----
-Now, Your Output:
+No step should produce invalid states (like negative energy/money, items below zero, or crafting > 10 items). If relocation is needed, include a `goto [location]` step first.  
+
+When you are done, present the final plan in the required format.
+
+**Now:** Carefully validate and re-plan so the user can execute every step without error. Please provide the finalized Action List now.
 """
 )
