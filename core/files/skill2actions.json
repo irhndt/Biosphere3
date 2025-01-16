@@ -7,7 +7,8 @@
             "craft rice <num>",
             "craft chicken <num>",
             "craft beef <num>",
-            "craft fish <num>"
+            "craft fish <num>",
+            "craft wood <num>"
         ],
         "cost": 5,
         "materials": {
@@ -21,7 +22,8 @@
             "beef": [
                 "3 feed"
             ],
-            "fish": []
+            "fish": [],
+            "wood": []
         }
     },
     "FoodFactoryOwner": {
@@ -71,14 +73,12 @@
     "MineOwner": {
         "actions": [
             "craft iron_ore <num>",
-            "craft wood <num>",
             "craft copper_ore <num>",
             "craft silicon_ore <num>"
         ],
         "cost": 5,
         "materials": {
             "iron_ore": [],
-            "wood": [],
             "copper_ore": [],
             "silicon_ore": []
         }

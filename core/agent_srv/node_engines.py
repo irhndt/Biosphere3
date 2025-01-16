@@ -756,6 +756,10 @@ async def send_message(state, message_name, message_code, data):
         message_code (int): The code of the message.
         data (dict): The data to send in the message.
     """
+    if not state.get("instance"):
+        logger.warning(f"⚠️ User {state['userid']}: Instance not found.")
+        return
+
     await state["instance"].send_message(
         {
             "characterId": state["userid"],

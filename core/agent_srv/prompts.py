@@ -397,10 +397,9 @@ Action format: `craft [itemType:string] [amount:int]`
 5. chicken (requires 1 feed, be in farm)
 6. beef (requires 3 feed, be in farm)
 7. fish (no materials required, be in farm)
+8. wood (no materials required, be in farm)
 
-
-8. iron_ore (no materials required, be in mine)
-9. wood (no materials required, be in mine)
+9. iron_ore (no materials required, be in mine)
 10. copper_ore (no materials required, be in mine)
 11. silicon_ore (no materials required, be in mine)
 
@@ -570,10 +569,9 @@ Action format: `craft [itemType:string] [amount:int]` (remember, the amount shou
 5. chicken (requires 1 feed, be in farm)
 6. beef (requires 3 feed, be in farm)
 7. fish (no materials required, be in farm)
+8. wood (no materials required, be in farm)
 
-
-8. iron_ore (no materials required, be in mine)
-9. wood (no materials required, be in mine)
+9. iron_ore (no materials required, be in mine)
 10. copper_ore (no materials required, be in mine)
 11. silicon_ore (no materials required, be in mine)
 
@@ -999,8 +997,8 @@ But it may contain errors or infeasible actions, waiting for your correction.
 
 - **Basic Energy Cost** (5 per item) for items like:  
   apple, wheat, pear, rice, chicken (needs 1 feed), beef (needs 3 feed), fish, iron_ore, wood, copper_ore, silicon_ore.  
-  - Must be at farm for apple, wheat, pear, rice, chicken, beef, fish.  
-  - Must be at mine for iron_ore, wood, copper_ore, silicon_ore.
+  - Must be at farm for apple, wheat, pear, rice, chicken, beef, fish, wood
+  - Must be at mine for iron_ore, copper_ore, silicon_ore.
 
 - **Moderate Energy Cost** (10 per item) for items like:  
   feed (needs 1 rice), flour (needs 1 wheat), bread (1 flour), apple_pie (1 apple + 1 flour), fruit_salad (1 apple + 1 pear), chicken_salad (1 chicken + 1 fruit_salad), beef_rice (1 beef + 1 rice), sushi (1 fish + 1 rice), iron_ingot (3 iron_ore), wooden_board (3 wood), copper_ingot (3 copper_ore), pure_silicon (3 silicon_ore), pickaxes (1 iron_ingot + 1 wood_boards), iron_plate (1 iron_ingot), paper_pulp (1 wood_boards), books (3 paper_pulp), copper_wire (1 copper_ingots), transistor (1 pure_silicon).  
@@ -1022,7 +1020,8 @@ But it may contain errors or infeasible actions, waiting for your correction.
    - E.g., attempting `craft chicken` without enough `feed`, or `use [item]` without having that item in inventory.
 
 3. **Craft More Than 10 Items**  
-   - E.g., `craft iron_ore 20` in a single action is forbidden.
+   - E.g., `craft iron_ore 20` in a single action list is forbidden.
+   - You can only craft no more than 10 items per item in a single action list.
 
 ---
 
@@ -1031,8 +1030,10 @@ But it may contain errors or infeasible actions, waiting for your correction.
 Output your **corrected** Action List in a structured JSON (or similar) format where **each step** contains:
 - **action** (e.g., `"craft feed 5"`)
 - **reason** (brief explanation)
-- **status_before** (key stats, inventory)
-- **status_after** (updated stats, inventory)
+- **status_before** (key stats, before the action)
+- **status_after** (updated stats, after the action)
+- **inventory_before** (current inventory)
+- **inventory_after** (updated inventory)
 
 No step should produce invalid states (like negative energy/money, items below zero, or crafting > 10 items). If relocation is needed, include a `goto [location]` step first.  
 
