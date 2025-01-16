@@ -146,66 +146,6 @@ async def start_conversation(state: ConversationState):
             )
 
     # only go through the following process when the conversation is checked to be necessary
-    # get character_arc: from
-    arc_response = make_api_request_sync(
-        "GET", "/character_arc/", params={"characterId": state["userid"], "k": 1}
-    )
-    if not arc_response["data"]:
-        arc_data_from = []
-    else:
-        arc_data_from = arc_response["data"][0]
-        arc_data_from.pop("created_at", None)
-        arc_data_from.pop("characterId", None)
-    logger.info(f"User {state['userid']} current character arc is {arc_data_from}")
-
-    # get character_arc: to
-    arc_response = make_api_request_sync(
-        "GET", "/character_arc/", params={"characterId": current_talk['to_id'], "k": 1}
-    )
-    if not arc_response["data"]:
-        arc_data_to = []
-    else:
-        arc_data_to = arc_response["data"][0]
-        arc_data_to.pop("created_at", None)
-        arc_data_to.pop("characterId", None)
-    logger.info(f"User {current_talk['to_id']} current character arc is {arc_data_to}")
-
-    # get impression:from
-    impression_query_data = {
-        "from_id": state["userid"],
-        "to_id": current_talk["to_id"],
-        "k": 1,
-    }
-    impression_response = make_api_request_sync(
-        "GET", "/impressions/", params=impression_query_data
-    )
-
-    if impression_response["data"]:
-        current_impression_from = impression_response["data"][0]
-    else:
-        current_impression_from = []
-    logger.info(
-        f"The current impression from User {state['userid']} to User {current_talk['to_id']} is {current_impression_from}"
-    )
-
-    # get impression:to
-    impression_query_data = {
-        "from_id": current_talk["to_id"],
-        "to_id": state["userid"],
-        "k": 1,
-    }
-    impression_response = make_api_request_sync(
-        "GET", "/impressions/", params=impression_query_data
-    )
-
-    if impression_response["data"]:
-        current_impression_to = impression_response["data"][0]
-    else:
-        current_impression_to = []
-    logger.info(
-        f"The current impression from User {current_talk['to_id']} to User {state['userid']} is {current_impression_to}"
-    )
-
     # get target name
     userid = current_talk["to_id"]
     character_data = {"characterId": userid}
@@ -229,77 +169,136 @@ async def start_conversation(state: ConversationState):
     my_name = state["character_stats"]["characterName"]
     style_from = state["character_stats"]["language_style"]
 
-    # get self action
-    get_daily_objectives_data = {"characterId": state["userid"], "count": 5}
-    objective_response = make_api_request_sync(
-        "GET", "/decision/", params=get_daily_objectives_data
-    )
-    if objective_response["data"] is not None:
-        objective_data = objective_response["data"]
-        memory_from = {}
-        memory_from["action_description"] = objective_data["action_description"]
-        # if objective_data["reflection"]:
-        #     memory_from["reflection"] = objective_data["reflection"][0]
-    else:
-        memory_from = []
-    logger.info(f"User {state['userid']} current actions and reflections are: {memory_from}")
-
-    # get target action
-    get_daily_objectives_data = {"characterId": current_talk['to_id'], "count": 5}
-    objective_response = make_api_request_sync(
-        "GET", "/decision/", params=get_daily_objectives_data
-    )
-    if objective_response["data"] is not None:
-        objective_data = objective_response["data"]
-        memory_to = {}
-        memory_to["action_description"] = objective_data["action_description"]
-        # if objective_data["reflection"]:
-        #     memory_to["reflection"] = objective_data["reflection"][0]
-    else:
-        memory_to = []
-    logger.info(f"User {current_talk['to_id']} current actions and reflections are: {memory_to}")
-
     # Todo:
     # get topic
-    topic =
-    content_type =
+    topic = "from_id makes an ultimatum to to_id: agree to be with them, or they’ll reveal the truth about their past relationship and everything that’s been kept secret."
+    content_type = "Romantic"
+
+    if content_type == "game":  # topic about games
+        # get character_arc: from
+        arc_response = make_api_request_sync(
+            "GET", "/character_arc/", params={"characterId": state["userid"], "k": 1}
+        )
+        if not arc_response["data"]:
+            arc_data_from = []
+        else:
+            arc_data_from = arc_response["data"][0]
+            arc_data_from.pop("created_at", None)
+            arc_data_from.pop("characterId", None)
+        logger.info(f"User {state['userid']} current character arc is {arc_data_from}")
+
+        # get character_arc: to
+        arc_response = make_api_request_sync(
+            "GET", "/character_arc/", params={"characterId": current_talk['to_id'], "k": 1}
+        )
+        if not arc_response["data"]:
+            arc_data_to = []
+        else:
+            arc_data_to = arc_response["data"][0]
+            arc_data_to.pop("created_at", None)
+            arc_data_to.pop("characterId", None)
+        logger.info(f"User {current_talk['to_id']} current character arc is {arc_data_to}")
+
+        # get impression:from
+        impression_query_data = {
+            "from_id": state["userid"],
+            "to_id": current_talk["to_id"],
+            "k": 1,
+        }
+        impression_response = make_api_request_sync(
+            "GET", "/impressions/", params=impression_query_data
+        )
+
+        if impression_response["data"]:
+            current_impression_from = impression_response["data"][0]
+        else:
+            current_impression_from = []
+        logger.info(
+            f"The current impression from User {state['userid']} to User {current_talk['to_id']} is {current_impression_from}"
+        )
+
+        # get impression:to
+        impression_query_data = {
+            "from_id": current_talk["to_id"],
+            "to_id": state["userid"],
+            "k": 1,
+        }
+        impression_response = make_api_request_sync(
+            "GET", "/impressions/", params=impression_query_data
+        )
+
+        if impression_response["data"]:
+            current_impression_to = impression_response["data"][0]
+        else:
+            current_impression_to = []
+        logger.info(
+            f"The current impression from User {current_talk['to_id']} to User {state['userid']} is {current_impression_to}"
+        )
+
+        # get self action
+        get_daily_objectives_data = {"characterId": state["userid"], "count": 5}
+        objective_response = make_api_request_sync(
+            "GET", "/decision/", params=get_daily_objectives_data
+        )
+        if objective_response["data"] is not None:
+            objective_data = objective_response["data"]
+            memory_from = {}
+            memory_from["action_description"] = objective_data["action_description"]
+            # if objective_data["reflection"]:
+            #     memory_from["reflection"] = objective_data["reflection"][0]
+        else:
+            memory_from = []
+        logger.info(f"User {state['userid']} current actions and reflections are: {memory_from}")
+
+        # get target action
+        get_daily_objectives_data = {"characterId": current_talk['to_id'], "count": 5}
+        objective_response = make_api_request_sync(
+            "GET", "/decision/", params=get_daily_objectives_data
+        )
+        if objective_response["data"] is not None:
+            objective_data = objective_response["data"]
+            memory_to = {}
+            memory_to["action_description"] = objective_data["action_description"]
+            # if objective_data["reflection"]:
+            #     memory_to["reflection"] = objective_data["reflection"][0]
+        else:
+            memory_to = []
+        logger.info(f"User {current_talk['to_id']} current actions and reflections are: {memory_to}")
+        payload = {
+            "character_stats_from": memory_from,
+            "character_stats_to": memory_to,
+            "topic": topic,
+            "impression_from": current_impression_from,
+            "impression_to": current_impression_to,
+            "target_name": target_name,
+            "my_name": my_name,
+            "personality_from": arc_data_from,
+            "personality_to": arc_data_to,
+            "style_from": style_from,
+            "style_to": style_to,
+            "impact": state["prompt"]["impression_impact"]
+        }
+        generator = conversation_generator
+        generator_prompt = conversation_generator_prompt
+    else:
+        payload = {
+            "type": content_type,
+            "topic": topic,
+            "from_name": my_name,
+            "to_name": target_name,
+        }
+        generator = simple_content_generator
+        generator_prompt = simple_content_prompt
 
     # generate conversation content
     retry_count = 0
     while retry_count < 3:
         try:
-            if content_type == "game":  # topic about games
-                payload = {
-                        "character_stats_from": memory_from,
-                        "character_stats_to": memory_to,
-                        "topic": topic,
-                        "impression_from": current_impression_from,
-                        "impression_to": current_impression_to,
-                        "target_name": target_name,
-                        "my_name": my_name,
-                        "personality_from": arc_data_from,
-                        "personality_to": arc_data_to,
-                        "style_from": style_from,
-                        "style_to": style_to,
-                        "impact": state["prompt"]["impression_impact"]
-                    }
-                conversation_content = conversation_generator.invoke(
-                    payload
-                )
-                full_prompt = conversation_generator_prompt.format(**payload)
-                logger.info("======conversation_generator======\n" + full_prompt)
-            else:  # other topics
-                payload = {
-                    "type": content_type,
-                    "topic": topic,
-                    "from_name": my_name,
-                    "to_name": target_name,
-                }
-                conversation_content = simple_content_generator.invoke(
-                    payload
-                )
-                full_prompt = simple_content_prompt.format(**payload)
-                logger.info("======conversation_generator======\n" + full_prompt)
+            conversation_content = generator.invoke(
+                payload
+            )
+            full_prompt = generator_prompt.format(**payload)
+            logger.info("======conversation_generator======\n" + full_prompt)
 
             # Reconstruct the format
             lines = conversation_content["content"].strip().split('\n')
@@ -422,11 +421,32 @@ async def update_impression(id1: int, id2: int, conversation):
         13.Relative, including Father, Mother, Son, Daughter, Grandfather, Grandmother, Grandson, Granddaughter
     """
 
+    # get from_name
+    character_data = {"characterId": id1}
+    profile = make_api_request_sync("GET", "/characters/", params=character_data)
+    if not profile["data"]:
+        my_name = {}
+    else:
+        my_name = profile["data"][0]["characterName"]
+
+    # get to_name
+    character_data = {"characterId": id2}
+    profile = make_api_request_sync("GET", "/characters/", params=character_data)
+    if not profile["data"]:
+        target_name = {}
+    else:
+        target_name = profile["data"][0]["characterName"]
+
     # update impression
     retry_count = 0
     while retry_count < 3:
         try:
-            payload = {"conversation": conversation, "relation_list": relation_list}
+            payload = {
+                "conversation": conversation,
+                "relation_list": relation_list,
+                "from_name": my_name,
+                "to_name": target_name,
+            }
             impression = impression_update.invoke(
                 payload
             )
@@ -613,7 +633,7 @@ async def update_intimacy(id1: int, id2: int, conversation):
 
 
 # a tool for transferring real_time to game_time
-def calculate_game_time(real_time=datetime.now(), day1_str="2024-7-1 0:00"):
+def calculate_game_time(real_time=datetime.now(), day1_str="2024-7-1 1:00"):
     day1 = datetime.strptime(day1_str, "%Y-%m-%d %H:%M")
     elapsed_time = real_time - day1
     game_elapsed_time = elapsed_time * 7
@@ -622,7 +642,7 @@ def calculate_game_time(real_time=datetime.now(), day1_str="2024-7-1 0:00"):
     remaining_seconds = total_seconds - (game_day * 86400)
     game_hour, remainder = divmod(remaining_seconds, 3600)
     game_minute, seconds = divmod(remainder, 60)
-    return [game_day, game_hour, game_minute]
+    return [game_day+1, game_hour, game_minute]
 
 
 # Randomly return k players, excluding the user.
@@ -665,7 +685,7 @@ def generate_talk_time(k: int):
         )
 
     # only for test, set the first conversation to happen after 5 minutes in game time
-    # sorted_numbers[0] = 1
+    sorted_numbers[0] = 1
 
     for t in sorted_numbers:
         add_hour, add_minute = divmod(minute + t, 60)
