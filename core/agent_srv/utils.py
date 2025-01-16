@@ -764,3 +764,42 @@ def format_false_action_info(false_action_info: dict) -> str:
     formatted_str += "| Result: " + false_action_info["result"] + "\n"
     formatted_str += "------\n"
     return formatted_str 
+
+def format_meta_seq(meta_seq: list, false_action_name:str) -> str:
+    formatted_str = ""
+    # find the location of the false action
+    false_action_index = 0
+    for i, action in enumerate(meta_seq):
+        if action == false_action_name:
+            false_action_index = i
+            break
+    meta_seq = meta_seq[false_action_index:]
+    for i, action in enumerate(meta_seq, start=1):
+        formatted_str += f"Action {i}: {action}\n"
+    return formatted_str
+
+
+def format_detailed_meta_seq(detailed_seq: list, false_action_name:str) -> str:
+    formatted_str = ""
+    # find the location of the false action
+    false_action_index = 0
+    for i, action in enumerate(detailed_seq):
+        if action["action"] == false_action_name:
+            false_action_index = i
+            break
+    detailed_seq = detailed_seq[false_action_index:]
+    for i, action in enumerate(detailed_seq, start=1):
+        formatted_str += f"Action {i}: {action['action']}\n"
+        if action.get("cost"):
+            formatted_str += f" | Cost: {action['cost']}\n"
+        if action.get("status_before"):
+            formatted_str += f" | Status Before: {action['status_before']}\n"
+        if action.get("status_after"):
+            formatted_str += f" | Status After: {action['status_after']}\n"
+        if action.get("inventory_before"):
+            formatted_str += f" | Inventory Before: {action['inventory_before']}\n"
+        if action.get("inventory_after"):
+            formatted_str += f" | Inventory After: {action['inventory_after']}\n"
+        formatted_str += f" | Reason: {action['reason']}\n"
+        formatted_str += "------\n"
+    return formatted_str

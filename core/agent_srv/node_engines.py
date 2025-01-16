@@ -14,7 +14,7 @@ from core.agent_srv.node_model import (
     CharacterArc,
     Reflection,
     AccommodationDecision,
-    CraftingAndTradingActionSequence,
+    DetailedMetaActionSequence,
     RefinedMetaActionSequence,
     EmojiSequence,
 )
@@ -41,6 +41,7 @@ from core.agent_srv.utils import (
     get_market_data_from_db,
     format_status_changes,
     format_false_action_info,
+    format_detailed_meta_seq,
 )
 from core.agent_srv.action_filter import ActionFilter
 
@@ -111,67 +112,10 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
     crafting_and_trading_planner = create_planner(
         crafting_and_trading_prompt,
         state.get("character_stats", {}).get("model_type"),
-        CraftingAndTradingActionSequence,
+        DetailedMetaActionSequence,
         0.3,
     )
-    forbidden_example_out = """### Forbidden Example Output 1: The latter effect of the action is not allowed (latter energy/money is negative)
->> suppose the current or initial energy is 20, and the action costs 25 energy, the latter energy is -5, which is not allowed.
-{
-    "result": [
-        {
-            "action": "craft feed 5",
-            "reason": "Reason: Craft feed from rice to prepare for making chicken/beef.",
-            "cost": "25 energy total (5 energy per item × 5)"
-            "status_before": "Current energy is 20/100",
-            "status_after": "Later energy is -5/100" # This is not allowed!
-            "inventory_before": "Current inventory is {apple: 2, rice: 7}",
-            "inventory_after": "Later inventory is {apple: 2, rice: 2}"
-        }
-    ]
-}
 
->> suppose the current or initial money is 20, and the action costs 100 money, the latter money is -80, which is not allowed.
-{
-    "result": [
-        {
-            "action": "study 1",
-            "reason": "Reason: Study to gain experience.",
-            "cost": "100 money total (100 money per item × 1), 10 energy total (10 energy per item × 1)"
-            "status_before": "Current money is 20; Current energy is 20/100",
-            "status_after": "Later money is -80; Later energy is 10/100" # This is not allowed!
-        }
-    ]
-}
-
-### Forbidden Example Output 2: Take `craft action` but the user doesn't have enough materials
->> suppose the user current inventory is {apple: 2, rice: 3}, and the action is `craft chicken 2`, which requires 2 feed, but the user doesn't have enough rice.
-{
-    "result": [
-        {
-            "action": "craft feed 5",
-            "reason": "Reason: Craft feed from rice to prepare for making chicken/beef.",
-            "cost": "25 energy total (5 energy per item × 5); 5 rice total (1 rice per item × 5)"
-            "status_before": "Current energy is 20/100",   
-            "status_after": "Later energy is 0/100",
-            "inventory_before": "Current inventory is {apple: 2, rice: 3}",
-            "inventory_after": "Later inventory is {apple: 2, rice: -2}" # This is not allowed!
-        }
-    ]
-}
-
-### Forbidden Example Output 3: `Craft Action` CAN NOT craft more than ***10 items*** at an action list.
->> suppose the user have enough energy to craft 20 iron_ore. Even in this case, the user can only craft 10 iron_ore at an action list.
-{
-    "result": [
-        {
-            "action": "craft iron_ore 20",  # This is not allowed!!
-            ...
-        }
-    ]
-}
-
-Remember, you should not output any forbidden situation in the result!
-"""
     payload = {
         "character_stats": format_character_data(
             state["character_stats"],
@@ -190,50 +134,10 @@ Remember, you should not output any forbidden situation in the result!
         "market_data": format_market(state["public_data"]["market_data"]),
         "daily_objectives": format_daily_obj(state["decision"]["daily_objective"]),
         "production_graph": state["meta"]["production_graph"],
-        "example_output": """
-{
-    "result": [
-            {
-                "action": "action1",,
-                "cost": "25 energy total (5 energy per item × 5)",
-                "status_before": "Current energy is 65/100",
-                "status_after": "Later energy is 40/100",
-                "reason": "Reason for action1"
-            },
-            {
-                "action": "action2",
-                "cost": "10 energy total (5 energy per item × 2)",
-                "status_before": "Current energy is 40/100",
-                "status_after": "Later energy is 30/100",
-                "inventory_before": "Current inventory is {apple: 2, rice: 3}",
-                "inventory_after": "Later inventory is {apple: 2, rice: 1}",
-                "reason": "Reason for action2"
-            },
-            {
-                "action": "goto home",
-                "cost": "None",
-                "reason": "Go home to rest and recover energy"
-            },
-            {
-                "action": "sleep 6",
-                "cost": "None",
-                "status_before": "Current energy is 30/100",
-                "status_after": "Later energy is 90/100",
-                "reason": "The energy is too low, need to sleep to recover energy"
-            },
-            {
-                "action": "action3",
-                "expected_revenue": "23.7 gold",
-                "status_before": "Current gold is 100",
-                "status_after": "Later gold is 123.7",
-                "reason": "Reason for action3"
-            },
-            ...(more actions)...
-        ]
-}""",
-        "forbidden_example_output": forbidden_example_out,
+        "example_output": meta_seq_example_out,
+        "forbidden_example_output": meta_seq_forbidden_example_out,
     }
-    print(crafting_and_trading_prompt.format(**payload))
+    # print(crafting_and_trading_prompt.format(**payload))
     for _ in range(3):
         try:
             crafting_and_trading_sequence = await crafting_and_trading_planner.ainvoke(
@@ -251,9 +155,9 @@ Remember, you should not output any forbidden situation in the result!
     for craft_and_trade in crafting_and_trading_sequence.action_sequence:
         state["decision"]["detailed_meta_seq"].append(craft_and_trade.model_dump())
 
-    pprint.pprint(
-        state["decision"]["detailed_meta_seq"],
-    )
+    # pprint.pprint(
+    #     state["decision"]["detailed_meta_seq"],
+    # )
     state["decision"]["meta_seq"] = [
         action.action for action in crafting_and_trading_sequence.action_sequence
     ]
@@ -300,16 +204,16 @@ Remember, you should not output any forbidden situation in the result!
         },
     )
 
-    # await send_message(
-    #     state,
-    #     "actionList",
-    #     6,
-    #     {
-    #         "command": meta_action_sequence,
-    #         "emoji": [desc.emoji for desc in emoji_sequence.response],
-    #         "description": state["decision"]["action_description"],
-    #     },
-    # )
+    await send_message(
+        state,
+        "actionList",
+        6,
+        {
+            "command": meta_action_sequence,
+            "emoji": [desc.emoji for desc in emoji_sequence.response],
+            "description": state["decision"]["action_description"],
+        },
+    )
     logger.info(f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence}")
     pprint.pprint(
         {
@@ -972,14 +876,14 @@ async def refine_meta_action_sequence(state: RunningState):
     state["decision"]["refined_meta_seq"] = meta_seq_list
 
 
-async def replan_meta_action_seq(state: RunningState):
+async def replan_meta_action_seq_new(state: RunningState):
     meta_action_replanner = create_planner(
         replanner_prompt,
         state.get("character_stats", {}).get("model_type"),
-        RefinedMetaActionSequence,
+        DetailedMetaActionSequence,
         0.3,
     )
-
+    false_action_info = state["false_action_queue"].get_nowait()
     payload = {
         "character_stats": format_character_data(
             state["character_stats"],
@@ -996,12 +900,14 @@ async def replan_meta_action_seq(state: RunningState):
             ],
         ),
         "market_data": format_dict(state["public_data"]["market_data"]),
-        "current_meta_seq": state["decision"]["meta_seq"],
-        "false_action_info": format_false_action_info(
-            state["false_action_queue"].get_nowait()
+        "current_action_list": format_detailed_meta_seq(
+            state["decision"]["detailed_meta_seq"],
+            false_action_info["actionName"],
         ),
+        "fail_action_info": format_false_action_info(false_action_info),
     }
 
+    # print(replanner_prompt.format(**payload))
     retry_count = 0
     while retry_count < 3:
         try:
@@ -1015,10 +921,15 @@ async def replan_meta_action_seq(state: RunningState):
             continue
 
     meta_seq_list = []
-    for item in meta_action_sequence.meta_action_sequence:
+    for item in meta_action_sequence.action_sequence:
         meta_seq_list.append(item.action)
 
     state["decision"]["meta_seq"] = meta_seq_list
+
+    detailed_meta_seq = []
+    for item in meta_action_sequence.action_sequence:
+        detailed_meta_seq.append(item.model_dump())
+    state["decision"]["detailed_meta_seq"] = detailed_meta_seq
 
     emoji_sequence_generator = create_planner(
         generate_emoji_sequence_prompt,
@@ -1072,6 +983,71 @@ async def replan_meta_action_seq(state: RunningState):
     return {"current_pointer": "Replan_Meta_Action"}
 
 
+async def test_put_false_action_info(state: RunningState):
+    false_action_info = {
+        "actionName": "goto forest",
+        "result": "No location named 'forest'.",
+    }
+    state["false_action_queue"].put_nowait(false_action_info)
+    state["decision"]["detailed_meta_seq"] = [
+        {
+            "action": "goto forest",
+            "cost": None,
+            "inventory_after": None,
+            "inventory_before": None,
+            "reason": "Move to the forest to gather wood.",
+            "status_after": None,
+            "status_before": None,
+        },
+        {
+            "action": "craft wood 10",
+            "cost": "50 energy total (5 energy per item × 10)",
+            "inventory_after": "Later inventory is {wood: 10}",
+            "inventory_before": "Current inventory is {}",
+            "reason": "Gather wood to prepare for crafting wooden_boards.",
+            "status_after": "Later energy is 50/100",
+            "status_before": "Current energy is 100/100",
+        },
+        {
+            "action": "goto workshop",
+            "cost": None,
+            "inventory_after": None,
+            "inventory_before": None,
+            "reason": "Move to the workshop to craft wooden_boards.",
+            "status_after": None,
+            "status_before": None,
+        },
+        {
+            "action": "craft wooden_board 3",
+            "cost": "30 energy total (10 energy per item × 3)",
+            "inventory_after": "Later inventory is {wood: 1, wooden_board: 3}",
+            "inventory_before": "Current inventory is {wood: 10}",
+            "reason": "Craft wooden_boards to prepare for book production.",
+            "status_after": "Later energy is 20/100",
+            "status_before": "Current energy is 50/100",
+        },
+        {
+            "action": "goto home",
+            "cost": None,
+            "inventory_after": None,
+            "inventory_before": None,
+            "reason": "Go home to rest and recover energy.",
+            "status_after": None,
+            "status_before": None,
+        },
+        {
+            "action": "sleep 8",
+            "cost": "None",
+            "inventory_after": None,
+            "inventory_before": None,
+            "reason": "The energy is too low, need to sleep to recover energy.",
+            "status_after": "Later energy is 100/100",
+            "status_before": "Current energy is 20/100",
+        },
+    ]
+    return {"current_pointer": "Test_Put_False_Action_Info"}
+
+
 if __name__ == "__main__":
     import asyncio
     import core.agent_srv.utils as utils
@@ -1080,11 +1056,22 @@ if __name__ == "__main__":
     state = asyncio.run(utils.get_initial_state_from_db(432543, "websocket"))
     # pprint.pprint(state)
     logger.info(f"🚀 User {state['userid']} starting node engines")
-    asyncio.run(generate_daily_objective(state))
-    logger.success(f"🌞 User {state['userid']} finished daily objective")
-    asyncio.run(generate_crafting_and_trading_sequence(state))
-    logger.success(f"🌞 User {state['userid']} finished crafting and trading")
-    # asyncio.run(refine_meta_action_sequence(state))
-    # logger.success(f"🌞 User {state['userid']} finished refining meta action sequence")
-    # asyncio.run(generate_emoji_seq(state))
-    # logger.success(f"🌞 User {state['userid']} finished emoji sequence")
+
+    # TEST REPLAN ROUTINES
+    asyncio.run(test_put_false_action_info(state))
+    logger.success(f"🌞 User {state['userid']} finished putting false action info")
+
+    asyncio.run(replan_meta_action_seq_new(state))
+    logger.success(
+        f"🌞 User {state['userid']} finished replanning meta action sequence"
+    )
+
+    # pprint.pprint(state["decision"]["meta_seq"])
+
+    pprint.pprint(state["decision"]["detailed_meta_seq"])
+
+    # TEST PLANNING ROUTINES
+    # asyncio.run(generate_daily_objective(state))
+    # logger.success(f"🌞 User {state['userid']} finished daily objective")
+    # asyncio.run(generate_crafting_and_trading_sequence(state))
+    # logger.success(f"🌞 User {state['userid']} finished crafting and trading")

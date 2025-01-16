@@ -900,16 +900,16 @@ replanner_prompt = ChatPromptTemplate.from_template(
 1. **Character Stats**:
 {character_stats}
 
-2. **Inventory**:
-{inventory}
-
-3. **Market Data**:
+2. **Market Data**:
 {market_data}
 
-4. **Current Action List**:
+3. **Current Action List**: 
 {current_action_list}
 
-5. **Fail Action Info**:
+It includes the formatted list of actions the user has planned to take, as well as the reasons, effects and supposing status changes for each action. 
+But it may contain errors or infeasible actions, waiting for your correction.
+
+4. **Fail Action Info**:
 {fail_action_info}
 
 ---
@@ -1041,3 +1041,105 @@ When you are done, present the final plan in the required format.
 **Now:** Carefully validate and re-plan so the user can execute every step without error. Please provide the finalized Action List now.
 """
 )
+
+
+meta_seq_forbidden_example_out = """### Forbidden Example Output 1: The latter effect of the action is not allowed (latter energy/money is negative)
+>> suppose the current or initial energy is 20, and the action costs 25 energy, the latter energy is -5, which is not allowed.
+{
+    "result": [
+        {
+            "action": "craft feed 5",
+            "reason": "Reason: Craft feed from rice to prepare for making chicken/beef.",
+            "cost": "25 energy total (5 energy per item × 5)"
+            "status_before": "Current energy is 20/100",
+            "status_after": "Later energy is -5/100" # This is not allowed!
+            "inventory_before": "Current inventory is {apple: 2, rice: 7}",
+            "inventory_after": "Later inventory is {apple: 2, rice: 2}"
+        }
+    ]
+}
+
+>> suppose the current or initial money is 20, and the action costs 100 money, the latter money is -80, which is not allowed.
+{
+    "result": [
+        {
+            "action": "study 1",
+            "reason": "Reason: Study to gain experience.",
+            "cost": "100 money total (100 money per item × 1), 10 energy total (10 energy per item × 1)"
+            "status_before": "Current money is 20; Current energy is 20/100",
+            "status_after": "Later money is -80; Later energy is 10/100" # This is not allowed!
+        }
+    ]
+}
+
+### Forbidden Example Output 2: Take `craft action` but the user doesn't have enough materials
+>> suppose the user current inventory is {apple: 2, rice: 3}, and the action is `craft chicken 2`, which requires 2 feed, but the user doesn't have enough rice.
+{
+    "result": [
+        {
+            "action": "craft feed 5",
+            "reason": "Reason: Craft feed from rice to prepare for making chicken/beef.",
+            "cost": "25 energy total (5 energy per item × 5); 5 rice total (1 rice per item × 5)"
+            "status_before": "Current energy is 20/100",   
+            "status_after": "Later energy is 0/100",
+            "inventory_before": "Current inventory is {apple: 2, rice: 3}",
+            "inventory_after": "Later inventory is {apple: 2, rice: -2}" # This is not allowed!
+        }
+    ]
+}
+
+### Forbidden Example Output 3: `Craft Action` CAN NOT craft more than ***10 items*** at an action list.
+>> suppose the user have enough energy to craft 20 iron_ore. Even in this case, the user can only craft 10 iron_ore at an action list.
+{
+    "result": [
+        {
+            "action": "craft iron_ore 20",  # This is not allowed!!
+            ...
+        }
+    ]
+}
+
+Remember, you should not output any forbidden situation in the result!
+"""
+
+meta_seq_example_out = """
+{
+    "result": [
+            {
+                "action": "action1",,
+                "cost": "25 energy total (5 energy per item × 5)",
+                "status_before": "Current energy is 65/100",
+                "status_after": "Later energy is 40/100",
+                "reason": "Reason for action1"
+            },
+            {
+                "action": "action2",
+                "cost": "10 energy total (5 energy per item × 2)",
+                "status_before": "Current energy is 40/100",
+                "status_after": "Later energy is 30/100",
+                "inventory_before": "Current inventory is {apple: 2, rice: 3}",
+                "inventory_after": "Later inventory is {apple: 2, rice: 1}",
+                "reason": "Reason for action2"
+            },
+            {
+                "action": "goto home",
+                "cost": "None",
+                "reason": "Go home to rest and recover energy"
+            },
+            {
+                "action": "sleep 6",
+                "cost": "None",
+                "status_before": "Current energy is 30/100",
+                "status_after": "Later energy is 90/100",
+                "reason": "The energy is too low, need to sleep to recover energy"
+            },
+            {
+                "action": "action3",
+                "expected_revenue": "23.7 gold",
+                "status_before": "Current gold is 100",
+                "status_after": "Later gold is 123.7",
+                "reason": "Reason for action3"
+            },
+            ...(more actions)...
+        ]
+}"""

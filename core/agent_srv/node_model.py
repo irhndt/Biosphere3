@@ -109,7 +109,7 @@ class MetaActionSequence(BaseModel):
     description_sequence: List[str] = Field(description="description sequence")
 
 
-class CraftingAndTradingAction(BaseModel):
+class DetailedMetaAction(BaseModel):
     action: str = Field(
         ...,
         description="The action to take, e.g., 'goto workshop', 'craft feed 5', etc.",
@@ -135,11 +135,11 @@ class CraftingAndTradingAction(BaseModel):
     reason: str = Field(..., description="Why this action is needed")
 
 
-class CraftingAndTradingActionSequence(BaseModel):
+class DetailedMetaActionSequence(BaseModel):
     """Crafting and trading action sequence to follow in future"""
 
-    action_sequence: List[CraftingAndTradingAction] = Field(
-        ..., description="Crafting and trading action sequence"
+    action_sequence: List[DetailedMetaAction] = Field(
+        ..., description="Detailed meta-action sequence"
     )
 
 
