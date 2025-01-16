@@ -204,7 +204,7 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
         },
     )
 
-    await send_message(
+    response = await send_message(
         state,
         "actionList",
         6,
@@ -222,6 +222,9 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
             "description": state["decision"]["action_description"],
         },
     )
+    state["instance"].log_message("received", json.dumps(response))
+
+    return {"current_pointer": "meta_action_sequence"}
 
 
 async def generate_meta_action_sequence(state: RunningState):
@@ -272,7 +275,7 @@ async def generate_meta_action_sequence(state: RunningState):
         },
     )
 
-    await send_message(
+    response = await send_message(
         state,
         "actionList",
         6,
@@ -283,6 +286,7 @@ async def generate_meta_action_sequence(state: RunningState):
             "description": meta_action_sequence.description_sequence,
         },
     )
+    state["instance"].log_message("received", json.dumps(response))
     logger.info(
         f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence.meta_action_sequence}"
     )
@@ -363,7 +367,7 @@ async def replan_action(state: RunningState):
     )
 
     # Send new action sequence to client
-    await send_message(
+    response = await send_message(
         state,
         "actionList",
         6,
@@ -374,6 +378,7 @@ async def replan_action(state: RunningState):
             "description": meta_action_sequence.description_sequence,
         },
     )
+    state["instance"].log_message("received", json.dumps(response))
 
     return {"current_pointer": "Replan_Action"}
 
@@ -423,7 +428,7 @@ async def generate_change_job_cv(instance, msg: dict):
         cv, user_id, studyXp, education, date
     )
     if instance:
-        await instance.send_message(
+        response = await instance.send_message(
             {
                 "characterId": user_id,
                 "messageName": "mayor_decision",
@@ -431,6 +436,7 @@ async def generate_change_job_cv(instance, msg: dict):
                 "data": {"jobId": cv.job_id, "cv": cv.cv, **mayor_decision},
             }
         )
+        instance.log_message("received", json.dumps(response))
 
 
 async def generate_mayor_decision(
@@ -530,14 +536,15 @@ async def generate_daily_reflection(state: RunningState):
     logger.info("======generate_daily_reflection======\n" + full_prompt)
     state["decision"]["reflection"].append(daily_reflection.reflection)
     save_decision_to_db(state["userid"], {"reflection": daily_reflection.reflection})
-    # await send_message(
-    #     state,
-    #     "daily_reflection",
-    #     11,
-    #     {
-    #         "reflection": daily_reflection.reflection,
-    #     },
-    # )
+    response = await send_message(
+        state,
+        "daily_reflection",
+        11,
+        {
+            "reflection": daily_reflection.reflection,
+        },
+    )
+    state["instance"].log_message("received", json.dumps(response))
 
     logger.info(f"🔍 DAILY_REFLECTION INVOKED with {daily_reflection.reflection}")
 
@@ -569,12 +576,13 @@ async def generate_character_arc(state: RunningState):
         "characterId": state["userid"],
         **dict(character_arc),
     }
-    await send_message(
+    response = await send_message(
         state,
         "character_arc",
         12,
         {"character_arc": character_arc_data},
     )
+    state["instance"].log_message("received", json.dumps(response))
     logger.info(f"📜 Character Arc: {character_arc_data}")
     make_api_request_sync("POST", "/character_arc/", data=character_arc_data)
 
@@ -732,7 +740,7 @@ async def generate_accommodation_decision(state: RunningState):
             }
         }
 
-    await send_message(
+    response = await send_message(
         state,
         "accommodationChange",
         8,
@@ -742,32 +750,23 @@ async def generate_accommodation_decision(state: RunningState):
             "comments": accommodation_decision.comments,
         },
     )
+    state["instance"].log_message("received", json.dumps(response))
 
     return {"current_pointer": "Accommodation_Decision"}
 
 
 async def send_message(state, message_name, message_code, data):
-    """
-    Send a message to the client.
-
-    Args:
-        state: The current state containing the instance and user ID.
-        message_name (str): The name of the message.
-        message_code (int): The code of the message.
-        data (dict): The data to send in the message.
-    """
     if not state.get("instance"):
         logger.warning(f"⚠️ User {state['userid']}: Instance not found.")
         return
-
-    await state["instance"].send_message(
-        {
-            "characterId": state["userid"],
-            "messageName": message_name,
-            "messageCode": message_code,
-            "data": data,
-        }
-    )
+    response = {
+        "characterId": state["userid"],
+        "messageName": message_name,
+        "messageCode": message_code,
+        "data": data,
+    }
+    await state["instance"].send_message(response)
+    return response
 
 
 async def generate_emoji_seq(state):
@@ -973,7 +972,7 @@ async def replan_meta_action_seq_new(state: RunningState):
         },
     )
 
-    await send_message(
+    response = await send_message(
         state,
         "actionList",
         6,
@@ -983,6 +982,7 @@ async def replan_meta_action_seq_new(state: RunningState):
             "description": state["decision"]["action_description"],
         },
     )
+    state["instance"].log_message("received", json.dumps(response))
 
     return {"current_pointer": "Replan_Meta_Action"}
 

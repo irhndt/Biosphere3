@@ -30,6 +30,7 @@ class LangGraphInstance:
         self.websocket = websocket
         self.signal = None
         self.state = {}
+        self.message_log = []
 
         self.websocket_lock = None
         self.graph = None
@@ -230,3 +231,12 @@ class LangGraphInstance:
                 self.signal = "TERMINATE"
             except Exception as e:
                 self.logger.error(f"User {self.user_id}: Error sending message: {e}")
+
+    def log_message(self, direction: str, message: str):
+        self.message_log.append(
+            {
+                "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+                "direction": direction,
+                "message": message,
+            }
+        )
