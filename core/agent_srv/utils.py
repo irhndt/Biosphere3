@@ -659,7 +659,7 @@ def format_level_graph(
         formatted_str += f"Level {goal['goal_number']}:\n"
         for obj in goal["objectives"]:
             formatted_str += f"  - {obj['item']} *{obj['quantity']}\n"
-            formatted_str += f"     | Inventory: {inventory_copy.get(obj['item'], 0)}, Lack {obj["quantity"] - inventory_copy.get(obj['item'], 0)}\n"
+            formatted_str += f"     | Inventory: {inventory_copy.get(obj['item'], 0)}, Lack {obj['quantity'] - inventory_copy.get(obj['item'], 0)}\n"
             energy_cost = get_cost(skill2actions, obj["item"])
             formatted_str += f"     | Energy Cost: {energy_cost} per item, max craft num {current_energy / energy_cost} \n"
         formatted_str += "\n"

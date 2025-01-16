@@ -215,7 +215,7 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
         },
     )
     logger.info(f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence}")
-    pprint.pprint(
+    pprint(
         {
             "command": meta_action_sequence,
             "emoji": [desc.emoji for desc in emoji_sequence.response],
@@ -1072,7 +1072,7 @@ if __name__ == "__main__":
 
     # pprint.pprint(state["decision"]["meta_seq"])
 
-    pprint.pprint(state["decision"]["detailed_meta_seq"])
+    pprint(state["decision"]["detailed_meta_seq"])
 
     # TEST PLANNING ROUTINES
     # asyncio.run(generate_daily_objective(state))
