@@ -1,6 +1,7 @@
 import json
 from loguru import logger
 import sys
+from pprint import pprint
 
 sys.path.append(".")
 
@@ -13,6 +14,9 @@ from core.agent_srv.node_model import (
     CharacterArc,
     Reflection,
     AccommodationDecision,
+    DetailedMetaActionSequence,
+    RefinedMetaActionSequence,
+    EmojiSequence,
 )
 from core.agent_srv.prompts import *
 from core.utils.llm_factory import llm_selector
@@ -22,16 +26,24 @@ from core.db.game_api_utils import (
     make_api_request_sync as make_api_request_sync_backend,
 )
 from core.agent_srv.utils import (
+    format_dict,
     save_decision_to_db,
     format_role_actions,
+    format_market,
     format_character_data,
     format_conversation_data,
     format_queue_data,
+    format_trade_and_craft_sequence,
+    format_level_graph,
+    format_daily_obj,
     get_character_data_async,
     get_prompt_data_from_db,
     get_market_data_from_db,
     format_status_changes,
+    format_false_action_info,
+    format_detailed_meta_seq,
 )
+from core.agent_srv.action_filter import ActionFilter
 
 
 def create_planner(prompt_template, model_name, output_type, temperature=0.5):
@@ -45,20 +57,17 @@ async def generate_daily_objective(state: RunningState):
         obj_planner_prompt,
         state.get("character_stats", {}).get("model_type"),
         DailyObjective,
-        0.9,
+        0.7,
     )
-    response = make_api_request_sync_backend(
-        "GET", f"/characters/getByIdS/{state['userid']}"
+    dev_dict = make_api_request_sync("GET", f"/production_path/{state['userid']}").get(
+        "data", {}
     )
-    skill_list = response.get("data", {}).get("skillList", [])
-    skill_name = [skill["skillName"] for skill in skill_list]
-    try:
-        with open("core/files/skill2actions.json", "r") as f:
-            skills = json.load(f)
-    except Exception as e:
-        logger.error(f"Failed to load skill actions: {e}")
-    role_specific_actions = format_role_actions(skill_name, skills)
-    state["meta"]["tool_functions"] += role_specific_actions
+    # print(dev_dict)
+    state["meta"]["production_graph"] = format_level_graph(
+        dev_dict,
+        state["character_stats"]["inventory"],
+        state["character_stats"]["energy"],
+    )
 
     decision_response = make_api_request_sync(
         "GET", "/decision/", params={"characterId": state["userid"], "count": 5}
@@ -73,35 +82,7 @@ async def generate_daily_objective(state: RunningState):
         "past_objectives": last_decision.get("daily_objective", []),
         "life_style": state["prompts"]["life_style"],
         "past_reflection": last_decision.get("reflection", []),
-        "production_graph": """
-Level 1:
-  - iron_ore *48
-  - copper_ore *48
-  - silicon_ore *48
-
-Level 2:
-  - iron_ingots *16
-  - copper_ingots *16
-  - pure_silicon *16
-
-Level 3:
-  - iron_plates *16
-  - copper_wire *16
-  - circuit_board *32
-  - transistors *32
-
-Level 4:
-  - a100 *32
-
-Level 5:
-  - h100 *16
-
-Level 6:
-  - h200 *8
-
-Level 7:
-  - b200 *4        
-""",
+        "production_graph": state["meta"]["production_graph"],
     }
     while retry_count < 3:
         try:
@@ -124,7 +105,123 @@ Level 7:
     logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response.progress}")
     logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response.objectives}")
 
-    return {"current_pointer": "Objectives_planner"}
+    return {"current_pointer": "objectives_planner"}
+
+
+async def generate_crafting_and_trading_sequence(state: RunningState):
+    crafting_and_trading_planner = create_planner(
+        crafting_and_trading_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        DetailedMetaActionSequence,
+        0.3,
+    )
+
+    payload = {
+        "character_stats": format_character_data(
+            state["character_stats"],
+            fields=[
+                "money",
+                "energy",
+                "health",
+                "hungry",
+                "education",
+                "education_experience",
+                "occupation",
+                "effciency",
+                "inventory",
+            ],
+        ),
+        "market_data": format_market(state["public_data"]["market_data"]),
+        "daily_objectives": format_daily_obj(state["decision"]["daily_objective"]),
+        "production_graph": state["meta"]["production_graph"],
+        "example_output": meta_seq_example_out,
+        "forbidden_example_output": meta_seq_forbidden_example_out,
+    }
+    # print(crafting_and_trading_prompt.format(**payload))
+    for _ in range(3):
+        try:
+            crafting_and_trading_sequence = await crafting_and_trading_planner.ainvoke(
+                payload
+            )
+            # print("crafting_and_trading_sequence: \n", crafting_and_trading_sequence)
+            break
+        except Exception as e:
+            logger.error(
+                f"⛔ User {state['userid']} Error in generate_crafting_and_trading_sequence: {e}"
+            )
+            continue
+
+    state["decision"]["detailed_meta_seq"] = []
+    for craft_and_trade in crafting_and_trading_sequence.action_sequence:
+        state["decision"]["detailed_meta_seq"].append(craft_and_trade.model_dump())
+
+    # pprint.pprint(
+    #     state["decision"]["detailed_meta_seq"],
+    # )
+    state["decision"]["meta_seq"] = [
+        action.action for action in crafting_and_trading_sequence.action_sequence
+    ]
+
+    emoji_seq_generator = create_planner(
+        generate_emoji_sequence_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        EmojiSequence,
+        0.8,
+    )
+
+    squence_format = """{"response": [{"content": "I hate work overtime!", "emoji": "🥺😭"}, {"content": "So tired, but got lots of fishes", "emoji": "🐟😆"}]}"""
+
+    pay_load = {
+        "personality": state["character_stats"]["personality"],
+        "action_list": state["decision"]["meta_seq"],
+        "sequence_format": squence_format,
+    }
+    retry_count = 0
+    while retry_count < 3:
+        try:
+            emoji_sequence = await emoji_seq_generator.ainvoke(pay_load)
+            if emoji_sequence.response:
+                break
+        except Exception as e:
+            logger.error(
+                f"⛔ User {state['userid']} Error in generate_emoji_sequence: {e}"
+            )
+            retry_count += 1
+            continue
+
+    for emoji_and_description in emoji_sequence.response:
+        state["decision"]["action_description"].append(emoji_and_description.content)
+
+    meta_action_sequence = [
+        action.action for action in crafting_and_trading_sequence.action_sequence
+    ]
+
+    save_decision_to_db(
+        state["userid"],
+        {
+            "meta_seq": meta_action_sequence,
+            "action_description": state["decision"]["action_description"],
+        },
+    )
+
+    await send_message(
+        state,
+        "actionList",
+        6,
+        {
+            "command": meta_action_sequence,
+            "emoji": [desc.emoji for desc in emoji_sequence.response],
+            "description": state["decision"]["action_description"],
+        },
+    )
+    logger.info(f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence}")
+    pprint.pprint(
+        {
+            "command": meta_action_sequence,
+            "emoji": [desc.emoji for desc in emoji_sequence.response],
+            "description": state["decision"]["action_description"],
+        },
+    )
 
 
 async def generate_meta_action_sequence(state: RunningState):
@@ -659,6 +756,10 @@ async def send_message(state, message_name, message_code, data):
         message_code (int): The code of the message.
         data (dict): The data to send in the message.
     """
+    if not state.get("instance"):
+        logger.warning(f"⚠️ User {state['userid']}: Instance not found.")
+        return
+
     await state["instance"].send_message(
         {
             "characterId": state["userid"],
@@ -669,23 +770,312 @@ async def send_message(state, message_name, message_code, data):
     )
 
 
-async def main():
-    from core.agent_srv.utils import get_initial_state_from_db
-    import copy
+async def generate_emoji_seq(state):
 
-    state = await get_initial_state_from_db(448450, None)
-    # state["meta"]["day"] = 4
-    # state["past_stats"] = copy.deepcopy(state["character_stats"])
-    # state["past_stats"]["energy"] = 80
-    # state["past_stats"]["hungry"] = 60
-    # state["past_stats"]["education"] = "SecondarySchool"
-    # state["prompts"]["focus_topic"] = ["Crafting", "Trading"]
-    # await generate_daily_reflection(state)
+    emoji_seq_generator = create_planner(
+        generate_emoji_sequence_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        EmojiSequence,
+        0.8,
+    )
 
-    await generate_daily_objective(state)
+    squence_format = """{"response": [{"content": "I hate work overtime!", "emoji": "🥺😭"}, {"content": "So tired, but got lots of fishes", "emoji": "🐟😆"}]}"""
+
+    meta_seq = [action["action"] for action in state["decision"]["refined_meta_seq"]]
+
+    pay_load = {
+        "personality": state["character_stats"]["personality"],
+        "action_list": meta_seq,
+        "sequence_format": squence_format,
+    }
+
+    emoji_sequence = await emoji_seq_generator.ainvoke(pay_load)
+    print("emoji_sequence: ", emoji_sequence)
+    # return emoji_sequence
+
+
+async def refine_meta_action_sequence(state: RunningState):
+    meta_action_general_part_refiner = create_planner(
+        meta_action_general_part_refiner_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        RefinedMetaActionSequence,
+        0.5,
+    )
+
+    example_out = """
+[
+    {
+        "action": "action1",
+        "cost": "25 energy total (5 energy per item × 5 items)",
+        "expected_effect": "Get X <item> from crafting"
+    },
+    {
+        "action": "action2",
+        "cost": "None",
+        "expected_effect": "Get X gold refund from selling"
+    },
+    {
+        "action": "sleep 3,
+        "cost": "None",
+        "expected_effect": "Recover energy 30 (3x10) from sleeping"
+    }
+    {
+        "action": "action3",
+        "cost": "X gold",
+        "expected_effect": ""
+    },
+    {
+        "action": "goto school",
+        "cost": "None",
+        "expected_effect": "Get to school, ready to study"
+    },
+    ...
+]
+    """
+    payload = {
+        "daily_objectives": (state["decision"]["daily_objective"]),
+        "character_stats": format_character_data(
+            state["character_stats"],
+            fields=[
+                "money",
+                "energy",
+                "health",
+                "hunger",
+                "education",
+                "education_experience",
+                "occupation",
+                "effciency",
+            ],
+        ),
+        "market_data": format_dict(state["public_data"]["market_data"]),
+        "inventory": format_dict(state["character_stats"]["inventory"]),
+        "current_trade_and_craft_sequence": format_trade_and_craft_sequence(
+            state["decision"]["crafting_and_trading"]
+        ),
+        "example_output": example_out,
+    }
+
+    print(meta_action_general_part_refiner_prompt.format(**payload))
+
+    retry_count = 0
+    while retry_count < 3:
+        try:
+            meta_action_sequence = await meta_action_general_part_refiner.ainvoke(
+                payload
+            )
+            break
+        except Exception as e:
+            logger.error(
+                f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
+            )
+            retry_count += 1
+            continue
+
+    print("meta_action_sequence: ", meta_action_sequence)
+
+    meta_seq_list = []
+    for item in meta_action_sequence.meta_action_sequence:
+        meta_seq_list.append(item.model_dump())
+
+    state["decision"]["refined_meta_seq"] = meta_seq_list
+
+
+async def replan_meta_action_seq_new(state: RunningState):
+    meta_action_replanner = create_planner(
+        replanner_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        DetailedMetaActionSequence,
+        0.3,
+    )
+    false_action_info = state["false_action_queue"].get_nowait()
+    payload = {
+        "character_stats": format_character_data(
+            state["character_stats"],
+            fields=[
+                "money",
+                "energy",
+                "health",
+                "hunger",
+                "education",
+                "education_experience",
+                "occupation",
+                "effciency",
+                "inventory",
+            ],
+        ),
+        "market_data": format_dict(state["public_data"]["market_data"]),
+        "current_action_list": format_detailed_meta_seq(
+            state["decision"]["detailed_meta_seq"],
+            false_action_info["actionName"],
+        ),
+        "fail_action_info": format_false_action_info(false_action_info),
+    }
+
+    # print(replanner_prompt.format(**payload))
+    retry_count = 0
+    while retry_count < 3:
+        try:
+            meta_action_sequence = await meta_action_replanner.ainvoke(payload)
+            break
+        except Exception as e:
+            logger.error(
+                f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
+            )
+            retry_count += 1
+            continue
+
+    meta_seq_list = []
+    for item in meta_action_sequence.action_sequence:
+        meta_seq_list.append(item.action)
+
+    state["decision"]["meta_seq"] = meta_seq_list
+
+    detailed_meta_seq = []
+    for item in meta_action_sequence.action_sequence:
+        detailed_meta_seq.append(item.model_dump())
+    state["decision"]["detailed_meta_seq"] = detailed_meta_seq
+
+    emoji_sequence_generator = create_planner(
+        generate_emoji_sequence_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        EmojiSequence,
+        0.7,
+    )
+
+    squence_format = """{"response": [{"content": "I hate work overtime!", "emoji": "🥺😭"}, {"content": "So tired, but got lots of fishes", "emoji": "🐟😆"}]}"""
+
+    pay_load = {
+        "personality": state["character_stats"]["personality"],
+        "action_list": state["decision"]["meta_seq"],
+        "sequence_format": squence_format,
+    }
+
+    retry_count = 0
+    while retry_count < 3:
+        try:
+            emoji_sequence = await emoji_sequence_generator.ainvoke(pay_load)
+            break
+        except Exception as e:
+            logger.error(
+                f"⛔ User {state['userid']} Error in generate_emoji_sequence: {e}"
+            )
+            retry_count += 1
+            continue
+
+    for emoji_and_description in emoji_sequence.response:
+        state["decision"]["action_description"].append(emoji_and_description.content)
+
+    save_decision_to_db(
+        state["userid"],
+        {
+            "meta_seq": state["decision"]["meta_seq"],
+            "action_description": state["decision"]["action_description"],
+        },
+    )
+
+    await send_message(
+        state,
+        "actionList",
+        6,
+        {
+            "command": state["decision"]["meta_seq"],
+            "emoji": [desc.emoji for desc in emoji_sequence.response],
+            "description": state["decision"]["action_description"],
+        },
+    )
+
+    return {"current_pointer": "Replan_Meta_Action"}
+
+
+async def test_put_false_action_info(state: RunningState):
+    false_action_info = {
+        "actionName": "goto forest",
+        "result": "No location named 'forest'.",
+    }
+    state["false_action_queue"].put_nowait(false_action_info)
+    state["decision"]["detailed_meta_seq"] = [
+        {
+            "action": "goto forest",
+            "cost": None,
+            "inventory_after": None,
+            "inventory_before": None,
+            "reason": "Move to the forest to gather wood.",
+            "status_after": None,
+            "status_before": None,
+        },
+        {
+            "action": "craft wood 10",
+            "cost": "50 energy total (5 energy per item × 10)",
+            "inventory_after": "Later inventory is {wood: 10}",
+            "inventory_before": "Current inventory is {}",
+            "reason": "Gather wood to prepare for crafting wooden_boards.",
+            "status_after": "Later energy is 50/100",
+            "status_before": "Current energy is 100/100",
+        },
+        {
+            "action": "goto workshop",
+            "cost": None,
+            "inventory_after": None,
+            "inventory_before": None,
+            "reason": "Move to the workshop to craft wooden_boards.",
+            "status_after": None,
+            "status_before": None,
+        },
+        {
+            "action": "craft wooden_board 3",
+            "cost": "30 energy total (10 energy per item × 3)",
+            "inventory_after": "Later inventory is {wood: 1, wooden_board: 3}",
+            "inventory_before": "Current inventory is {wood: 10}",
+            "reason": "Craft wooden_boards to prepare for book production.",
+            "status_after": "Later energy is 20/100",
+            "status_before": "Current energy is 50/100",
+        },
+        {
+            "action": "goto home",
+            "cost": None,
+            "inventory_after": None,
+            "inventory_before": None,
+            "reason": "Go home to rest and recover energy.",
+            "status_after": None,
+            "status_before": None,
+        },
+        {
+            "action": "sleep 8",
+            "cost": "None",
+            "inventory_after": None,
+            "inventory_before": None,
+            "reason": "The energy is too low, need to sleep to recover energy.",
+            "status_after": "Later energy is 100/100",
+            "status_before": "Current energy is 20/100",
+        },
+    ]
+    return {"current_pointer": "Test_Put_False_Action_Info"}
 
 
 if __name__ == "__main__":
     import asyncio
+    import core.agent_srv.utils as utils
+    import pprint
 
-    asyncio.run(main())
+    state = asyncio.run(utils.get_initial_state_from_db(432543, "websocket"))
+    # pprint.pprint(state)
+    logger.info(f"🚀 User {state['userid']} starting node engines")
+
+    # TEST REPLAN ROUTINES
+    asyncio.run(test_put_false_action_info(state))
+    logger.success(f"🌞 User {state['userid']} finished putting false action info")
+
+    asyncio.run(replan_meta_action_seq_new(state))
+    logger.success(
+        f"🌞 User {state['userid']} finished replanning meta action sequence"
+    )
+
+    # pprint.pprint(state["decision"]["meta_seq"])
+
+    pprint.pprint(state["decision"]["detailed_meta_seq"])
+
+    # TEST PLANNING ROUTINES
+    # asyncio.run(generate_daily_objective(state))
+    # logger.success(f"🌞 User {state['userid']} finished daily objective")
+    # asyncio.run(generate_crafting_and_trading_sequence(state))
+    # logger.success(f"🌞 User {state['userid']} finished crafting and trading")

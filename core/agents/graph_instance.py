@@ -9,16 +9,7 @@ from pprint import pprint
 from loguru import logger
 import websockets
 from langgraph.graph import StateGraph
-from core.agent_srv.node_engines import (
-    generate_daily_objective,
-    generate_meta_action_sequence,
-    replan_action,
-    sensing_environment,
-    generate_change_job_cv,
-    generate_character_arc,
-    generate_daily_reflection,
-    generate_accommodation_decision,
-)
+from core.agent_srv.node_engines import *
 from core.agent_srv.node_model import RunningState
 from core.agent_srv.utils import (
     get_initial_state_from_db,
@@ -124,7 +115,9 @@ class LangGraphInstance:
             ):
                 self.schedule_event("ACCOMMODATION_EVENT")
             elif message_name == "new_day":
-                update_state_daily(self.state, message_data.get("day", self.state["meta"]["day"] + 1))
+                update_state_daily(
+                    self.state, message_data.get("day", self.state["meta"]["day"] + 1)
+                )
                 self.schedule_event("CHARACTER_ARC")
                 self.schedule_event("DAILY_REFLECTION")
                 await asyncio.sleep(60)
@@ -189,10 +182,12 @@ class LangGraphInstance:
         workflow = StateGraph(RunningState)
         workflow.add_node("Sensing_Route", sensing_environment)
         workflow.add_node("Objectives_planner", generate_daily_objective)
-        workflow.add_node("meta_action_sequence", generate_meta_action_sequence)
+        workflow.add_node(
+            "meta_action_sequence", generate_crafting_and_trading_sequence
+        )
         workflow.add_node("Character_Arc", generate_character_arc)
         workflow.add_node("Daily_Reflection", generate_daily_reflection)
-        workflow.add_node("Replan_Action", replan_action)
+        workflow.add_node("Replan_Action", replan_meta_action_seq_new)
         workflow.add_node("Accommodation_Decision", generate_accommodation_decision)
 
         workflow.set_entry_point("Sensing_Route")

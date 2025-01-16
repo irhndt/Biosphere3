@@ -1,5 +1,6 @@
 import requests
 import os
+import json
 from json import JSONDecodeError
 import asyncio
 from dotenv import load_dotenv
@@ -13,6 +14,7 @@ GAME_BACKEND_URL = os.getenv("GAME_BACKEND_URL")
 GAME_BACKEND_TIMEOUT = int(os.getenv("GAME_BACKEND_TIMEOUT"))
 AGENT_BACKEND_URL = os.getenv("AGENT_BACKEND_URL")
 DEFAULT_MODEL_TYPE = os.getenv("DEFAULT_MODEL_TYPE")
+skill2actions = json.load(open("core/files/skill2actions.json"))
 
 
 async def fetch_api_data_async(
@@ -639,14 +641,63 @@ async def format_queue_data(queue_data: asyncio.Queue) -> str:
     return ", ".join(items)
 
 
-def format_level_graph(level_graph_data: dict) -> str:
-    formatted_str = ""
-    for goal in level_graph_data:
+def format_level_graph(
+    level_graph_data: dict, inventory_info: dict, current_energy: int
+) -> str:
+    formatted_str = f"Current Energy: {current_energy}\n"
+    inventory_copy = inventory_info.copy()
+    inventory_copy = {key.lower(): value for key, value in inventory_copy.items()}
+    def get_cost(skill2actions, item):
+        # print(item)
+        for _, details in skill2actions.items():
+            if item in details["materials"].keys():
+                return details["cost"]
+        return 0
+    formatted_str += "Final Product: " + level_graph_data["final_product"] + "\n"
+    level_graph_data_list = level_graph_data["goals"]
+    for goal in level_graph_data_list:
         formatted_str += f"Level {goal['goal_number']}:\n"
         for obj in goal["objectives"]:
             formatted_str += f"  - {obj['item']} *{obj['quantity']}\n"
+            formatted_str += f"     | Inventory: {inventory_copy.get(obj['item'], 0)}, Lack {obj["quantity"] - inventory_copy.get(obj['item'], 0)}\n"
+            energy_cost = get_cost(skill2actions, obj["item"])
+            formatted_str += f"     | Energy Cost: {energy_cost} per item, max craft num {current_energy / energy_cost} \n"
         formatted_str += "\n"
+    return formatted_str
+
+
+def format_trade_and_craft_sequence(trade_and_craft_sequence: list):
+    formatted_str = ""
+    for action in trade_and_craft_sequence:
+        formatted_str += f"Action: {action['action']}\n"
+        formatted_str += f" | Reason: {action['reason']}\n"
+        if action.get("cost"):
+            formatted_str += f" | Cost: {action['cost']}\n"
+        if action.get("expected_revenue"):
+            formatted_str += f" | Expected Revenue: {action['expected_revenue']}\n"
+        formatted_str += "---\n"
     return formatted_str.strip()
+
+
+def format_dict(data: dict) -> str:
+    return "\n".join([f"{key}: {value}" for key, value in data.items()])
+
+
+def format_market(market_data: dict) -> str:
+    formatted_str = "{\n"
+    items = list(market_data.items())
+    for i in range(0, len(items), 4):
+        chunk = items[i:i+4]
+        line = ", ".join([f"{item.lower()}: {price}" for item, price in chunk])
+        formatted_str += f" {line}\n"
+    formatted_str += "}"
+    return formatted_str
+
+def format_daily_obj(daily_objectives: list) -> str:
+    formatted_str = ""
+    for i, obj in enumerate(daily_objectives, start=1):
+        formatted_str += f"Objective {i}: {obj}\n"
+    return formatted_str
 
 
 def update_state_daily(state: dict, day: int):
@@ -707,3 +758,48 @@ def format_status_changes(past_status: dict, status: dict, fields: list = None) 
         )
 
     return "\n".join(formatted_data)
+
+def format_false_action_info(false_action_info: dict) -> str:
+    formatted_str = "Failed Action: " + false_action_info["actionName"] + "\n"
+    formatted_str += "| Result: " + false_action_info["result"] + "\n"
+    formatted_str += "------\n"
+    return formatted_str 
+
+def format_meta_seq(meta_seq: list, false_action_name:str) -> str:
+    formatted_str = ""
+    # find the location of the false action
+    false_action_index = 0
+    for i, action in enumerate(meta_seq):
+        if action == false_action_name:
+            false_action_index = i
+            break
+    meta_seq = meta_seq[false_action_index:]
+    for i, action in enumerate(meta_seq, start=1):
+        formatted_str += f"Action {i}: {action}\n"
+    return formatted_str
+
+
+def format_detailed_meta_seq(detailed_seq: list, false_action_name:str) -> str:
+    formatted_str = ""
+    # find the location of the false action
+    false_action_index = 0
+    for i, action in enumerate(detailed_seq):
+        if action["action"] == false_action_name:
+            false_action_index = i
+            break
+    detailed_seq = detailed_seq[false_action_index:]
+    for i, action in enumerate(detailed_seq, start=1):
+        formatted_str += f"Action {i}: {action['action']}\n"
+        if action.get("cost"):
+            formatted_str += f" | Cost: {action['cost']}\n"
+        if action.get("status_before"):
+            formatted_str += f" | Status Before: {action['status_before']}\n"
+        if action.get("status_after"):
+            formatted_str += f" | Status After: {action['status_after']}\n"
+        if action.get("inventory_before"):
+            formatted_str += f" | Inventory Before: {action['inventory_before']}\n"
+        if action.get("inventory_after"):
+            formatted_str += f" | Inventory After: {action['inventory_after']}\n"
+        formatted_str += f" | Reason: {action['reason']}\n"
+        formatted_str += "------\n"
+    return formatted_str

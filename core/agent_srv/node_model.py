@@ -109,6 +109,40 @@ class MetaActionSequence(BaseModel):
     description_sequence: List[str] = Field(description="description sequence")
 
 
+class DetailedMetaAction(BaseModel):
+    action: str = Field(
+        ...,
+        description="The action to take, e.g., 'goto workshop', 'craft feed 5', etc.",
+    )
+    cost: Optional[str] = Field(
+        None,
+        description="Energy/Money or other materials cost. Not all actions need this field",
+    )
+    status_before: Optional[str] = Field(
+        None, description="User Status Info before this action is taken."
+    )
+    status_after: Optional[str] = Field(
+        None,
+        description="User Status Info after this action is taken. All after status should not be negative, or the action is invalid.",
+    )
+    inventory_before: Optional[str] = Field(
+        None, description="User Inventory Info before this action is taken"
+    )
+    inventory_after: Optional[str] = Field(
+        None,
+        description="User Inventory Info after this action is taken. All after inventory should not be negative, or the action is invalid.",
+    )
+    reason: str = Field(..., description="Why this action is needed")
+
+
+class DetailedMetaActionSequence(BaseModel):
+    """Crafting and trading action sequence to follow in future"""
+
+    action_sequence: List[DetailedMetaAction] = Field(
+        ..., description="Detailed meta-action sequence"
+    )
+
+
 class CV(BaseModel):
     """CV to follow in future"""
 
@@ -149,6 +183,34 @@ class AccommodationDecision(BaseModel):
     accommodation_id: int = Field(description="ID of the chosen accommodation")
     lease_weeks: int = Field(description="Number of weeks to lease (1-12)")
     comments: str = Field(description="comments")
+
+
+class EmojiSeq(BaseModel):
+    content: str = Field(description="The appropriate monologues for each time point")
+    emoji: str = Field(description="2 corresponding emojis")
+
+
+class EmojiSequence(BaseModel):
+
+    response: List[EmojiSeq] = Field(description="emoji sequence")
+
+
+class MetaAction(BaseModel):
+    """Meta action to follow in future"""
+
+    action: str = Field(
+        description="The action to take, e.g., 'goto workshop' or 'craft feed 5'"
+    )
+    cost: str = Field(description="Energy or resource cost")
+    expected_effect: str = Field(
+        description="Expected effect of the action, get from the model"
+    )
+
+
+class RefinedMetaActionSequence(BaseModel):
+    """Refined meta action sequence to follow in future"""
+
+    meta_action_sequence: List[MetaAction] = Field(description="meta action sequence")
 
 
 if __name__ == "__main__":

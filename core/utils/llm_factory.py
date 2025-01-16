@@ -13,7 +13,12 @@ ModelType = Literal["PLAN", "CHAT"]
 
 class LLMSelector:
     token_usage: DefaultDict[str, Dict[str, int]] = defaultdict(
-        lambda: {"prompt": 0, "completion": 0, "total": 0}
+        lambda: {"prompt": 0, "completion": 0, "total": 0},
+        {
+            "gpt-4o-mini": {"prompt": 0, "completion": 0, "total": 0},
+            "gpt-4o": {"prompt": 0, "completion": 0, "total": 0},
+            "deepseek-chat": {"prompt": 0, "completion": 0, "total": 0},
+        },
     )
 
     @classmethod
@@ -21,6 +26,8 @@ class LLMSelector:
         modelToken = make_api_request_sync("GET", "/modelToken/getLatestModelToken")
         data = modelToken.get("data", [])
         for item in data:
+            if not item:
+                continue
             model_type = item.get("modelType")
             cls.token_usage[model_type] = {
                 "prompt": item.get("prompt", 0),
