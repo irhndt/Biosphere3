@@ -45,7 +45,7 @@ class ConversationInstance:
                     await self.graph.ainvoke(self.state, config=self.graph_config)
                     self.plan_signal = False
                     day, hour, minute = calculate_game_time(real_time=datetime.now())
-                    time_gap = ((24-hour)*60*60+(0-minute)*60)//7+300
+                    time_gap = ((24-hour)*60*60+(0-minute)*60)//7+(self.user_id//1000)
                     self.logger.info(
                         f"Next planning workflow will start in {time_gap} seconds."
                     )
