@@ -169,10 +169,20 @@ async def start_conversation(state: ConversationState):
     my_name = state["character_stats"]["characterName"]
     style_from = state["character_stats"]["language_style"]
 
-    # Todo:
     # get topic
-    topic = "from_id makes an ultimatum to to_id: agree to be with them, or they’ll reveal the truth about their past relationship and everything that’s been kept secret."
-    content_type = "Romantic"
+    topic_data = {
+        "from_characterName": my_name,
+        "to_characterName": target_name
+    }
+    topic_response = make_api_request_sync("GET", "/dialog_topic/", params=topic_data)
+    if topic_response["data"]:
+        topic = topic_response["data"]["topic"]
+        content_type = topic_response["data"]["category"]
+    else:
+        content_type = "game"
+        topic = "Share about your recent actions and try to learn from each other."
+        logger.warning(f"User {state['userid']} failed to fetch topic. Using backup topic...")
+    logger.info(f"User {state['userid']} current topic is: {content_type}-{topic}")
 
     if content_type == "game":  # topic about games
         # get character_arc: from
@@ -315,7 +325,7 @@ async def start_conversation(state: ConversationState):
             continue
 
     logger.info(
-        f"The conversation FROM {current_talk['from_id']} at GAME TIME {current_talk['start_time']} on topic {current_talk['topic']} has been generated."
+        f"The conversation FROM {current_talk['from_id']} at GAME TIME {current_talk['start_time']} on topic {topic} has been generated."
     )
     logger.info(f"{all_content}")
 
@@ -685,7 +695,7 @@ def generate_talk_time(k: int):
         )
 
     # only for test, set the first conversation to happen after 5 minutes in game time
-    sorted_numbers[0] = 1
+    # sorted_numbers[0] = 1
 
     for t in sorted_numbers:
         add_hour, add_minute = divmod(minute + t, 60)

@@ -59,6 +59,7 @@ conversation_generator_prompt = ChatPromptTemplate.from_template(
     You must make sure that the the words of two players follows their tone and language_style of the players.
     Also consider the impact of each impression item on the conversation content.
     In each sentence, never start with words that express agreement or disagreement, such as absolutely, indeed, etc.
+    Each sentence should be less than 30 words.
     The players don't need to always agree with others. Express their own opinions based on given information.
     
     Each conversation should be a str in the following format:
@@ -163,8 +164,8 @@ intimacy_mark_prompt = ChatPromptTemplate.from_template(
     Now give an intimacy mark for each player respectively.
     The intimacy mark should be an integer ranging from 1 to 5.
     There are five levels with different marks: 
-    5 marks: Very close, marked by deep trust, emotional support, and frequent sharing of personal feelings..
-    4 marks: Positive, characterized by mutual trust, enjoyable exchanges, and supportive interactions. 
+    5 marks: Very close, marked by lots of agreements, emotional support, and frequent sharing of personal feelings.
+    4 marks: Positive, characterized by some enjoyable emotion exchanges, and supportive interactions. 
     3 marks: Average, with occasional interactions but no emotional depth or strong connection.
     2 marks: Lack connection and engagement, resulting in unresolved issues or misunderstandings, but not deep hostility. 
     1 mark: Hostile. There is a tense relationship characterized by negative emotions and frequent conflicts.
