@@ -34,50 +34,6 @@ async def generate_daily_conversation_plan(state: ConversationState):
     logger.info(f"User {state['userid']}: {profile['message']}")
     logger.info(f"User {state['userid']} current state is: {state['character_stats']}")
 
-    # get new daily objectives
-    get_daily_objectives_data = {"characterId": state["userid"], "count": 5}
-    objective_response = make_api_request_sync(
-        "GET", "/decision/", params=get_daily_objectives_data
-    )
-    if objective_response["data"] is not None:
-        memory = objective_response["data"]
-    else:
-        memory = []
-    logger.info(f"User {state['userid']} current daily objectives are: {memory}")
-
-    # get character_arc
-    arc_response = make_api_request_sync(
-        "GET", "/character_arc/", params={"characterId": state["userid"], "k": 1}
-    )
-    if not arc_response["data"]:
-        arc_data = []
-    else:
-        arc_data = arc_response["data"]
-    logger.info(f"User {state['userid']} current character arc is {arc_data}")
-
-    # get featured prompt (topic)
-    topic_response = make_api_request_sync(
-        "GET", "/conversation_prompt/", params={"characterId": state["userid"]}
-    )
-    if not topic_response["data"]:
-        topic_requirement = ""
-    else:
-        topic_requirement = topic_response["data"][0]["topic_requirements"]
-
-    # look up the past conversation topics
-    current_day, current_hour, current_minute = calculate_game_time(datetime.now())
-    get_conversation_memory_params = {
-        "characterId": state["userid"],
-        "day": current_day - 1,
-    }
-    past_topic_response = make_api_request_sync(
-        "GET", "/conversation_memory/", params=get_conversation_memory_params
-    )
-    if not past_topic_response["data"]:
-        past_topics = []
-    else:
-        past_topics = past_topic_response["data"][0]["topic_plan"]
-
     # generate conversation time list
     start_time_list = []
     conversation_number = random.randint(10, 15)  # total number of conversations
@@ -93,67 +49,16 @@ async def generate_daily_conversation_plan(state: ConversationState):
     # generate conversation target list
     conversation_number = len(start_time_list)
     target_list = random_conversation_target(conversation_number, state["userid"])
+    # target_list[0] = 432543#test
     logger.info(
         f"User {state['userid']} planned to have conversation with {target_list}."
-    )
-
-    # generate conversation topics list.
-    style_type = [
-        {"positive": "Communicate, share, discuss friendly."},
-        {"negative": "Insult, quarrel, abuse or attack."}
-    ]
-    topic_list = []
-    for target in target_list:
-        retry_count = 0
-        while retry_count < 3:
-            try:
-                character_data = {"characterId": target}
-                target_response = make_api_request_sync(
-                    "GET", "/characters/", params=character_data
-                )
-                if target_response["data"]:
-                    target_profile = target_response["data"][0]
-                else:
-                    target_profile = {}
-
-                style_select = random.randint(1, 10)  # select topic style
-                if style_select > 7:
-                    style = style_type[1]
-                else:
-                    style = style_type[0]
-
-                current_topic = conversation_topic_planner.invoke(
-                    {
-                        "character_stats": state["character_stats"],
-                        "memory": memory,
-                        "personality": arc_data,
-                        "target_profile": target_profile,
-                        "style": style,
-                        "topic_list": topic_list,
-                        "past_topics": past_topics,
-                        "topic_requirements": topic_requirement
-                    }
-                )
-                logger.info(
-                    f"User {state['userid']} planned to talk with User {target} about {current_topic['topics']}."
-                )
-                topic_list.append(current_topic["topics"])
-                break
-            except Exception as e:
-                logger.error(
-                    f"⛔ User {state['userid']} Error in generate daily conversation topics: {e}"
-                )
-                retry_count += 1
-                continue
-    logger.info(
-        f"Today User {state['userid']} is going to talk with others about: {topic_list}"
     )
 
     conversation_plan = DailyConversationPlan(conversations=[])
 
     if start_time_list:
         for index, start_time in enumerate(start_time_list):
-            talk = topic_list[index]
+            talk = ""
             to_id = target_list[index]
             # reconstruct the format
             single_conversation = ConversationTask(
@@ -168,91 +73,11 @@ async def generate_daily_conversation_plan(state: ConversationState):
         # update daily conversation plan to state
         state["daily_task"] = conversation_plan.conversations
 
-        # update daily conversation plan to database
-        current_day, current_hour, current_minute = calculate_game_time(datetime.now())
-        get_conversation_memory_params = {
-            "characterId": state["userid"],
-            "day": current_day,
-        }
-        memory_response = make_api_request_sync(
-            "GET", "/conversation_memory/", params=get_conversation_memory_params
-        )
-        if not memory_response["data"]:
-            store_conversation_memory_data = {
-                "characterId": state["userid"],
-                "day": current_day,
-                "topic_plan": topic_list,
-                "time_list": start_time_list,
-                "started": [],
-            }
-            memory_store_response = make_api_request_sync(
-                "POST", "/conversation_memory/", data=store_conversation_memory_data
-            )
-            logger.info(
-                f"User {state['userid']} conversation plan stored: {memory_store_response['message']}"
-            )
-        else:
-            old_topic = memory_response["data"][0]["topic_plan"]
-            old_time = memory_response["data"][0]["time_list"]
-            if not memory_response["data"][0]["started"]:
-                point = 0
-            else:
-                point = len(memory_response["data"][0]["started"])
-            update_conversation_memory_data = {
-                "characterId": state["userid"],
-                "day": current_day,
-                "update_fields": {
-                    "topic_plan": old_topic[0: point] + topic_list,
-                    "time_list": old_time[0: point] + start_time_list,
-                },
-            }
-            memory_update_response = make_api_request_sync(
-                "PUT", "/conversation_memory/", data=update_conversation_memory_data
-            )
-            logger.info(
-                f"User {state['userid']} conversation plan updated: {memory_update_response['message']}"
-            )
-
         logger.info(f"🧠 NEW CONVERSATION PLAN GENERATED...")
         logger.info(
             f"New conversation plan of User {state['userid']}: {state['daily_task']}"
         )
     return state
-
-
-def create_message(
-    character_id, message_name, conversation: RunningConversation, message_code=100
-):  # messagecode=100 for conversation system
-    return {
-        "characterId": character_id,
-        "messageCode": message_code,
-        "messageName": message_name,
-        "data": conversation,
-    }
-
-
-# send message through ws
-async def send_conversation_message(
-    state: ConversationState, conversation: RunningConversation
-):
-    websocket = state["websocket"]
-    if websocket is None or websocket.closed:
-        logger.error(f"⛔ User {state['userid']}: WebSocket is not connected.")
-        return
-    try:
-        message = create_message(
-            character_id=state["userid"],
-            message_name="to_agent",
-            conversation=conversation,
-        )
-        await websocket.send(json.dumps(message))
-        logger.info(f"📤 User {state['userid']}: Sent a response message: {message}")
-    except websockets.ConnectionClosed:
-        logger.warning(
-            f"User {state['userid']}: WebSocket connection closed during send."
-        )
-    except Exception as e:
-        logger.error(f"User {state['userid']}: Error sending message: {e}")
 
 
 async def start_conversation(state: ConversationState):
@@ -305,63 +130,61 @@ async def start_conversation(state: ConversationState):
     )
     if talking_response["data"]:
         talking_conversation = talking_response["data"][0]
-        talking_id = talking_conversation["to_id"]
-        replace_id_list = random_conversation_target(2, state["userid"])
-        for r_id in replace_id_list:
-            if r_id != talking_id:
-                replace_id = r_id
-                break
-        current_talk["to_id"] = replace_id
-        logger.info(
-            f"User {state['userid']} doesn't want to talk to the same person in such short time."
-        )
-        logger.info(
-            f"User {state['userid']}: new player to talk {current_talk['to_id']}."
-        )
-
-    # get conversations that have already happened with target
-    talked_data = {
-        "from_id": current_talk["to_id"],
-        "to_id": state["userid"],
-        "start_day": current_time[0]
-    }
-    talked_response = make_api_request_sync(
-        "GET", "/conversation/", params=talked_data
-    )
-
-    logger.info(f"🧠 CHECKING WHETHER TO START THE CONVERSATION ...")
-    need_start = True
-    if talked_response["data"]:
-        logger.info(
-            f"User {state['userid']} has talked with {current_talk['to_id']} today."
-        )
-        logger.info(
-            f"Conversation data: {talked_response['data']}."
-        )
-        # check whether to start this task
-        retry_count = 0
-        while retry_count < 3:
-            try:
-                check_response = conversation_check.invoke(
-                    {
-                        "profile": state["character_stats"],
-                        "current_talk": current_talk,
-                        "finished_talk": talked_response["data"],
-                    }
-                )
-                break
-            except Exception as e:
-                logger.error(f"⛔ User {state['userid']} Error in check conversation: {e}")
-                retry_count += 1
-                continue
-        need_start = check_response["Need"]
-
-    logger.info(
-        f"User {state['userid']} final decision on whether to start the conversation is: {need_start}."
-    )
+        talking_id = talking_conversation["from_id"]
+        if talking_id == current_talk["to_id"]:
+            replace_id_list = random_conversation_target(2, state["userid"])
+            for r_id in replace_id_list:
+                if r_id != talking_id:
+                    replace_id = r_id
+                    break
+            current_talk["to_id"] = replace_id
+            logger.info(
+                f"User {state['userid']} doesn't want to talk to the same person in such short time."
+            )
+            logger.info(
+                f"User {state['userid']}: new player to talk {current_talk['to_id']}."
+            )
 
     # only go through the following process when the conversation is checked to be necessary
-    if need_start:
+    # get target name
+    userid = current_talk["to_id"]
+    character_data = {"characterId": userid}
+    profile = make_api_request_sync("GET", "/characters/", params=character_data)
+    if not profile["data"]:
+        target_name = ""
+        target_profile = {}
+        style_to = ""
+        logger.warning(
+            f"User {state['userid']} talking with an unknown character {current_talk['to_id']}"
+        )
+    else:
+        target_name = profile["data"][0]["characterName"]
+        target_profile = profile["data"][0]["full_profile"]
+        style_to = profile["data"][0]["language_style"]
+        logger.info(
+            f"User {current_talk['to_id']} current state is {target_profile}."
+        )
+
+    # get self name
+    my_name = state["character_stats"]["characterName"]
+    style_from = state["character_stats"]["language_style"]
+
+    # get topic
+    topic_data = {
+        "from_characterName": my_name,
+        "to_characterName": target_name
+    }
+    topic_response = make_api_request_sync("GET", "/dialog_topic/", params=topic_data)
+    if topic_response["data"]:
+        topic = topic_response["data"]["topic"]
+        content_type = topic_response["data"]["category"]
+    else:
+        content_type = "game"
+        topic = "Share about your recent actions and try to learn from each other."
+        logger.warning(f"User {state['userid']} failed to fetch topic. Using backup topic...")
+    logger.info(f"User {state['userid']} current topic is: {content_type}-{topic}")
+
+    if content_type == "game":  # topic about games
         # get character_arc: from
         arc_response = make_api_request_sync(
             "GET", "/character_arc/", params={"characterId": state["userid"], "k": 1}
@@ -369,7 +192,9 @@ async def start_conversation(state: ConversationState):
         if not arc_response["data"]:
             arc_data_from = []
         else:
-            arc_data_from = arc_response["data"]
+            arc_data_from = arc_response["data"][0]
+            arc_data_from.pop("created_at", None)
+            arc_data_from.pop("characterId", None)
         logger.info(f"User {state['userid']} current character arc is {arc_data_from}")
 
         # get character_arc: to
@@ -379,7 +204,9 @@ async def start_conversation(state: ConversationState):
         if not arc_response["data"]:
             arc_data_to = []
         else:
-            arc_data_to = arc_response["data"]
+            arc_data_to = arc_response["data"][0]
+            arc_data_to.pop("created_at", None)
+            arc_data_to.pop("characterId", None)
         logger.info(f"User {current_talk['to_id']} current character arc is {arc_data_to}")
 
         # get impression:from
@@ -418,124 +245,125 @@ async def start_conversation(state: ConversationState):
             f"The current impression from User {current_talk['to_id']} to User {state['userid']} is {current_impression_to}"
         )
 
-        # get target name
-        userid = current_talk["to_id"]
-        character_data = {"characterId": userid}
-        profile = make_api_request_sync("GET", "/characters/", params=character_data)
-        if not profile["data"]:
-            target_name = ""
-            target_profile = {}
-            style_to = ""
-            logger.warning(
-                f"User {state['userid']} talking with an unknown character {current_talk['to_id']}"
-            )
+        # get self action
+        get_daily_objectives_data = {"characterId": state["userid"], "count": 5}
+        objective_response = make_api_request_sync(
+            "GET", "/decision/", params=get_daily_objectives_data
+        )
+        if objective_response["data"] is not None:
+            objective_data = objective_response["data"]
+            memory_from = {}
+            memory_from["action_description"] = objective_data["action_description"]
+            # if objective_data["reflection"]:
+            #     memory_from["reflection"] = objective_data["reflection"][0]
         else:
-            target_name = profile["data"][0]["characterName"]
-            target_profile = profile["data"][0]
-            style_to = profile["data"][0]["characterName"]
-            logger.info(
-                f"User {current_talk['to_id']} current state is {target_profile}."
-            )
+            memory_from = []
+        logger.info(f"User {state['userid']} current actions and reflections are: {memory_from}")
 
-        # get self name
-        my_name = state["character_stats"]["characterName"]
-        style_from = state["character_stats"]["language_style"]
-
-        # generate conversation content
-        retry_count = 0
-        while retry_count < 3:
-            try:
-                conversation_content = conversation_generator.invoke(
-                    {
-                        "character_stats_from": state["character_stats"],
-                        "character_stats_to": target_profile,
-                        "topic": current_talk["topic"],
-                        "impression_from": current_impression_from,
-                        "impression_to": current_impression_to,
-                        "target_name": target_name,
-                        "my_name": my_name,
-                        "personality_from": arc_data_from,
-                        "personality_to": arc_data_to,
-                        "style_from": style_from,
-                        "style_to": style_to,
-                        "impact": state["prompt"]["impression_impact"]
-                    }
-                )
-
-                # Reconstruct the format
-                lines = conversation_content["content"].strip().split('\n')
-                all_content = []
-                for line in lines:
-                    key, value = line.split(':')
-                    all_content.append({key.strip(): value.strip()})
-                break
-            except Exception as e:
-                logger.error(
-                    f"⛔ User {state['userid']} Error in starting a conversation: {e}"
-                )
-                retry_count += 1
-                continue
-
-        logger.info(
-            f"The conversation FROM {current_talk['from_id']} at GAME TIME {current_talk['start_time']} on topic {current_talk['topic']} has been generated."
+        # get target action
+        get_daily_objectives_data = {"characterId": current_talk['to_id'], "count": 5}
+        objective_response = make_api_request_sync(
+            "GET", "/decision/", params=get_daily_objectives_data
         )
-        logger.info(f"{all_content}")
-
-        from_to_count = 0
-        for sentence in all_content:
-            current_realtime = datetime.now()
-            current_day, current_hour, current_minute = calculate_game_time(
-                current_realtime
-            )
-            send_gametime = [
-                current_day,
-                f"{current_hour:02}" + ":" + f"{current_minute:02}",
-            ]
-            send_realtime = f"{current_realtime.year}-{current_realtime.month}-{current_realtime.day} {current_realtime.hour}:{current_realtime.minute:02}"
-
-            if from_to_count % 2 == 0:
-                id1 = current_talk["from_id"]
-                id2 = current_talk["to_id"]
-            else:
-                id2 = current_talk["from_id"]
-                id1 = current_talk["to_id"]
-            # store the message to database
-            store_conversation_data = {
-                "from_id": id1,
-                "to_id": id2,
-                "start_time": current_talk["start_time"],
-                "start_day": current_day,
-                "message": list(sentence.values())[0],
-                "send_gametime": send_gametime,
-                "send_realtime": send_realtime,
-            }
-            store_response = make_api_request_sync(
-                "POST", "/conversation/", data=store_conversation_data
-            )
-            logger.info(
-                f"User {id1} conversation message stored: {store_response['message']}"
-            )
-            from_to_count += 1
-
-        # update the daily conversation plan
-        add_started_data = {
-            "characterId": state["userid"],
-            "day": current_time[0],
-            "add_started": {
-                "time": current_talk["start_time"],
-                "topic": current_talk["topic"],
-            },
+        if objective_response["data"] is not None:
+            objective_data = objective_response["data"]
+            memory_to = {}
+            memory_to["action_description"] = objective_data["action_description"]
+            # if objective_data["reflection"]:
+            #     memory_to["reflection"] = objective_data["reflection"][0]
+        else:
+            memory_to = []
+        logger.info(f"User {current_talk['to_id']} current actions and reflections are: {memory_to}")
+        payload = {
+            "character_stats_from": memory_from,
+            "character_stats_to": memory_to,
+            "topic": topic,
+            "impression_from": current_impression_from,
+            "impression_to": current_impression_to,
+            "target_name": target_name,
+            "my_name": my_name,
+            "personality_from": arc_data_from,
+            "personality_to": arc_data_to,
+            "style_from": style_from,
+            "style_to": style_to,
+            "impact": state["prompt"]["impression_impact"]
         }
-        start_add_response = make_api_request_sync(
-            "PUT", "/conversation_memory/", data=add_started_data
-        )
-        logger.info(
-            f"User {state['userid']} conversation memory added: {start_add_response['message']}"
-        )
+        generator = conversation_generator
+        generator_prompt = conversation_generator_prompt
     else:
-        logger.info(
-            f"The conversation FROM {current_talk['from_id']} at GAME TIME {current_talk['start_time']} on topic {current_talk['topic']} is canceled after check."
+        payload = {
+            "type": content_type,
+            "topic": topic,
+            "from_name": my_name,
+            "to_name": target_name,
+        }
+        generator = simple_content_generator
+        generator_prompt = simple_content_prompt
+
+    # generate conversation content
+    retry_count = 0
+    while retry_count < 3:
+        try:
+            conversation_content = generator.invoke(
+                payload
+            )
+            full_prompt = generator_prompt.format(**payload)
+            logger.info("======conversation_generator======\n" + full_prompt)
+
+            # Reconstruct the format
+            lines = conversation_content["content"].strip().split('\n')
+            all_content = []
+            for line in lines:
+                key, value = line.split(':')
+                all_content.append({key.strip(): value.strip()})
+            break
+        except Exception as e:
+            logger.error(
+                f"⛔ User {state['userid']} Error in starting a conversation: {e}"
+            )
+            retry_count += 1
+            continue
+
+    logger.info(
+        f"The conversation FROM {current_talk['from_id']} at GAME TIME {current_talk['start_time']} on topic {topic} has been generated."
+    )
+    logger.info(f"{all_content}")
+
+    from_to_count = 0
+    for sentence in all_content:
+        current_realtime = datetime.now()
+        current_day, current_hour, current_minute = calculate_game_time(
+            current_realtime
         )
+        send_gametime = [
+            current_day,
+            f"{current_hour:02}" + ":" + f"{current_minute:02}",
+        ]
+        send_realtime = f"{current_realtime.year}-{current_realtime.month}-{current_realtime.day} {current_realtime.hour}:{current_realtime.minute:02}"
+
+        if from_to_count % 2 == 0:
+            id1 = current_talk["from_id"]
+            id2 = current_talk["to_id"]
+        else:
+            id2 = current_talk["from_id"]
+            id1 = current_talk["to_id"]
+        # store the message to database
+        store_conversation_data = {
+            "from_id": id1,
+            "to_id": id2,
+            "start_time": current_talk["start_time"],
+            "start_day": current_day,
+            "message": list(sentence.values())[0],
+            "send_gametime": send_gametime,
+            "send_realtime": send_realtime,
+        }
+        store_response = make_api_request_sync(
+            "POST", "/conversation/", data=store_conversation_data
+        )
+        logger.info(
+            f"User {id1} conversation message stored: {store_response['message']}"
+        )
+        from_to_count += 1
 
     # update the daily_task list
     if len(state["daily_task"]) > 1:
@@ -544,15 +372,13 @@ async def start_conversation(state: ConversationState):
         state["daily_task"] = []
 
     # handling finished conversation
-    if need_start:
-        # Record finished conversation
-        conversation_finished = {
-            "characterIds": [current_talk["from_id"], current_talk["to_id"]],
-            "dialogue": all_content,
-            "start_time": current_talk["start_time"],
-            "start_day": current_time[0],
-        }
-        await handling_finished_conversation(conversation_finished)
+    conversation_finished = {
+        "characterIds": [current_talk["from_id"], current_talk["to_id"]],
+        "dialogue": all_content,
+        "start_time": current_talk["start_time"],
+        "start_day": current_time[0],
+    }
+    await handling_finished_conversation(conversation_finished)
 
     return state
 
@@ -605,13 +431,37 @@ async def update_impression(id1: int, id2: int, conversation):
         13.Relative, including Father, Mother, Son, Daughter, Grandfather, Grandmother, Grandson, Granddaughter
     """
 
+    # get from_name
+    character_data = {"characterId": id1}
+    profile = make_api_request_sync("GET", "/characters/", params=character_data)
+    if not profile["data"]:
+        my_name = {}
+    else:
+        my_name = profile["data"][0]["characterName"]
+
+    # get to_name
+    character_data = {"characterId": id2}
+    profile = make_api_request_sync("GET", "/characters/", params=character_data)
+    if not profile["data"]:
+        target_name = {}
+    else:
+        target_name = profile["data"][0]["characterName"]
+
     # update impression
     retry_count = 0
     while retry_count < 3:
         try:
+            payload = {
+                "conversation": conversation,
+                "relation_list": relation_list,
+                "from_name": my_name,
+                "to_name": target_name,
+            }
             impression = impression_update.invoke(
-                {"conversation": conversation, "relation_list": relation_list}
+                payload
             )
+            full_prompt = impression_update_prompt.format(**payload)
+            logger.info("======impression_update======\n" + full_prompt)
             break
         except Exception as e:
             logger.error(
@@ -694,21 +544,32 @@ async def update_intimacy(id1: int, id2: int, conversation):
     logger.info(f"🧠 MARKING THE CONVERSATION...")
 
     character_data = {"characterId": id1}
-    profile1 = make_api_request_sync("GET", "/characters/", data=character_data)
+    profile_response_1 = make_api_request_sync("GET", "/characters/", params=character_data)
+    if profile_response_1["data"]:
+        profile1 = profile_response_1["data"][0]["full_profile"]
+    else:
+        profile1 = ""
 
     character_data = {"characterId": id2}
-    profile2 = make_api_request_sync("GET", "/characters/", data=character_data)
+    profile_response_2 = make_api_request_sync("GET", "/characters/", params=character_data)
+    if profile_response_2["data"]:
+        profile2 = profile_response_2["data"][0]["full_profile"]
+    else:
+        profile2 = ""
 
     retry_count = 0
     while retry_count < 3:
         try:
-            intimacy_mark = conversation_intimacy_mark.invoke(
-                {
+            payload = {
                     "profile1": profile1,
                     "profile2": profile2,
                     "conversation": conversation,
-                }
+            }
+            intimacy_mark = conversation_intimacy_mark.invoke(
+                payload
             )
+            full_prompt = intimacy_mark_prompt.format(**payload)
+            logger.info("======intimacy_mark======\n" + full_prompt)
             break
         except Exception as e:
             logger.error(
@@ -782,7 +643,7 @@ async def update_intimacy(id1: int, id2: int, conversation):
 
 
 # a tool for transferring real_time to game_time
-def calculate_game_time(real_time=datetime.now(), day1_str="2024-7-1 0:00"):
+def calculate_game_time(real_time=datetime.now(), day1_str="2024-7-1 1:00"):
     day1 = datetime.strptime(day1_str, "%Y-%m-%d %H:%M")
     elapsed_time = real_time - day1
     game_elapsed_time = elapsed_time * 7
@@ -791,7 +652,7 @@ def calculate_game_time(real_time=datetime.now(), day1_str="2024-7-1 0:00"):
     remaining_seconds = total_seconds - (game_day * 86400)
     game_hour, remainder = divmod(remaining_seconds, 3600)
     game_minute, seconds = divmod(remainder, 60)
-    return [game_day, game_hour, game_minute]
+    return [game_day+1, game_hour, game_minute]
 
 
 # Randomly return k players, excluding the user.
@@ -834,7 +695,7 @@ def generate_talk_time(k: int):
         )
 
     # only for test, set the first conversation to happen after 5 minutes in game time
-    # sorted_numbers[0] = 5
+    # sorted_numbers[0] = 1
 
     for t in sorted_numbers:
         add_hour, add_minute = divmod(minute + t, 60)

@@ -10,7 +10,7 @@ conversation_topic_planner_prompt = ChatPromptTemplate.from_template(
     You are now talking with: {target_profile}.
     
     Now generate one topic for this conversation.
-    The topic should be {style}.
+    The topic style should be {style}.
     The topic should only focus on your action descriptions and reflections.
     Never talk about web3, blockchain, economy, finance, crypto-finance or other similar topics.
     
@@ -19,10 +19,11 @@ conversation_topic_planner_prompt = ChatPromptTemplate.from_template(
     Your new topic should be different from these topics.
     
     There are some other requirements for the topic {topic_requirements}.
-
+    
+    You should generate one topic in English and add an style pattern before.
+    The style pattern must be the same as the style you received.
     Here are some examples.
-    "Discuss food price in the market.", "Insult others on clothing.", "Share good learning habits."
-    Now generate ONE topic in English:
+    "Positive: Discuss food price in the market.", "Negative: Insult others on clothing.", "Positive: Share good learning habits."
     """
 )
 
@@ -32,35 +33,35 @@ conversation_generator_prompt = ChatPromptTemplate.from_template(
     
     This is the information about the first player, from_player.
     The name of from_player is: {my_name}.
-    The personal profile of from_player is: {character_stats_from}.
+    The latest actions of from_player is: {character_stats_from}.
     The tone and language style of from_player is: {style_from}.
     The current personality of from_player is: {personality_from}.
     The impression of from_player towards the other player is: {impression_from}
     
     This is the information about the second player, to_player.
     The name of to_player is: {target_name}.
-    The personal profile of to_player is: {character_stats_to}.
+    The latest actions of to_player is: {character_stats_to}.
     The tone and language style of to_player is: {style_to}.
     The current personality of to_player is: {personality_to}.
     The impression of to_player towards the from_player is: {impression_to}.
     
     Now you are talking about {topic}.
     Now based on the information of two players and topic, generate your the conversation content.
-    The content must closely related to the topic.
-    If the the topic is about criticizing, insulting or debate, the conversation content must be negative.
-    
+    The content must closely related to the given topic and latest actions of both players.
+    If the the topic is negative, the overall atmosphere of the conversation must be negative.
+         
     Based on the profile, personality, the impression, determine when should the conversation end.
     The relation and emotion in impressions and personalities can influence the overall round of the conversation.
-    For example, if two speakers are close friends, they may talk until 7 or 8 rounds.
-    If they are in bad relation or bad emotion, the conversation may end very soon, say after 3 rounds.
+    For example, if two speakers are close friends, they may talk until 5 rounds.
+    If they are in bad relation or bad emotion, the conversation may end very soon, say after 2 or 3 rounds.
+    The overall rounds of conversation must be less than 6 rounds.
     
-    You must make sure that the content is generated based on the tone and language_style of the players.
-    Their words must closely follow their language style.
+    You must make sure that the the words of two players follows their tone and language_style of the players.
     Also consider the impact of each impression item on the conversation content.
-    
     In each sentence, never start with words that express agreement or disagreement, such as absolutely, indeed, etc.
+    Each sentence should be less than 30 words.
     The players don't need to always agree with others. Express their own opinions based on given information.
-         
+    
     Each conversation should be a str in the following format:
     Each line start with the speaker's name, after that comes a colon, then his words.
     If one speaker finish his sentence, start a new line for the next speaker.
@@ -74,6 +75,25 @@ conversation_generator_prompt = ChatPromptTemplate.from_template(
     """
 )
 
+simple_content_prompt = ChatPromptTemplate.from_template(
+    """
+    Generate a conversation about {type} between two celebrities: from {from_name} to {to_name}.
+     
+    The conversation should be explosive, intense, and create a huge buzz among the public.
+    The topic is {topic}.
+    
+    The conversation should not exceed 5 rounds, and each person should speak no more than 20 words.:
+    
+    Each conversation should be a str in the following format:
+    Each line start with the speaker's name, after that comes a colon, then his words.
+    If one speaker finish his sentence, start a new line for the next speaker.
+    Here is an example: 
+    {from_name}: sentence1
+    {to_name}: sentence2
+    {from_name}: sentence3
+    {to_name}: sentence4
+   """
+)
 
 conversation_check_prompt = ChatPromptTemplate.from_template(
     """
@@ -103,32 +123,33 @@ impression_update_prompt = ChatPromptTemplate.from_template(
     1.relation: the positive, negative or neutral relationship between the two players. Also include a brief desription and reason.
     You can choose the relation from the relation list or randomly generate one.
     The relation list is: {relation_list}.
-    2.emotion: a positive or negative emotion and the cause of such emotion
+    2.emotion: a positive or negative emotion of the one you are talking with and the cause of such emotion
     eg: Alice is exhausted due to her bad study habit. / Jack is angry because we don't agree with each other.
-    3.personality: based on openness to experience, conscientiousness, extraversion, agreeableness, and neuroticism.
+    3.personality: The person you are talking to is extroverted or introverted.
     eg: Ivy is open and likes to talk with others./ Amy is a lonely person. She likes to stay alone.
     4.habits and preferences: the other player's habit and taste. Also include things he dislike.
     eg: David really likes travelling. He prefers to traveling everyday./ Alice do not have a good relaxation schedule and she is too devoted to studing.  
     
-    Base on the given conversation content:{conversation}, update the impressions from player1 to player2 and from player2 to player1, respectively.
-    Player1 is the one who talks first. The other person is Player2.
+    Base on the given conversation content:{conversation}, update the impressions respectively.
+    Impression1 is the impression from {from_name} to {to_name}.
+    Impression2 is the impression from {to_name} to {from_name}.
     You should carefully check their names and the order of impression.
     
-    Here is an example of impressions between Eva and Alice. 
-    1.impression1: the impression from Alice to Eva
-    relation: Eva is my classmate,
-    emotion: Eva is happy because she has enough sleep,
-    personality: Eva is extrovant and willing to share her habits with others,
-    habits and preferences: Eva has a balanced lifestyle and prefer to having enough sleep
-    2.impression2: the impression from Eva to Alice
-    relation: I know Alice but we are enemies.,
-    emotion: Alice is exhausting because she spent too much time on study.,
-    personality: Alice is always talking with others and she is really noisy and self-centered.,
-    habits and preferences: Alice put too much emphasis on study and neglect others' feeling. 
+    Here is an example of impressions format. Each impression item should be in a new line.
+    1.impression1: 
+    relation: 
+    emotion: 
+    personality: 
+    habits and preferences: 
+    2.impression2: 
+    relation: 
+    emotion: 
+    personality: 
+    habits and preferences: 
     
     Now generate the two impressions in English.
-    The impression1 from player1 to player2:
-    The impression2 from player2 to player1:
+    impression1:
+    impression2:
     """
 )
 
@@ -143,14 +164,14 @@ intimacy_mark_prompt = ChatPromptTemplate.from_template(
     Now give an intimacy mark for each player respectively.
     The intimacy mark should be an integer ranging from 1 to 5.
     There are five levels with different marks: 
-    Very close and friendly is 5, 
-    positive but not so close is 4, 
-    neutral is 3, 
-    a little negative is 2, 
-    hate each other, about to quarrel is 1.
+    5 marks: Very close, marked by lots of agreements, emotional support, and frequent sharing of personal feelings.
+    4 marks: Positive, characterized by some enjoyable emotion exchanges, and supportive interactions. 
+    3 marks: Average, with occasional interactions but no emotional depth or strong connection.
+    2 marks: Lack connection and engagement, resulting in unresolved issues or misunderstandings, but not deep hostility. 
+    1 mark: Hostile. There is a tense relationship characterized by negative emotions and frequent conflicts.
 
     You need to give mark one by one to two players.
-    Their mark towards the conversation do not need to be the same.
+    Their marks towards the conversation do not need to be the same.
 
     Now start your work here.
     mark1:
