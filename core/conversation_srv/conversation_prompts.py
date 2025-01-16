@@ -45,10 +45,10 @@ conversation_generator_prompt = ChatPromptTemplate.from_template(
     The current personality of to_player is: {personality_to}.
     The impression of to_player towards the from_player is: {impression_to}.
     
-    Now you are talking about {topic}.
-    Now based on the information of two players and topic, generate your the conversation content.
-    The content must closely related to the given topic and latest actions of both players.
-    If the the topic is negative, the overall atmosphere of the conversation must be negative.
+    Now you are talking about the game.
+    Now based on the information of two players, generate your the conversation content.
+    The content must closely related to the latest actions of both players.
+    The overall atmosphere of the conversation can be negative, when players have some disagreements.
          
     Based on the profile, personality, the impression, determine when should the conversation end.
     The relation and emotion in impressions and personalities can influence the overall round of the conversation.

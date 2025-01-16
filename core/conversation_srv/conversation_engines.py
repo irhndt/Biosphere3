@@ -356,6 +356,8 @@ async def start_conversation(state: ConversationState):
             "message": list(sentence.values())[0],
             "send_gametime": send_gametime,
             "send_realtime": send_realtime,
+            "category": content_type,
+            "topic": topic
         }
         store_response = make_api_request_sync(
             "POST", "/conversation/", data=store_conversation_data
