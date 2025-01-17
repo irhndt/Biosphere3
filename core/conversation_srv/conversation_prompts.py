@@ -29,49 +29,29 @@ conversation_topic_planner_prompt = ChatPromptTemplate.from_template(
 
 conversation_generator_prompt = ChatPromptTemplate.from_template(
     """
-    You are a conversation generator in a RPG game. Your job is to generate conversation content.
+    Generate a conversation between {my_name} and {target_name}.
     
-    This is the information about the first player, from_player.
-    The name of from_player is: {my_name}.
-    The latest actions of from_player is: {character_stats_from}.
-    The tone and language style of from_player is: {style_from}.
-    The current personality of from_player is: {personality_from}.
-    The impression of from_player towards the other player is: {impression_from}
+    The personality of {my_name} is: {personality_from}.
+    The impression of {my_name} towards {target_name} is: {impression_from}
     
-    This is the information about the second player, to_player.
-    The name of to_player is: {target_name}.
-    The latest actions of to_player is: {character_stats_to}.
-    The tone and language style of to_player is: {style_to}.
-    The current personality of to_player is: {personality_to}.
-    The impression of to_player towards the from_player is: {impression_to}.
+    The personality of {target_name} is: {personality_to}.
+    The impression of {target_name} towards {my_name} is: {impression_to}
     
-    Now you are talking about the game.
-    Now based on the information of two players, generate your the conversation content.
-    The content must closely related to the latest actions of both players.
-    The overall atmosphere of the conversation can be negative, when players have some disagreements.
-         
-    Based on the profile, personality, the impression, determine when should the conversation end.
-    The relation and emotion in impressions and personalities can influence the overall round of the conversation.
-    For example, if two speakers are close friends, they may talk until 5 rounds.
-    If they are in bad relation or bad emotion, the conversation may end very soon, say after 2 or 3 rounds.
-    The overall rounds of conversation must be less than 6 rounds.
+    The actions of {my_name} is: {character_stats_from}.
+    The actions of {target_name} is: {character_stats_to}.
     
-    You must make sure that the the words of two players follows their tone and language_style of the players.
-    Also consider the impact of each impression item on the conversation content.
-    In each sentence, never start with words that express agreement or disagreement, such as absolutely, indeed, etc.
-    Each sentence should be less than 30 words.
-    The players don't need to always agree with others. Express their own opinions based on given information.
+    The conversation needs to be connected with action. 
+    The conversation should be explosive, intense, and create a huge buzz among the public.
+    The conversation should not exceed 5 rounds, and each person should speak no more than 30 words.
     
     Each conversation should be a str in the following format:
     Each line start with the speaker's name, after that comes a colon, then his words.
     If one speaker finish his sentence, start a new line for the next speaker.
-    Here is an example: 
-    from_player name: sentence1
-    to_player name: sentence2
-    from_player name: sentence3
-    to_player name: sentence4
-    
-    Now begin your work in English:
+    Here is an example:
+    {my_name}: sentence1
+    {target_name}: sentence2
+    {my_name}: sentence3
+    {target_name}: sentence4
     """
 )
 
@@ -172,7 +152,7 @@ intimacy_mark_prompt = ChatPromptTemplate.from_template(
 
     You need to give mark one by one to two players.
     Their marks towards the conversation do not need to be the same.
-
+    
     Now start your work here.
     mark1:
     mark2:
