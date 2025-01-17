@@ -62,7 +62,7 @@ async def generate_daily_conversation_plan(state: ConversationState):
     # generate conversation target list
     conversation_number = len(start_time_list)
     target_list = random_conversation_target(conversation_number, state["userid"])
-    target_list[0] = 616422#test
+    # target_list[0] = 616422#test
     logger.info(
         f"User {state['userid']} planned to have conversation with {target_list}."
     )
@@ -724,7 +724,7 @@ def generate_talk_time(k: int):
         )
 
     # only for test, set the first conversation to happen after 5 minutes in game time
-    sorted_numbers[0] = 1
+    # sorted_numbers[0] = 1
 
     for t in sorted_numbers:
         add_hour, add_minute = divmod(minute + t, 60)
