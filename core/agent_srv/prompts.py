@@ -27,7 +27,7 @@ Only when the inventory has the specified number of required items, will the nex
 You need to determine the highest level you have reached and continue to collect the remaining items needed to reach higher levels.
 
 Here are the actions you can plan: go to different places, sleep, study, see a doctor, work, use/buy/sell different items, craft different items.
-Here are the places you can reach: school, workshop, home, farm, mall, square, councilHall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen.
+Here are the places you can reach: school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen.
 The following are the items that exist in this world:
     - apple, wheat, pear, rice, chicken, beef, fish
     - iron_ore, timber, copper_ore, silicon_ore
@@ -498,7 +498,7 @@ Below are detailed explanations of each possible action, including constraints a
 1. **goto [placeName:string]**  
    - **Action Effect**: Moves the character to a specific location, only change the location. 
    - **Constraints**: The placeName must be one of the following:  
-     (school, workshop, home, farm, mall, square, councilHall, hospital, fruit, harvest, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
+     (school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
 
 2. **sleep [hours:int]**  
    - **Action Effect**: Recover energy (10 per hour).  
@@ -760,7 +760,7 @@ Below are detailed explanations of each possible action, including constraints a
 1. **goto [placeName:string]**  
    - **Effect**: Moves the character to a specific location.  
    - **Constraints**: The placeName must be one of the following:  
-     (school, workshop, home, farm, mall, square, councilHall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
+     (school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
 
 2. **sleep [hours:int]**  
    - **Effect**: Recover energy (10 per hour).  
@@ -953,7 +953,7 @@ But it may contain errors or infeasible actions, waiting for your correction.
 
 1. **goto [placeName:string]**  
    - Moves the character to `placeName`. Valid places include:  
-     (school, workshop, home, farm, mall, square, councilHall, hospital, fruit, harvest, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
+     (school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
 
 2. **sleep [hours:int]**  
    - Recover energy (10 per hour).

@@ -231,7 +231,8 @@ async def fetch_agent_db_response_async(userid: int) -> dict:
             "🆕 No character data found in agent database, creating new character"
         )
         return {}
-    return response.get("data", [])[0]
+    data = response.get("data", [])
+    return data[0] if data else {}
 
 
 async def fetch_model_type_response_async(userid: int) -> dict:
@@ -324,10 +325,10 @@ def save_decision_to_db(userid: int, decision: dict):
         userid (int): The ID of the user.
         decision (dict): The decision data to save.
     """
-    url = f"{AGENT_BACKEND_URL}/decision/"
+    url = f"{AGENT_BACKEND_URL}/action_log/"
     decision["characterId"] = userid
     try:
-        response = requests.patch(
+        response = requests.post(
             url,
             json=decision,
             timeout=GAME_BACKEND_TIMEOUT,
@@ -466,7 +467,7 @@ async def get_initial_state_from_db(userid, websocket):
 
 tool_functions_live = """
 1. goto [placeName:string]: Go to a specified location.
-Constraints: Must in (school,workshop,home,farm,mall,square,councilHall,hospital,fruit,harvest,fishing,mine,orchard,foodfactory,factory,garden,policestation,library,supermarket,canteen).
+Constraints: Must in (school,workshop,home,farm,mall,square,councilhall,hospital,fruit,harvest,fishing,mine,orchard,foodfactory,factory,garden,policestation,library,supermarket,canteen).
 2. sleep [hours:int]: Sleep to recover energy (10 per hour).
 Constraints: Must be at home.
 3. study [hours:int]: Study to achieve a higher degree, cost money (100 per hour) and energy (10 per hour), gain education experience (10 per hour).
@@ -499,7 +500,7 @@ available_locations = [
     "farm",
     "mall",
     "square",
-    "councilHall",
+    "councilhall",
     "hospital",
     "fruit",
     "harvest",
@@ -761,7 +762,7 @@ def format_status_changes(past_status: dict, status: dict, fields: list = None) 
 
 def format_false_action_info(false_action_info: dict) -> str:
     formatted_str = "Failed Action: " + false_action_info["actionName"] + "\n"
-    formatted_str += "| Result: " + false_action_info["result"] + "\n"
+    formatted_str += "| Result: " + false_action_info["msg"] + "\n"
     formatted_str += "------\n"
     return formatted_str 
 

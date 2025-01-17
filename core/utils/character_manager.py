@@ -81,7 +81,7 @@ class CharacterManager:
 
     async def _check_heartbeats(self) -> None:
         while True:
-            logger.info("🔍 Performing heartbeat check...")
+            # logger.info("🔍 Performing heartbeat check...")
             for character_id, character in self._characters.items():
                 if time.time() - character.last_heartbeat > self.timeout:
                     logger.error(f"💔 Character {character_id} heartbeat timeout")

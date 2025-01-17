@@ -70,7 +70,7 @@ async def generate_daily_objective(state: RunningState):
     )
 
     decision_response = make_api_request_sync(
-        "GET", "/decision/", params={"characterId": state["userid"], "count": 5}
+        "GET", "/action_log/", params={"characterId": state["userid"], "count": 5}
     )
     last_decision = decision_response.get("data", {})
     retry_count = 0
@@ -79,9 +79,9 @@ async def generate_daily_objective(state: RunningState):
             state["character_stats"],
             fields=["money", "inventory"],
         ),
-        "past_objectives": last_decision.get("daily_objective", []),
+        "past_objectives": last_decision.get("daily_objective", []) if last_decision else [],
         "life_style": state["prompts"]["life_style"],
-        "past_reflection": last_decision.get("reflection", []),
+        "past_reflection": last_decision.get("reflection", []) if last_decision else [],
         "production_graph": state["meta"]["production_graph"],
     }
     while retry_count < 3:

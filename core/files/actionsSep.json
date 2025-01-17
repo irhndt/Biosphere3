@@ -2,7 +2,7 @@
     {
         "name": "goto",
         "Description": "goto [placeName:string]: Go to a specified location.",
-        "Constraints": "Must be in (school, workshop, home, farm, mall, square, councilHall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen)."
+        "Constraints": "Must be in (school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen)."
     },
     {
         "name": "sleep",

@@ -160,7 +160,7 @@ class HTTPServer:
                 }
             )
 
-        @self.app.route("/decision/", methods=["GET"])
+        @self.app.route("/action_log/", methods=["GET"])
         def get_decision():
             return jsonify(
                 {
@@ -522,7 +522,7 @@ class HTTPServer:
                 }
             )
 
-        @self.app.route("/decision/", methods=["PATCH"])
+        @self.app.route("/action_log/", methods=["PATCH"])
         def post_decision():
             decision_data = request.get_json()
 
