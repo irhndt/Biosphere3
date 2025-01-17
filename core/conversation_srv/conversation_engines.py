@@ -34,9 +34,22 @@ async def generate_daily_conversation_plan(state: ConversationState):
     logger.info(f"User {state['userid']}: {profile['message']}")
     logger.info(f"User {state['userid']} current state is: {state['character_stats']}")
 
+    # get conversation number
+    ie_data = {"characterId": state['userid']}
+    ie_response = make_api_request_sync(
+        "GET", "/conversation_prompt/", params=ie_data
+    )
+    if ie_response["data"]:
+        ie = ie_response["data"][0]["personality"]
+    else:
+        ie = "Introversion"
+    if ie == "Extraversion":
+        conversation_number = random.randint(3, 5)
+    else:
+        conversation_number = random.randint(1, 3)
+
     # generate conversation time list
     start_time_list = []
-    conversation_number = random.randint(10, 15)  # total number of conversations
     try:
         start_time_list = generate_talk_time(conversation_number)
         if not start_time_list:
@@ -49,7 +62,7 @@ async def generate_daily_conversation_plan(state: ConversationState):
     # generate conversation target list
     conversation_number = len(start_time_list)
     target_list = random_conversation_target(conversation_number, state["userid"])
-    # target_list[0] = 432543#test
+    # target_list[0] = 616422#test
     logger.info(
         f"User {state['userid']} planned to have conversation with {target_list}."
     )
@@ -152,22 +165,18 @@ async def start_conversation(state: ConversationState):
     profile = make_api_request_sync("GET", "/characters/", params=character_data)
     if not profile["data"]:
         target_name = ""
-        target_profile = {}
-        style_to = ""
         logger.warning(
             f"User {state['userid']} talking with an unknown character {current_talk['to_id']}"
         )
     else:
         target_name = profile["data"][0]["characterName"]
         target_profile = profile["data"][0]["full_profile"]
-        style_to = profile["data"][0]["language_style"]
         logger.info(
             f"User {current_talk['to_id']} current state is {target_profile}."
         )
 
     # get self name
     my_name = state["character_stats"]["characterName"]
-    style_from = state["character_stats"]["language_style"]
 
     # get topic
     topic_data = {
@@ -180,8 +189,20 @@ async def start_conversation(state: ConversationState):
         content_type = topic_response["data"]["category"]
     else:
         content_type = "game"
-        topic = "Share about your recent actions and try to learn from each other."
+        topic = ""
         logger.warning(f"User {state['userid']} failed to fetch topic. Using backup topic...")
+
+    # special pair
+    if {state['userid'], current_talk['to_id']} == {616422, 804851}:
+        information = "Background information: Yi is the mother of at least two of CZ’s three children, although she has denied that they are currently romantic partners."
+        if topic:
+            topic += information
+        else:
+            topic = information
+        logger.info(f"Special background for User {state['userid']} and {current_talk['to_id']}: information.")
+    elif not topic:
+        topic = ""
+
     logger.info(f"User {state['userid']} current topic is: {content_type}-{topic}")
 
     if content_type == "game":  # topic about games
@@ -246,34 +267,39 @@ async def start_conversation(state: ConversationState):
         )
 
         # get self action
-        get_daily_objectives_data = {"characterId": state["userid"], "count": 5}
-        objective_response = make_api_request_sync(
-            "GET", "/decision/", params=get_daily_objectives_data
+        get_action_log_params = {"characterId": state["userid"], "k": 5}
+        action_response = make_api_request_sync(
+            "GET", "/action_log/", params=get_action_log_params
         )
-        if objective_response["data"] is not None:
-            objective_data = objective_response["data"]
+        if action_response["data"] is not None:
+            action_data = action_response["data"]
             memory_from = {}
-            memory_from["action_description"] = objective_data["action_description"]
-            # if objective_data["reflection"]:
-            #     memory_from["reflection"] = objective_data["reflection"][0]
+            for act in action_data:
+                key = act["command"]
+                value = act["description"]
+                if key not in memory_from:
+                    memory_from[key] = value
         else:
-            memory_from = []
-        logger.info(f"User {state['userid']} current actions and reflections are: {memory_from}")
+            memory_from = {}
+        logger.info(f"User {state['userid']} current actions are: {memory_from}")
 
         # get target action
-        get_daily_objectives_data = {"characterId": current_talk['to_id'], "count": 5}
-        objective_response = make_api_request_sync(
-            "GET", "/decision/", params=get_daily_objectives_data
+        get_action_log_params = {"characterId": current_talk["to_id"], "k": 5}
+        action_response = make_api_request_sync(
+            "GET", "/action_log/", params=get_action_log_params
         )
-        if objective_response["data"] is not None:
-            objective_data = objective_response["data"]
+        if action_response["data"] is not None:
+            action_data = action_response["data"]
             memory_to = {}
-            memory_to["action_description"] = objective_data["action_description"]
-            # if objective_data["reflection"]:
-            #     memory_to["reflection"] = objective_data["reflection"][0]
+            for act in action_data:
+                key = act["command"]
+                value = act["description"]
+                if key not in memory_to:
+                    memory_to[key] = value
         else:
-            memory_to = []
-        logger.info(f"User {current_talk['to_id']} current actions and reflections are: {memory_to}")
+            memory_to = {}
+        logger.info(f"User {current_talk['to_id']} current actions are: {memory_to}")
+
         payload = {
             "character_stats_from": memory_from,
             "character_stats_to": memory_to,
@@ -283,10 +309,7 @@ async def start_conversation(state: ConversationState):
             "target_name": target_name,
             "my_name": my_name,
             "personality_from": arc_data_from,
-            "personality_to": arc_data_to,
-            "style_from": style_from,
-            "style_to": style_to,
-            "impact": state["prompt"]["impression_impact"]
+            "personality_to": arc_data_to
         }
         generator = conversation_generator
         generator_prompt = conversation_generator_prompt
@@ -356,6 +379,8 @@ async def start_conversation(state: ConversationState):
             "message": list(sentence.values())[0],
             "send_gametime": send_gametime,
             "send_realtime": send_realtime,
+            "category": content_type,
+            "topic": topic
         }
         store_response = make_api_request_sync(
             "POST", "/conversation/", data=store_conversation_data
@@ -579,11 +604,15 @@ async def update_intimacy(id1: int, id2: int, conversation):
             continue
 
     logger.info(f"The conversation is {conversation}.")
+
+    mark1 = mark_map(intimacy_mark.mark1)
+    mark2 = mark_map(intimacy_mark.mark2)
+
     logger.info(
-        f"User {id1}'s attitude towards the conversation is: {intimacy_mark.mark1 - 3}"
+        f"User {id1}'s attitude towards the conversation is: {mark1}"
     )
     logger.info(
-        f"User {id2}'s attitude towards the conversation is: {intimacy_mark.mark2 - 3}"
+        f"User {id2}'s attitude towards the conversation is: {mark2}"
     )
 
     intimacy_query_data = {"from_id": id1, "to_id": id2}
@@ -611,10 +640,10 @@ async def update_intimacy(id1: int, id2: int, conversation):
         f"Past intimacy mark from User {id2} to User {id1} is {current_intimacy_2}."
     )
 
-    current_intimacy_1 += intimacy_mark.mark1 - 3
+    current_intimacy_1 += mark1
     current_intimacy_1 = min(current_intimacy_1, 100)
     current_intimacy_1 = max(current_intimacy_1, 0)
-    current_intimacy_2 += intimacy_mark.mark2 - 3
+    current_intimacy_2 += mark2
     current_intimacy_2 = min(current_intimacy_2, 100)
     current_intimacy_2 = max(current_intimacy_2, 0)
 
@@ -643,7 +672,7 @@ async def update_intimacy(id1: int, id2: int, conversation):
 
 
 # a tool for transferring real_time to game_time
-def calculate_game_time(real_time=datetime.now(), day1_str="2024-7-1 1:00"):
+def calculate_game_time(real_time=datetime.now(), day1_str="2024-7-1 3:00"):
     day1 = datetime.strptime(day1_str, "%Y-%m-%d %H:%M")
     elapsed_time = real_time - day1
     game_elapsed_time = elapsed_time * 7
@@ -708,3 +737,13 @@ def generate_talk_time(k: int):
 
     return time_list
 
+
+def mark_map(x: int):
+    mapping = {
+        5: 5,
+        4: 3,
+        3: 0,
+        2: -3,
+        1: -5
+    }
+    return mapping.get(x, 0)
