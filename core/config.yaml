@@ -16,6 +16,6 @@ production:
   websocket_port: 8008
   ssl_certfile: "/etc/ssl/certs/bio3.crt"
   ssl_keyfile: "/etc/ssl/certs/bio3.key"
-  monitor_trigger: True
+  monitor_trigger: False
   dashboard_trigger: True
   ssl_trigger: True

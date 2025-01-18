@@ -27,12 +27,12 @@ Only when the inventory has the specified number of required items, will the nex
 You need to determine the highest level you have reached and continue to collect the remaining items needed to reach higher levels.
 
 Here are the actions you can plan: go to different places, sleep, study, see a doctor, work, use/buy/sell different items, craft different items.
-Here are the places you can reach: school, workshop, home, farm, mall, square, councilHall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen.
+Here are the places you can reach: school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen.
 The following are the items that exist in this world:
     - apple, wheat, pear, rice, chicken, beef, fish
     - iron_ore, timber, copper_ore, silicon_ore
     - feed, flour, bread, apple_pie, fruit_salad, chicken_salad, beef_rice, sushi
-    - iron_ingots, wooden_boards, copper_ingots, pure_silicon, pickaxes, iron_plates, paper_pulp, books, copper_wire, transistors
+    - iron_ingots, wooden_boards, copper_ingots, pure_silicon, pickaxes, iron_plates, pulp, books, copper_wire, transistors
     - circuit_board, a100, h100, h200, b200
 
 Remind:
@@ -419,8 +419,8 @@ Action format: `craft [itemType:string] [amount:int]`
 12. pure_silicon (requires 3 silicon_ore, be in factory)
 13. pickaxes (requires 1 iron_ingot, 1 wood_boards, be in factory)
 14. iron_plate (requires 1 iron_ingot, be in factory)
-15. paper_pulp (requires 1 wood_boards, be in factory)
-16. books (requires 3 paper_pulp, be in factory)
+15. pulp (requires 1 wood_boards, be in factory)
+16. books (requires 3 pulp, be in factory)
 17. copper_wire (requires 1 copper_ingots, be in factory)
 18. transistor (requires 1 pure_silicon, be in factory)
 
@@ -498,7 +498,7 @@ Below are detailed explanations of each possible action, including constraints a
 1. **goto [placeName:string]**  
    - **Action Effect**: Moves the character to a specific location, only change the location. 
    - **Constraints**: The placeName must be one of the following:  
-     (school, workshop, home, farm, mall, square, councilHall, hospital, fruit, harvest, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
+     (school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
 
 2. **sleep [hours:int]**  
    - **Action Effect**: Recover energy (10 per hour).  
@@ -591,8 +591,8 @@ Action format: `craft [itemType:string] [amount:int]` (remember, the amount shou
 12. pure_silicon (requires 3 silicon_ore, be in factory)
 13. pickaxes (requires 1 iron_ingot, 1 wood_boards, be in factory)
 14. iron_plate (requires 1 iron_ingot, be in factory)
-15. paper_pulp (requires 1 wood_boards, be in factory)
-16. books (requires 3 paper_pulp, be in factory)
+15. pulp (requires 1 wood_boards, be in factory)
+16. books (requires 3 pulp, be in factory)
 17. copper_wire (requires 1 copper_ingots, be in factory)
 18. transistor (requires 1 pure_silicon, be in factory)
 
@@ -760,7 +760,7 @@ Below are detailed explanations of each possible action, including constraints a
 1. **goto [placeName:string]**  
    - **Effect**: Moves the character to a specific location.  
    - **Constraints**: The placeName must be one of the following:  
-     (school, workshop, home, farm, mall, square, councilHall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
+     (school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
 
 2. **sleep [hours:int]**  
    - **Effect**: Recover energy (10 per hour).  
@@ -953,7 +953,7 @@ But it may contain errors or infeasible actions, waiting for your correction.
 
 1. **goto [placeName:string]**  
    - Moves the character to `placeName`. Valid places include:  
-     (school, workshop, home, farm, mall, square, councilHall, hospital, fruit, harvest, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
+     (school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
 
 2. **sleep [hours:int]**  
    - Recover energy (10 per hour).
@@ -1001,7 +1001,7 @@ But it may contain errors or infeasible actions, waiting for your correction.
   - Must be at mine for iron_ore, copper_ore, silicon_ore.
 
 - **Moderate Energy Cost** (10 per item) for items like:  
-  feed (needs 1 rice), flour (needs 1 wheat), bread (1 flour), apple_pie (1 apple + 1 flour), fruit_salad (1 apple + 1 pear), chicken_salad (1 chicken + 1 fruit_salad), beef_rice (1 beef + 1 rice), sushi (1 fish + 1 rice), iron_ingot (3 iron_ore), wooden_board (3 wood), copper_ingot (3 copper_ore), pure_silicon (3 silicon_ore), pickaxes (1 iron_ingot + 1 wood_boards), iron_plate (1 iron_ingot), paper_pulp (1 wood_boards), books (3 paper_pulp), copper_wire (1 copper_ingots), transistor (1 pure_silicon).  
+  feed (needs 1 rice), flour (needs 1 wheat), bread (1 flour), apple_pie (1 apple + 1 flour), fruit_salad (1 apple + 1 pear), chicken_salad (1 chicken + 1 fruit_salad), beef_rice (1 beef + 1 rice), sushi (1 fish + 1 rice), iron_ingot (3 iron_ore), wooden_board (3 wood), copper_ingot (3 copper_ore), pure_silicon (3 silicon_ore), pickaxes (1 iron_ingot + 1 wood_boards), iron_plate (1 iron_ingot), pulp (1 wood_boards), books (3 pulp), copper_wire (1 copper_ingots), transistor (1 pure_silicon).  
   - Must be at foodfactory for food recipes.  
   - Must be at factory for metal/tech recipes.
 

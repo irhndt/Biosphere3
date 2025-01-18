@@ -30,6 +30,7 @@ class LangGraphInstance:
         self.websocket = websocket
         self.signal = None
         self.state = {}
+        self.message_log = []
 
         self.websocket_lock = None
         self.graph = None
@@ -55,7 +56,7 @@ class LangGraphInstance:
         self.start_time = time.time()
 
         self.msg_processor_task = asyncio.create_task(self.msg_processor())
-        self.event_scheduler_task = asyncio.create_task(self.event_scheduler())
+        # self.event_scheduler_task = asyncio.create_task(self.event_scheduler())
         self.schedule_event("PLAN")
         self.logger.info(f"User {self.user_id} workflow initialized")
         self.task = asyncio.create_task(self.a_run())
@@ -76,7 +77,7 @@ class LangGraphInstance:
             elif message_name == "actionresult":
                 self.state["decision"]["action_result"].append(message_data["msg"])
                 save_decision_to_db(self.user_id, {"action_result": message_data})
-                if message_data.get("actionName") == "Nav":
+                if message_data.get("actionName").startswith("goto"):
                     save_action_to_db(self.user_id, message_data)
                 # If the action result is False, put REPLAN into event_queue
                 if msg["data"]["result"] is False:
@@ -94,8 +95,6 @@ class LangGraphInstance:
                 self.logger.info(
                     f"🏃 User {self.user_id}: Received action result: {msg['data']}"
                 )
-            elif message_name == "cv_submission":
-                await generate_change_job_cv(self.state["instance"], msg)
             elif message_name == "onestep":
                 self.schedule_event("PLAN")
             elif message_name == "check":
@@ -120,6 +119,7 @@ class LangGraphInstance:
                 )
                 self.schedule_event("CHARACTER_ARC")
                 self.schedule_event("DAILY_REFLECTION")
+                await generate_change_job_cv(self.state["instance"], msg)
                 await asyncio.sleep(60)
                 clear_decision(self.state)
             else:
@@ -170,7 +170,7 @@ class LangGraphInstance:
 
                 if self.signal == "TERMINATE":
                     self.logger.error(
-                        f"⛔ Task run_event terminated due to termination signal."
+                        f"⛔ User {self.user_id}'s Task run_event terminated due to termination signal."
                     )
                     break
                 if event_name not in list(self.state["event_queue"]._queue):
@@ -211,6 +211,7 @@ class LangGraphInstance:
             self.logger.error(f"User {self.user_id} Error in workflow: {e}")
             self.logger.error("⛔ Task a_run terminated due to termination signal.")
             self.task.cancel()
+            self.routine_tasks.cancel()
 
     async def send_message(self, message):
         async with self.websocket_lock:
@@ -230,3 +231,12 @@ class LangGraphInstance:
                 self.signal = "TERMINATE"
             except Exception as e:
                 self.logger.error(f"User {self.user_id}: Error sending message: {e}")
+
+    def log_message(self, direction: str, message: str):
+        self.message_log.append(
+            {
+                "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+                "direction": direction,
+                "message": message,
+            }
+        )

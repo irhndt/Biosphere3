@@ -10,6 +10,24 @@ load_dotenv()
 
 ModelType = Literal["PLAN", "CHAT"]
 
+openai_api_keys = [os.getenv(f"OPENAI_API_KEY_{i}") for i in range(1, 11)]
+deepseek_api_keys = [os.getenv(f"DEEPSEEK_API_KEY_{i}") for i in range(1, 6)]
+openai_request_count = 0
+deepseek_request_count = 0
+
+
+def get_api_key(model_name: str) -> str:
+    api_key = ""
+    global openai_request_count
+    global deepseek_request_count
+    if model_name.startswith("gpt"):
+        api_key = openai_api_keys[openai_request_count % len(openai_api_keys)]
+        openai_request_count += 1
+    elif model_name.startswith("deepseek"):
+        api_key = deepseek_api_keys[deepseek_request_count % len(deepseek_api_keys)]
+        deepseek_request_count += 1
+    return api_key
+
 
 class LLMSelector:
     token_usage: DefaultDict[str, Dict[str, int]] = defaultdict(
@@ -54,18 +72,11 @@ class LLMSelector:
         cls, model_name: str, model_type: ModelType = "PLAN", temperature: float = 0.7
     ):
         callbacks = [TokenUsageHandler(model_name)]
-
-        def get_api_key(model_prefix: str) -> str:
-            if model_prefix == "gpt":
-                return os.getenv(f"OPENAI_API_KEY_{model_type}")
-            elif model_prefix == "deepseek":
-                return os.getenv(f"DEEPSEEK_API_KEY_{model_type}")
-            return ""
-
+        api_key = get_api_key(model_name)
         if model_name.startswith("gpt"):
             return ChatOpenAI(
                 base_url="https://api.aiproxy.io/v1",
-                api_key=get_api_key("gpt"),
+                api_key=api_key,
                 model=model_name,
                 temperature=temperature,
                 callbacks=callbacks,
@@ -73,7 +84,7 @@ class LLMSelector:
         elif model_name.startswith("deepseek"):
             return ChatOpenAI(
                 base_url="https://api.deepseek.com/v1",
-                api_key=get_api_key("deepseek"),
+                api_key=api_key,
                 model=model_name,
                 temperature=temperature,
                 callbacks=callbacks,

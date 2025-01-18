@@ -70,7 +70,7 @@ async def generate_daily_objective(state: RunningState):
     )
 
     decision_response = make_api_request_sync(
-        "GET", "/decision/", params={"characterId": state["userid"], "count": 5}
+        "GET", "/action_log/", params={"characterId": state["userid"], "count": 5}
     )
     last_decision = decision_response.get("data", {})
     retry_count = 0
@@ -79,9 +79,11 @@ async def generate_daily_objective(state: RunningState):
             state["character_stats"],
             fields=["money", "inventory"],
         ),
-        "past_objectives": last_decision.get("daily_objective", []),
+        "past_objectives": (
+            last_decision.get("daily_objective", []) if last_decision else []
+        ),
         "life_style": state["prompts"]["life_style"],
-        "past_reflection": last_decision.get("reflection", []),
+        "past_reflection": last_decision.get("reflection", []) if last_decision else [],
         "production_graph": state["meta"]["production_graph"],
     }
     while retry_count < 3:
@@ -93,6 +95,8 @@ async def generate_daily_objective(state: RunningState):
                 f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
             )
             retry_count += 1
+            if retry_count == 3:
+                raise Exception("Too many retries on generate_daily_objective")
             continue
     full_prompt = obj_planner_prompt.format(**payload)
     logger.info("======generate_daily_objective======\n" + full_prompt)
@@ -138,7 +142,8 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
         "forbidden_example_output": meta_seq_forbidden_example_out,
     }
     # print(crafting_and_trading_prompt.format(**payload))
-    for _ in range(3):
+    retry_count = 0
+    while retry_count < 3:
         try:
             crafting_and_trading_sequence = await crafting_and_trading_planner.ainvoke(
                 payload
@@ -149,6 +154,11 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
             logger.error(
                 f"⛔ User {state['userid']} Error in generate_crafting_and_trading_sequence: {e}"
             )
+            retry_count += 1
+            if retry_count == 3:
+                raise Exception(
+                    "Too many retries on generate_crafting_and_trading_sequence"
+                )
             continue
 
     state["decision"]["detailed_meta_seq"] = []
@@ -187,6 +197,10 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
                 f"⛔ User {state['userid']} Error in generate_emoji_sequence: {e}"
             )
             retry_count += 1
+            if retry_count == 3:
+                raise Exception(
+                    "Too many retries on generate_crafting_and_trading_sequence"
+                )
             continue
 
     for emoji_and_description in emoji_sequence.response:
@@ -204,7 +218,7 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
         },
     )
 
-    await send_message(
+    response = await send_message(
         state,
         "actionList",
         6,
@@ -215,13 +229,16 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
         },
     )
     logger.info(f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence}")
-    pprint.pprint(
+    pprint(
         {
             "command": meta_action_sequence,
             "emoji": [desc.emoji for desc in emoji_sequence.response],
             "description": state["decision"]["action_description"],
         },
     )
+    state["instance"].log_message("received", json.dumps(response))
+
+    return {"current_pointer": "meta_action_sequence"}
 
 
 async def generate_meta_action_sequence(state: RunningState):
@@ -256,6 +273,8 @@ async def generate_meta_action_sequence(state: RunningState):
                 f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
             )
             retry_count += 1
+            if retry_count == 3:
+                raise Exception("Too many retries on generate_meta_action_sequence")
             continue
 
     # full_prompt = meta_action_sequence_prompt.format(**payload)
@@ -272,7 +291,7 @@ async def generate_meta_action_sequence(state: RunningState):
         },
     )
 
-    await send_message(
+    response = await send_message(
         state,
         "actionList",
         6,
@@ -283,6 +302,7 @@ async def generate_meta_action_sequence(state: RunningState):
             "description": meta_action_sequence.description_sequence,
         },
     )
+    state["instance"].log_message("received", json.dumps(response))
     logger.info(
         f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence.meta_action_sequence}"
     )
@@ -345,6 +365,8 @@ async def replan_action(state: RunningState):
                 f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
             )
             retry_count += 1
+            if retry_count == 3:
+                raise Exception("Too many retries on replan_action")
             continue
 
     logger.info(
@@ -363,7 +385,7 @@ async def replan_action(state: RunningState):
     )
 
     # Send new action sequence to client
-    await send_message(
+    response = await send_message(
         state,
         "actionList",
         6,
@@ -374,6 +396,7 @@ async def replan_action(state: RunningState):
             "description": meta_action_sequence.description_sequence,
         },
     )
+    state["instance"].log_message("received", json.dumps(response))
 
     return {"current_pointer": "Replan_Action"}
 
@@ -423,7 +446,7 @@ async def generate_change_job_cv(instance, msg: dict):
         cv, user_id, studyXp, education, date
     )
     if instance:
-        await instance.send_message(
+        response = await instance.send_message(
             {
                 "characterId": user_id,
                 "messageName": "mayor_decision",
@@ -431,6 +454,7 @@ async def generate_change_job_cv(instance, msg: dict):
                 "data": {"jobId": cv.job_id, "cv": cv.cv, **mayor_decision},
             }
         )
+        instance.log_message("received", json.dumps(response))
 
 
 async def generate_mayor_decision(
@@ -530,14 +554,15 @@ async def generate_daily_reflection(state: RunningState):
     logger.info("======generate_daily_reflection======\n" + full_prompt)
     state["decision"]["reflection"].append(daily_reflection.reflection)
     save_decision_to_db(state["userid"], {"reflection": daily_reflection.reflection})
-    # await send_message(
-    #     state,
-    #     "daily_reflection",
-    #     11,
-    #     {
-    #         "reflection": daily_reflection.reflection,
-    #     },
-    # )
+    response = await send_message(
+        state,
+        "daily_reflection",
+        11,
+        {
+            "reflection": daily_reflection.reflection,
+        },
+    )
+    state["instance"].log_message("received", json.dumps(response))
 
     logger.info(f"🔍 DAILY_REFLECTION INVOKED with {daily_reflection.reflection}")
 
@@ -569,12 +594,13 @@ async def generate_character_arc(state: RunningState):
         "characterId": state["userid"],
         **dict(character_arc),
     }
-    await send_message(
+    response = await send_message(
         state,
         "character_arc",
         12,
         {"character_arc": character_arc_data},
     )
+    state["instance"].log_message("received", json.dumps(response))
     logger.info(f"📜 Character Arc: {character_arc_data}")
     make_api_request_sync("POST", "/character_arc/", data=character_arc_data)
 
@@ -732,7 +758,7 @@ async def generate_accommodation_decision(state: RunningState):
             }
         }
 
-    await send_message(
+    response = await send_message(
         state,
         "accommodationChange",
         8,
@@ -742,32 +768,23 @@ async def generate_accommodation_decision(state: RunningState):
             "comments": accommodation_decision.comments,
         },
     )
+    state["instance"].log_message("received", json.dumps(response))
 
     return {"current_pointer": "Accommodation_Decision"}
 
 
 async def send_message(state, message_name, message_code, data):
-    """
-    Send a message to the client.
-
-    Args:
-        state: The current state containing the instance and user ID.
-        message_name (str): The name of the message.
-        message_code (int): The code of the message.
-        data (dict): The data to send in the message.
-    """
     if not state.get("instance"):
         logger.warning(f"⚠️ User {state['userid']}: Instance not found.")
         return
-
-    await state["instance"].send_message(
-        {
-            "characterId": state["userid"],
-            "messageName": message_name,
-            "messageCode": message_code,
-            "data": data,
-        }
-    )
+    response = {
+        "characterId": state["userid"],
+        "messageName": message_name,
+        "messageCode": message_code,
+        "data": data,
+    }
+    await state["instance"].send_message(response)
+    return response
 
 
 async def generate_emoji_seq(state):
@@ -869,6 +886,8 @@ async def refine_meta_action_sequence(state: RunningState):
                 f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
             )
             retry_count += 1
+            if retry_count == 3:
+                raise Exception("Too many retries on refine_meta_action_sequence")
             continue
 
     print("meta_action_sequence: ", meta_action_sequence)
@@ -888,6 +907,14 @@ async def replan_meta_action_seq_new(state: RunningState):
         0.3,
     )
     false_action_info = state["false_action_queue"].get_nowait()
+
+    logger.warning(
+        f"⚠️ User {state['userid']}: Replanning failed action: {false_action_info}"
+    )
+
+    logger.warning(
+        f"⚠️ User {state['userid']}: Failed Plan list waiting to be planned: {format_detailed_meta_seq(state['decision']['detailed_meta_seq'], false_action_info['actionName'])}"
+    )
     payload = {
         "character_stats": format_character_data(
             state["character_stats"],
@@ -895,7 +922,7 @@ async def replan_meta_action_seq_new(state: RunningState):
                 "money",
                 "energy",
                 "health",
-                "hunger",
+                "hungry",
                 "education",
                 "education_experience",
                 "occupation",
@@ -903,7 +930,7 @@ async def replan_meta_action_seq_new(state: RunningState):
                 "inventory",
             ],
         ),
-        "market_data": format_dict(state["public_data"]["market_data"]),
+        "market_data": format_market(state["public_data"]["market_data"]),
         "current_action_list": format_detailed_meta_seq(
             state["decision"]["detailed_meta_seq"],
             false_action_info["actionName"],
@@ -922,6 +949,8 @@ async def replan_meta_action_seq_new(state: RunningState):
                 f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
             )
             retry_count += 1
+            if retry_count == 3:
+                raise Exception("Too many retries on replan_meta_action_seq_new")
             continue
 
     meta_seq_list = []
@@ -933,6 +962,8 @@ async def replan_meta_action_seq_new(state: RunningState):
     detailed_meta_seq = []
     for item in meta_action_sequence.action_sequence:
         detailed_meta_seq.append(item.model_dump())
+
+    pprint(detailed_meta_seq)
     state["decision"]["detailed_meta_seq"] = detailed_meta_seq
 
     emoji_sequence_generator = create_planner(
@@ -960,6 +991,8 @@ async def replan_meta_action_seq_new(state: RunningState):
                 f"⛔ User {state['userid']} Error in generate_emoji_sequence: {e}"
             )
             retry_count += 1
+            if retry_count == 3:
+                raise Exception("Too many retries on replan_meta_action_seq_new")
             continue
 
     for emoji_and_description in emoji_sequence.response:
@@ -973,7 +1006,7 @@ async def replan_meta_action_seq_new(state: RunningState):
         },
     )
 
-    await send_message(
+    response = await send_message(
         state,
         "actionList",
         6,
@@ -983,6 +1016,7 @@ async def replan_meta_action_seq_new(state: RunningState):
             "description": state["decision"]["action_description"],
         },
     )
+    state["instance"].log_message("received", json.dumps(response))
 
     return {"current_pointer": "Replan_Meta_Action"}
 
@@ -1072,7 +1106,7 @@ if __name__ == "__main__":
 
     # pprint.pprint(state["decision"]["meta_seq"])
 
-    pprint.pprint(state["decision"]["detailed_meta_seq"])
+    pprint(state["decision"]["detailed_meta_seq"])
 
     # TEST PLANNING ROUTINES
     # asyncio.run(generate_daily_objective(state))

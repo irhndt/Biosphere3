@@ -231,7 +231,8 @@ async def fetch_agent_db_response_async(userid: int) -> dict:
             "🆕 No character data found in agent database, creating new character"
         )
         return {}
-    return response.get("data", [])[0]
+    data = response.get("data", [])
+    return data[0] if data else {}
 
 
 async def fetch_model_type_response_async(userid: int) -> dict:
@@ -324,10 +325,10 @@ def save_decision_to_db(userid: int, decision: dict):
         userid (int): The ID of the user.
         decision (dict): The decision data to save.
     """
-    url = f"{AGENT_BACKEND_URL}/decision/"
+    url = f"{AGENT_BACKEND_URL}/action_log/"
     decision["characterId"] = userid
     try:
-        response = requests.patch(
+        response = requests.post(
             url,
             json=decision,
             timeout=GAME_BACKEND_TIMEOUT,
@@ -466,7 +467,7 @@ async def get_initial_state_from_db(userid, websocket):
 
 tool_functions_live = """
 1. goto [placeName:string]: Go to a specified location.
-Constraints: Must in (school,workshop,home,farm,mall,square,councilHall,hospital,fruit,harvest,fishing,mine,orchard,foodfactory,factory,garden,policestation,library,supermarket,canteen).
+Constraints: Must in (school,workshop,home,farm,mall,square,councilhall,hospital,fruit,harvest,fishing,mine,orchard,foodfactory,factory,garden,policestation,library,supermarket,canteen).
 2. sleep [hours:int]: Sleep to recover energy (10 per hour).
 Constraints: Must be at home.
 3. study [hours:int]: Study to achieve a higher degree, cost money (100 per hour) and energy (10 per hour), gain education experience (10 per hour).
@@ -499,7 +500,7 @@ available_locations = [
     "farm",
     "mall",
     "square",
-    "councilHall",
+    "councilhall",
     "hospital",
     "fruit",
     "harvest",
@@ -647,19 +648,21 @@ def format_level_graph(
     formatted_str = f"Current Energy: {current_energy}\n"
     inventory_copy = inventory_info.copy()
     inventory_copy = {key.lower(): value for key, value in inventory_copy.items()}
+
     def get_cost(skill2actions, item):
         # print(item)
         for _, details in skill2actions.items():
             if item in details["materials"].keys():
                 return details["cost"]
-        return 0
+        return 20
+
     formatted_str += "Final Product: " + level_graph_data["final_product"] + "\n"
     level_graph_data_list = level_graph_data["goals"]
     for goal in level_graph_data_list:
         formatted_str += f"Level {goal['goal_number']}:\n"
         for obj in goal["objectives"]:
             formatted_str += f"  - {obj['item']} *{obj['quantity']}\n"
-            formatted_str += f"     | Inventory: {inventory_copy.get(obj['item'], 0)}, Lack {obj["quantity"] - inventory_copy.get(obj['item'], 0)}\n"
+            formatted_str += f"     | Inventory: {inventory_copy.get(obj['item'], 0)}, Lack {obj['quantity'] - inventory_copy.get(obj['item'], 0)}\n"
             energy_cost = get_cost(skill2actions, obj["item"])
             formatted_str += f"     | Energy Cost: {energy_cost} per item, max craft num {current_energy / energy_cost} \n"
         formatted_str += "\n"
@@ -687,11 +690,12 @@ def format_market(market_data: dict) -> str:
     formatted_str = "{\n"
     items = list(market_data.items())
     for i in range(0, len(items), 4):
-        chunk = items[i:i+4]
+        chunk = items[i : i + 4]
         line = ", ".join([f"{item.lower()}: {price}" for item, price in chunk])
         formatted_str += f" {line}\n"
     formatted_str += "}"
     return formatted_str
+
 
 def format_daily_obj(daily_objectives: list) -> str:
     formatted_str = ""
@@ -736,7 +740,11 @@ def format_status_changes(past_status: dict, status: dict, fields: list = None) 
         formatted_data.append(
             f"Education: {past_status.get('education', 'N/A')} -> {status.get('education', 'N/A')}"
         )
-    if "education_experience" in fields and "education_experience" in past_status and "education_experience" in status:
+    if (
+        "education_experience" in fields
+        and "education_experience" in past_status
+        and "education_experience" in status
+    ):
         formatted_data.append(
             f"Education Experience: {past_status.get('education_experience', 'N/A')} -> {status.get('education_experience', 'N/A')}"
         )
@@ -744,11 +752,19 @@ def format_status_changes(past_status: dict, status: dict, fields: list = None) 
         formatted_data.append(
             f"Money: {past_status.get('money', 'N/A')} -> {status.get('money', 'N/A')}"
         )
-    if "occupation" in fields and "occupation" in past_status and "occupation" in status:
+    if (
+        "occupation" in fields
+        and "occupation" in past_status
+        and "occupation" in status
+    ):
         formatted_data.append(
             f"Occupation: {past_status.get('occupation', 'N/A')} -> {status.get('occupation', 'N/A')}"
         )
-    if "efficiency" in fields and "efficiency" in past_status and "efficiency" in status:
+    if (
+        "efficiency" in fields
+        and "efficiency" in past_status
+        and "efficiency" in status
+    ):
         formatted_data.append(
             f"Efficiency: {past_status.get('efficiency', 'N/A')} -> {status.get('efficiency', 'N/A')}"
         )
@@ -759,13 +775,15 @@ def format_status_changes(past_status: dict, status: dict, fields: list = None) 
 
     return "\n".join(formatted_data)
 
+
 def format_false_action_info(false_action_info: dict) -> str:
     formatted_str = "Failed Action: " + false_action_info["actionName"] + "\n"
     formatted_str += "| Result: " + false_action_info["msg"] + "\n"
     formatted_str += "------\n"
-    return formatted_str 
+    return formatted_str
 
-def format_meta_seq(meta_seq: list, false_action_name:str) -> str:
+
+def format_meta_seq(meta_seq: list, false_action_name: str) -> str:
     formatted_str = ""
     # find the location of the false action
     false_action_index = 0
@@ -779,7 +797,7 @@ def format_meta_seq(meta_seq: list, false_action_name:str) -> str:
     return formatted_str
 
 
-def format_detailed_meta_seq(detailed_seq: list, false_action_name:str) -> str:
+def format_detailed_meta_seq(detailed_seq: list, false_action_name: str) -> str:
     formatted_str = ""
     # find the location of the false action
     false_action_index = 0
