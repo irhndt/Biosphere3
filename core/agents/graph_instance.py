@@ -56,7 +56,7 @@ class LangGraphInstance:
         self.start_time = time.time()
 
         self.msg_processor_task = asyncio.create_task(self.msg_processor())
-        self.event_scheduler_task = asyncio.create_task(self.event_scheduler())
+        # self.event_scheduler_task = asyncio.create_task(self.event_scheduler())
         self.schedule_event("PLAN")
         self.logger.info(f"User {self.user_id} workflow initialized")
         self.task = asyncio.create_task(self.a_run())

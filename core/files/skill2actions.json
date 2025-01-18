@@ -91,7 +91,7 @@
             "craft pure_silicon <num>",
             "craft pickax <num>",
             "craft iron_plate <num>",
-            "craft paper_pulp <num>",
+            "craft pulp <num>",
             "craft books <num>",
             "craft copper_wire <num>",
             "craft transistor <num>"
@@ -117,11 +117,11 @@
             "iron_plate": [
                 "2 iron_ingot"
             ],
-            "paper_pulp": [
+            "pulp": [
                 "2 wooden_board"
             ],
             "books": [
-                "3 paper_pulp"
+                "3 pulp"
             ],
             "copper_wire": [
                 "2 copper_ingot"

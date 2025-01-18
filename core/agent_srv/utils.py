@@ -648,12 +648,14 @@ def format_level_graph(
     formatted_str = f"Current Energy: {current_energy}\n"
     inventory_copy = inventory_info.copy()
     inventory_copy = {key.lower(): value for key, value in inventory_copy.items()}
+
     def get_cost(skill2actions, item):
         # print(item)
         for _, details in skill2actions.items():
             if item in details["materials"].keys():
                 return details["cost"]
-        return 0
+        return 20
+
     formatted_str += "Final Product: " + level_graph_data["final_product"] + "\n"
     level_graph_data_list = level_graph_data["goals"]
     for goal in level_graph_data_list:
@@ -688,11 +690,12 @@ def format_market(market_data: dict) -> str:
     formatted_str = "{\n"
     items = list(market_data.items())
     for i in range(0, len(items), 4):
-        chunk = items[i:i+4]
+        chunk = items[i : i + 4]
         line = ", ".join([f"{item.lower()}: {price}" for item, price in chunk])
         formatted_str += f" {line}\n"
     formatted_str += "}"
     return formatted_str
+
 
 def format_daily_obj(daily_objectives: list) -> str:
     formatted_str = ""
@@ -737,7 +740,11 @@ def format_status_changes(past_status: dict, status: dict, fields: list = None) 
         formatted_data.append(
             f"Education: {past_status.get('education', 'N/A')} -> {status.get('education', 'N/A')}"
         )
-    if "education_experience" in fields and "education_experience" in past_status and "education_experience" in status:
+    if (
+        "education_experience" in fields
+        and "education_experience" in past_status
+        and "education_experience" in status
+    ):
         formatted_data.append(
             f"Education Experience: {past_status.get('education_experience', 'N/A')} -> {status.get('education_experience', 'N/A')}"
         )
@@ -745,11 +752,19 @@ def format_status_changes(past_status: dict, status: dict, fields: list = None) 
         formatted_data.append(
             f"Money: {past_status.get('money', 'N/A')} -> {status.get('money', 'N/A')}"
         )
-    if "occupation" in fields and "occupation" in past_status and "occupation" in status:
+    if (
+        "occupation" in fields
+        and "occupation" in past_status
+        and "occupation" in status
+    ):
         formatted_data.append(
             f"Occupation: {past_status.get('occupation', 'N/A')} -> {status.get('occupation', 'N/A')}"
         )
-    if "efficiency" in fields and "efficiency" in past_status and "efficiency" in status:
+    if (
+        "efficiency" in fields
+        and "efficiency" in past_status
+        and "efficiency" in status
+    ):
         formatted_data.append(
             f"Efficiency: {past_status.get('efficiency', 'N/A')} -> {status.get('efficiency', 'N/A')}"
         )
@@ -760,13 +775,15 @@ def format_status_changes(past_status: dict, status: dict, fields: list = None) 
 
     return "\n".join(formatted_data)
 
+
 def format_false_action_info(false_action_info: dict) -> str:
     formatted_str = "Failed Action: " + false_action_info["actionName"] + "\n"
     formatted_str += "| Result: " + false_action_info["msg"] + "\n"
     formatted_str += "------\n"
-    return formatted_str 
+    return formatted_str
 
-def format_meta_seq(meta_seq: list, false_action_name:str) -> str:
+
+def format_meta_seq(meta_seq: list, false_action_name: str) -> str:
     formatted_str = ""
     # find the location of the false action
     false_action_index = 0
@@ -780,7 +797,7 @@ def format_meta_seq(meta_seq: list, false_action_name:str) -> str:
     return formatted_str
 
 
-def format_detailed_meta_seq(detailed_seq: list, false_action_name:str) -> str:
+def format_detailed_meta_seq(detailed_seq: list, false_action_name: str) -> str:
     formatted_str = ""
     # find the location of the false action
     false_action_index = 0

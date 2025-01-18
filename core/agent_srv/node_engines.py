@@ -79,7 +79,9 @@ async def generate_daily_objective(state: RunningState):
             state["character_stats"],
             fields=["money", "inventory"],
         ),
-        "past_objectives": last_decision.get("daily_objective", []) if last_decision else [],
+        "past_objectives": (
+            last_decision.get("daily_objective", []) if last_decision else []
+        ),
         "life_style": state["prompts"]["life_style"],
         "past_reflection": last_decision.get("reflection", []) if last_decision else [],
         "production_graph": state["meta"]["production_graph"],
@@ -93,6 +95,8 @@ async def generate_daily_objective(state: RunningState):
                 f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
             )
             retry_count += 1
+            if retry_count == 3:
+                raise Exception("Too many retries on generate_daily_objective")
             continue
     full_prompt = obj_planner_prompt.format(**payload)
     logger.info("======generate_daily_objective======\n" + full_prompt)
@@ -138,7 +142,8 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
         "forbidden_example_output": meta_seq_forbidden_example_out,
     }
     # print(crafting_and_trading_prompt.format(**payload))
-    for _ in range(3):
+    retry_count = 0
+    while retry_count < 3:
         try:
             crafting_and_trading_sequence = await crafting_and_trading_planner.ainvoke(
                 payload
@@ -149,6 +154,11 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
             logger.error(
                 f"⛔ User {state['userid']} Error in generate_crafting_and_trading_sequence: {e}"
             )
+            retry_count += 1
+            if retry_count == 3:
+                raise Exception(
+                    "Too many retries on generate_crafting_and_trading_sequence"
+                )
             continue
 
     state["decision"]["detailed_meta_seq"] = []
@@ -187,6 +197,10 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
                 f"⛔ User {state['userid']} Error in generate_emoji_sequence: {e}"
             )
             retry_count += 1
+            if retry_count == 3:
+                raise Exception(
+                    "Too many retries on generate_crafting_and_trading_sequence"
+                )
             continue
 
     for emoji_and_description in emoji_sequence.response:
@@ -259,6 +273,8 @@ async def generate_meta_action_sequence(state: RunningState):
                 f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
             )
             retry_count += 1
+            if retry_count == 3:
+                raise Exception("Too many retries on generate_meta_action_sequence")
             continue
 
     # full_prompt = meta_action_sequence_prompt.format(**payload)
@@ -349,6 +365,8 @@ async def replan_action(state: RunningState):
                 f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
             )
             retry_count += 1
+            if retry_count == 3:
+                raise Exception("Too many retries on replan_action")
             continue
 
     logger.info(
@@ -868,6 +886,8 @@ async def refine_meta_action_sequence(state: RunningState):
                 f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
             )
             retry_count += 1
+            if retry_count == 3:
+                raise Exception("Too many retries on refine_meta_action_sequence")
             continue
 
     print("meta_action_sequence: ", meta_action_sequence)
@@ -887,6 +907,14 @@ async def replan_meta_action_seq_new(state: RunningState):
         0.3,
     )
     false_action_info = state["false_action_queue"].get_nowait()
+
+    logger.warning(
+        f"⚠️ User {state['userid']}: Replanning failed action: {false_action_info}"
+    )
+
+    logger.warning(
+        f"⚠️ User {state['userid']}: Failed Plan list waiting to be planned: {format_detailed_meta_seq(state['decision']['detailed_meta_seq'], false_action_info['actionName'])}"
+    )
     payload = {
         "character_stats": format_character_data(
             state["character_stats"],
@@ -894,7 +922,7 @@ async def replan_meta_action_seq_new(state: RunningState):
                 "money",
                 "energy",
                 "health",
-                "hunger",
+                "hungry",
                 "education",
                 "education_experience",
                 "occupation",
@@ -902,7 +930,7 @@ async def replan_meta_action_seq_new(state: RunningState):
                 "inventory",
             ],
         ),
-        "market_data": format_dict(state["public_data"]["market_data"]),
+        "market_data": format_market(state["public_data"]["market_data"]),
         "current_action_list": format_detailed_meta_seq(
             state["decision"]["detailed_meta_seq"],
             false_action_info["actionName"],
@@ -921,6 +949,8 @@ async def replan_meta_action_seq_new(state: RunningState):
                 f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
             )
             retry_count += 1
+            if retry_count == 3:
+                raise Exception("Too many retries on replan_meta_action_seq_new")
             continue
 
     meta_seq_list = []
@@ -932,6 +962,8 @@ async def replan_meta_action_seq_new(state: RunningState):
     detailed_meta_seq = []
     for item in meta_action_sequence.action_sequence:
         detailed_meta_seq.append(item.model_dump())
+
+    pprint(detailed_meta_seq)
     state["decision"]["detailed_meta_seq"] = detailed_meta_seq
 
     emoji_sequence_generator = create_planner(
@@ -959,6 +991,8 @@ async def replan_meta_action_seq_new(state: RunningState):
                 f"⛔ User {state['userid']} Error in generate_emoji_sequence: {e}"
             )
             retry_count += 1
+            if retry_count == 3:
+                raise Exception("Too many retries on replan_meta_action_seq_new")
             continue
 
     for emoji_and_description in emoji_sequence.response:

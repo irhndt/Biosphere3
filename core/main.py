@@ -48,33 +48,31 @@ class AI_WS_Server:
             logger.info(
                 f"🔗 Successfully connected to remote websocket: {websocket.remote_address}"
             )
-            if character_id != c:
-                character = self.character_manager.get_character(character_id)
-                agent_instance = character.agent_instance
-                conversation_instance = character.conversation_instance
+            character = self.character_manager.get_character(character_id)
+            agent_instance = character.agent_instance
+            conversation_instance = character.conversation_instance
 
-                agent_instance.log_message("received", response)
+            agent_instance.log_message("received", response)
 
             while True:
                 try:
                     message = await websocket.recv()
                     data = json.loads(message)
-                    if data.get("characterId") != 790456:
-                        agent_instance.log_message("sent", message)
+                    agent_instance.log_message("sent", message)
 
-                        if data.get("messageName") == "heartbeat":
-                            character.update_heartbeat()
-                            heartbeat_response = self.create_message(
-                                character_id, "heartbeat", 0, **{"status": "ok"}
-                            )
-                            await websocket.send(heartbeat_response)
-                            agent_instance.log_message("received", heartbeat_response)
-                        else:
-                            message_queue = agent_instance.state["message_queue"]
-                            await asyncio.gather(
-                                message_queue.put(data),
-                                conversation_instance.listener(data),
-                            )
+                    if data.get("messageName") == "heartbeat":
+                        character.update_heartbeat()
+                        heartbeat_response = self.create_message(
+                            character_id, "heartbeat", 0, **{"status": "ok"}
+                        )
+                        await websocket.send(heartbeat_response)
+                        agent_instance.log_message("received", heartbeat_response)
+                    else:
+                        message_queue = agent_instance.state["message_queue"]
+                        await asyncio.gather(
+                            message_queue.put(data),
+                            conversation_instance.listener(data),
+                        )
 
                 except websockets.ConnectionClosed as e:
                     logger.warning(f"🔗 Connection closed from {character_id}: {e}")
@@ -96,105 +94,6 @@ class AI_WS_Server:
         character_id = init_data.get("characterId")
         message_name = init_data.get("messageName")
         message_code = init_data.get("messageCode")
-        if character_id == 790456:
-            response = self.create_message(
-                character_id,
-                "actionList",
-                6,
-                **{
-                    "command": [
-                        "goto school",
-                        "study 1",
-                        "goto workshop",
-                        "buy fish 1",
-                        "sell fish 1",
-                        "goto home",
-                        "sleep 1",
-                        "goto farm",
-                        "craft rice 2",
-                        "craft apple 1",
-                        "goto mall",
-                        "goto square",
-                        "goto councilhall",
-                        "goto hospital",
-                        "seedoctor 1",
-                        "goto fruit",
-                        "goto harvest",
-                        "goto fishing",
-                        "goto orchard",
-                        "goto foodfactory",
-                        "craft feed 1",
-                        "goto factory",
-                        "goto garden",
-                        "goto policestation",
-                        "goto library",
-                        "goto supermarket",
-                        "goto canteen",
-                        "use apple 1",
-                    ],
-                    "emoji": [
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                        "\ud83c\udfe0",
-                    ],
-                    "description": [
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                        "test",
-                    ],
-                },
-            )
-            return (True, character_id, response)
 
         if not character_id:
             return (
