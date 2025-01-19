@@ -1089,24 +1089,25 @@ async def test_put_false_action_info(state: RunningState):
 if __name__ == "__main__":
     import asyncio
     import core.agent_srv.utils as utils
-    import pprint
+
+    # import pprint
 
     state = asyncio.run(utils.get_initial_state_from_db(432543, "websocket"))
     # pprint.pprint(state)
     logger.info(f"🚀 User {state['userid']} starting node engines")
-
+    print(state)
     # TEST REPLAN ROUTINES
-    asyncio.run(test_put_false_action_info(state))
-    logger.success(f"🌞 User {state['userid']} finished putting false action info")
+    # asyncio.run(test_put_false_action_info(state))
+    # logger.success(f"🌞 User {state['userid']} finished putting false action info")
 
-    asyncio.run(replan_meta_action_seq_new(state))
-    logger.success(
-        f"🌞 User {state['userid']} finished replanning meta action sequence"
-    )
+    # asyncio.run(replan_meta_action_seq_new(state))
+    # logger.success(
+    #     f"🌞 User {state['userid']} finished replanning meta action sequence"
+    # )
 
-    # pprint.pprint(state["decision"]["meta_seq"])
+    # # pprint.pprint(state["decision"]["meta_seq"])
 
-    pprint(state["decision"]["detailed_meta_seq"])
+    # pprint(state["decision"]["detailed_meta_seq"])
 
     # TEST PLANNING ROUTINES
     # asyncio.run(generate_daily_objective(state))
