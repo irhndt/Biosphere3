@@ -2,6 +2,7 @@ import json
 from loguru import logger
 import sys
 from pprint import pprint
+from collections import deque
 
 sys.path.append(".")
 
@@ -176,11 +177,12 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
     state["decision"]["meta_seq"] = [
         action.action for action in crafting_and_trading_sequence.action_sequence
     ]
-    state["decision"]["expanded_meta_seq"] = ActionSimulator().simulate(
+    simulate_list = ActionSimulator().simulate(
         state["decision"]["meta_seq"],
         state["character_stats"],
         state["public_data"]["market_data"],
     )
+    state["decision"]["expanded_meta_seq"] = deque(simulate_list)
     logger.info(
         f"🔨 CRAFTING_AND_TRADING_SEQUENCE INVOKED with {state['decision']['meta_seq']}"
     )

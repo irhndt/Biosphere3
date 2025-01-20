@@ -91,6 +91,17 @@ class LangGraphInstance:
                         self.logger.error(
                             f"User {self.user_id}: Error putting REPLAN into event_queue: {e}"
                         )
+                else:
+                    if (
+                        self.state["decision"]["expanded_meta_seq"]
+                        and self.state["decision"]["expanded_meta_seq"][0]
+                        == message_data["actionName"]
+                    ):
+                        self.state["decision"]["expanded_meta_seq"].popleft()
+                    else:
+                        self.logger.error(
+                            f"❌ User {self.user_id}: Action mismatch: {self.state["decision"]["expanded_meta_seq"][0]} != {message_data['actionName']}"
+                        )
 
                 self.logger.info(
                     f"🏃 User {self.user_id}: Received action result: {msg['data']}"
