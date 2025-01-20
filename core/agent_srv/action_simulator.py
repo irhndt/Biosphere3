@@ -64,7 +64,9 @@ class ActionSimulator:
                 if self.final_action_list[i].split(" ")[1] == current_location:
                     del self.final_action_list[i]
                 else:
-                    if self.final_action_list[i + 1].startswith("goto"):
+                    if i + 1 < len(self.final_action_list) and self.final_action_list[
+                        i + 1
+                    ].startswith("goto"):
                         del self.final_action_list[i]
                     else:
                         current_location = self.final_action_list[i].split(" ")[1]
@@ -516,6 +518,8 @@ class ActionRunner:
 
         for insert_index in insert_index_list[::-1]:
             actions.insert(insert_index["index"], insert_index["action"])
+
+        # TODO: add hungery and health check mechanism
 
         return actions
 

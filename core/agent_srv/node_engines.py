@@ -180,11 +180,16 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
     state["decision"]["meta_seq"] = [
         action.action for action in crafting_and_trading_sequence.action_sequence
     ]
-    simulate_list = ActionSimulator().simulate(
-        state["decision"]["meta_seq"],
-        state["character_stats"],
-        get_amm_data_from_db(),
-    )
+    try:
+        simulate_list = ActionSimulator().simulate(
+            state["decision"]["meta_seq"],
+            state["character_stats"],
+            get_amm_data_from_db(),
+        )
+    except Exception as e:
+        logger.warning("ActionSimulator Failed, use the original sequence")
+        print(traceback.format_exc())
+        simulate_list = state["decision"]["meta_seq"]
     for item in simulate_list:
         state["decision"]["expanded_meta_seq"].append(item)
     logger.info(
@@ -966,7 +971,9 @@ async def replan_meta_action_seq_new(state: RunningState):
             ],
         ),
         "market_data": format_market(state["public_data"]["market_data"]),
-        "current_action_list": format_meta_seq(list(state["decision"]["expanded_meta_seq"])),
+        "current_action_list": format_meta_seq(
+            list(state["decision"]["expanded_meta_seq"])
+        ),
         # if use detailed_meta_seq, please add:
         ## It includes the formatted list of actions the user has planned to take, as well as the reasons, effects and supposing status changes for each action.
         ## But it may contain errors or infeasible actions, waiting for your correction.
@@ -993,11 +1000,16 @@ async def replan_meta_action_seq_new(state: RunningState):
         meta_seq_list.append(item.action)
 
     state["decision"]["meta_seq"] = meta_seq_list
-    simulate_list = ActionSimulator().simulate(
-        state["decision"]["meta_seq"],
-        state["character_stats"],
-        get_amm_data_from_db(),
-    )
+    try:
+        simulate_list = ActionSimulator().simulate(
+            state["decision"]["meta_seq"],
+            state["character_stats"],
+            get_amm_data_from_db(),
+        )
+    except Exception as e:
+        logger.warning("ActionSimulator Failed, use the original sequence")
+        print(traceback.format_exc())
+        simulate_list = state["decision"]["meta_seq"]
     for item in simulate_list:
         state["decision"]["expanded_meta_seq"].append(item)
     detailed_meta_seq = []
@@ -1136,6 +1148,8 @@ if __name__ == "__main__":
     state = asyncio.run(utils.get_initial_state_from_db(432543, "websocket"))
     # pprint.pprint(state)
     logger.info(f"🚀 User {state['userid']} starting node engines")
+
+    pprint(state["public_data"]["market_data"])
     # print(state)
     # TEST REPLAN ROUTINES
     # asyncio.run(test_put_false_action_info(state))
@@ -1151,7 +1165,7 @@ if __name__ == "__main__":
     # pprint(state["decision"]["detailed_meta_seq"])
 
     # # TEST PLANNING ROUTINES
-    asyncio.run(generate_daily_objective(state))
-    logger.success(f"🌞 User {state['userid']} finished daily objective")
-    asyncio.run(generate_crafting_and_trading_sequence(state))
-    logger.success(f"🌞 User {state['userid']} finished crafting and trading")
+    # asyncio.run(generate_daily_objective(state))
+    # logger.success(f"🌞 User {state['userid']} finished daily objective")
+    # asyncio.run(generate_crafting_and_trading_sequence(state))
+    # logger.success(f"🌞 User {state['userid']} finished crafting and trading")
