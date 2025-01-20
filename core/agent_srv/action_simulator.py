@@ -517,6 +517,8 @@ class ActionRunner:
         for insert_index in insert_index_list[::-1]:
             actions.insert(insert_index["index"], insert_index["action"])
 
+        # TODO: add hungery and health check mechanism
+
         return actions
 
     def decompose_large_craft_actions(self, actions):

@@ -1128,6 +1128,8 @@ if __name__ == "__main__":
     state = asyncio.run(utils.get_initial_state_from_db(432543, "websocket"))
     # pprint.pprint(state)
     logger.info(f"🚀 User {state['userid']} starting node engines")
+
+    pprint(state["public_data"]["market_data"])
     # print(state)
     # TEST REPLAN ROUTINES
     # asyncio.run(test_put_false_action_info(state))
@@ -1143,7 +1145,7 @@ if __name__ == "__main__":
     # pprint(state["decision"]["detailed_meta_seq"])
 
     # # TEST PLANNING ROUTINES
-    asyncio.run(generate_daily_objective(state))
-    logger.success(f"🌞 User {state['userid']} finished daily objective")
-    asyncio.run(generate_crafting_and_trading_sequence(state))
-    logger.success(f"🌞 User {state['userid']} finished crafting and trading")
+    # asyncio.run(generate_daily_objective(state))
+    # logger.success(f"🌞 User {state['userid']} finished daily objective")
+    # asyncio.run(generate_crafting_and_trading_sequence(state))
+    # logger.success(f"🌞 User {state['userid']} finished crafting and trading")
