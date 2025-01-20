@@ -1,4 +1,5 @@
 import sys
+import traceback
 
 sys.path.append(".")
 
@@ -76,7 +77,6 @@ class LangGraphInstance:
                 pass
             elif message_name == "actionresult":
                 self.state["decision"]["action_result"].append(message_data["msg"])
-                save_decision_to_db(self.user_id, {"action_result": message_data})
                 if message_data.get("actionName").startswith("goto"):
                     save_action_to_db(self.user_id, message_data)
                 # If the action result is False, put REPLAN into event_queue
@@ -100,7 +100,7 @@ class LangGraphInstance:
                         self.state["decision"]["expanded_meta_seq"].popleft()
                     else:
                         self.logger.error(
-                            f"❌ User {self.user_id}: Action mismatch: {self.state["decision"]["expanded_meta_seq"][0]} != {message_data['actionName']}"
+                            f"❌ User {self.user_id}: Action mismatch: {self.state['decision']['expanded_meta_seq'][0]} != {message_data['actionName']}"
                         )
 
                 self.logger.info(
@@ -220,6 +220,7 @@ class LangGraphInstance:
             self.signal = "TERMINATE"
 
             self.logger.error(f"User {self.user_id} Error in workflow: {e}")
+            self.logger.error(traceback.format_exc())
             self.logger.error("⛔ Task a_run terminated due to termination signal.")
             self.task.cancel()
             self.routine_tasks.cancel()

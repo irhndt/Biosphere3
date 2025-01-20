@@ -162,6 +162,15 @@ def get_market_data_from_db() -> dict:
     market_data_dict = dict({x["name"]: x["averagePrice"] for x in price_response})
     return market_data_dict
 
+def get_amm_data_from_db() -> dict:
+    amm_response = fetch_json(
+        url=f"{GAME_BACKEND_URL}/ammPool/getAll1",
+        timeout=GAME_BACKEND_TIMEOUT,
+        _logger=logger,
+        error_message="Failed to get AMM data from game backend",
+    )
+    return amm_response
+
 
 async def get_prompt_data_from_db(userid: int):
     # Prompt data

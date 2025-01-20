@@ -3,6 +3,7 @@ from loguru import logger
 import sys
 from pprint import pprint
 from collections import deque
+import traceback
 
 sys.path.append(".")
 
@@ -41,6 +42,7 @@ from core.agent_srv.utils import (
     get_character_data_async,
     get_prompt_data_from_db,
     get_market_data_from_db,
+    get_amm_data_from_db,
     format_status_changes,
     format_false_action_info,
     format_detailed_meta_seq,
@@ -159,6 +161,7 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
             logger.error(
                 f"⛔ User {state['userid']} Error in generate_crafting_and_trading_sequence: {e}"
             )
+            logger.error(traceback.format_exc())
             retry_count += 1
             if retry_count == 3:
                 raise Exception(
@@ -180,15 +183,15 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
     simulate_list = ActionSimulator().simulate(
         state["decision"]["meta_seq"],
         state["character_stats"],
-        state["public_data"]["market_data"],
+        get_amm_data_from_db(),
     )
     state["decision"]["expanded_meta_seq"] = deque(simulate_list)
     logger.info(
-        f"🔨 CRAFTING_AND_TRADING_SEQUENCE INVOKED with {state['decision']['meta_seq']}"
+        f"🔨 User {state['userid']}: CRAFTING_AND_TRADING_SEQUENCE INVOKED with {state['decision']['meta_seq']}"
     )
 
     logger.info(
-        f"🔨 CRAFTING_AND_TRADING_SEQUENCE EXPANDED with {state['decision']['expanded_meta_seq']}"
+        f"🔨 User {state['userid']}: CRAFTING_AND_TRADING_SEQUENCE EXPANDED with {state['decision']['expanded_meta_seq']}"
     )
 
     emoji_seq_generator = create_planner(
@@ -228,7 +231,7 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
     # meta_action_sequence = [
     #     action.action for action in crafting_and_trading_sequence.action_sequence
     # ]
-    meta_action_sequence = state["decision"]["expanded_meta_seq"]
+    meta_action_sequence = list(state["decision"]["expanded_meta_seq"])
     # save_decision_to_db(
     #     state["userid"],
     #     {
@@ -992,7 +995,7 @@ async def replan_meta_action_seq_new(state: RunningState):
     state["decision"]["expanded_meta_seq"] = ActionSimulator().simulate(
         state["decision"]["meta_seq"],
         state["character_stats"],
-        state["public_data"]["market_data"],
+        get_amm_data_from_db(),
     )
     detailed_meta_seq = []
     for item in meta_action_sequence.action_sequence:
