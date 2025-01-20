@@ -211,7 +211,7 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
 
     pay_load = {
         "personality": state["character_stats"]["personality"],
-        "action_list": state["decision"]["expanded_meta_seq"],
+        "action_list": simulate_list,
         "sequence_format": squence_format,
     }
     retry_count = 0
@@ -231,8 +231,8 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
                 )
             continue
 
-    for emoji_and_description in emoji_sequence.response:
-        state["decision"]["action_description"].append(emoji_and_description.content)
+    # for emoji_and_description in emoji_sequence.response:
+    #     state["decision"]["action_description"].append(emoji_and_description.content)
 
     # meta_action_sequence = [
     #     action.action for action in crafting_and_trading_sequence.action_sequence
@@ -253,7 +253,7 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
         {
             "command": meta_action_sequence,
             "emoji": [desc.emoji for desc in emoji_sequence.response],
-            "description": state["decision"]["action_description"],
+            "description": [desc.content for desc in emoji_sequence.response],
         },
     )
     logger.info(f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence}")
@@ -261,7 +261,7 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
         {
             "command": meta_action_sequence,
             "emoji": [desc.emoji for desc in emoji_sequence.response],
-            "description": state["decision"]["action_description"],
+            "description": [desc.content for desc in emoji_sequence.response],
         },
     )
     if state.get("instance"):
@@ -1010,6 +1010,7 @@ async def replan_meta_action_seq_new(state: RunningState):
         logger.warning("ActionSimulator Failed, use the original sequence")
         print(traceback.format_exc())
         simulate_list = state["decision"]["meta_seq"]
+
     for item in simulate_list:
         state["decision"]["expanded_meta_seq"].append(item)
     detailed_meta_seq = []
@@ -1030,7 +1031,7 @@ async def replan_meta_action_seq_new(state: RunningState):
 
     pay_load = {
         "personality": state["character_stats"]["personality"],
-        "action_list": format_meta_seq(list(state["decision"]["expanded_meta_seq"])),
+        "action_list": simulate_list,
         "sequence_format": squence_format,
     }
 
@@ -1038,18 +1039,22 @@ async def replan_meta_action_seq_new(state: RunningState):
     while retry_count < 3:
         try:
             emoji_sequence = await emoji_sequence_generator.ainvoke(pay_load)
+            if len(emoji_sequence.response) != len(simulate_list):
+                logger.error(
+                    f"⛔ User {state['userid']} Emoji sequence length does not match with action sequence"
+                )
+                retry_count += 1
+                continue
             break
         except Exception as e:
             logger.error(
                 f"⛔ User {state['userid']} Error in generate_emoji_sequence: {e}"
             )
             retry_count += 1
+
             if retry_count == 3:
                 raise Exception("Too many retries on replan_meta_action_seq_new")
             continue
-
-    for emoji_and_description in emoji_sequence.response:
-        state["decision"]["action_description"].append(emoji_and_description.content)
 
     # save_decision_to_db(
     #     state["userid"],
@@ -1066,7 +1071,7 @@ async def replan_meta_action_seq_new(state: RunningState):
         {
             "command": list(state["decision"]["expanded_meta_seq"]),
             "emoji": [desc.emoji for desc in emoji_sequence.response],
-            "description": state["decision"]["action_description"],
+            "description": [desc.content for desc in emoji_sequence.response],
         },
     )
     state["instance"].log_message("received", json.dumps(response))
