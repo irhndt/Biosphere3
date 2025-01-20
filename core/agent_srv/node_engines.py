@@ -185,7 +185,8 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
         state["character_stats"],
         get_amm_data_from_db(),
     )
-    state["decision"]["expanded_meta_seq"] = deque(simulate_list)
+    for item in simulate_list:
+        state["decision"]["expanded_meta_seq"].append(item)
     logger.info(
         f"🔨 User {state['userid']}: CRAFTING_AND_TRADING_SEQUENCE INVOKED with {state['decision']['meta_seq']}"
     )
@@ -997,7 +998,8 @@ async def replan_meta_action_seq_new(state: RunningState):
         state["character_stats"],
         get_amm_data_from_db(),
     )
-    state["decision"]["expanded_meta_seq"] = deque(simulate_list)
+    for item in simulate_list:
+        state["decision"]["expanded_meta_seq"].append(item)
     detailed_meta_seq = []
     for item in meta_action_sequence.action_sequence:
         detailed_meta_seq.append(item.model_dump())
