@@ -101,7 +101,9 @@ async def generate_daily_objective(state: RunningState):
     logger.info("======generate_daily_objective======\n" + full_prompt)
     state["decision"]["daily_objective"].append(planner_response.objectives)
     save_decision_to_db(
-        state["userid"], {"daily_objective": planner_response.objectives}
+        state["userid"],
+        {"daily_objectives": planner_response.objectives},
+        "daily_objectives",
     )
 
     logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response.progress}")
@@ -225,13 +227,13 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
     #     action.action for action in crafting_and_trading_sequence.action_sequence
     # ]
     meta_action_sequence = state["decision"]["expanded_meta_seq"]
-    save_decision_to_db(
-        state["userid"],
-        {
-            "meta_seq": meta_action_sequence,
-            "action_description": state["decision"]["action_description"],
-        },
-    )
+    # save_decision_to_db(
+    #     state["userid"],
+    #     {
+    #         "meta_seq": meta_action_sequence,
+    #         "action_description": state["decision"]["action_description"],
+    #     },
+    # )
 
     response = await send_message(
         state,
@@ -300,13 +302,13 @@ async def generate_meta_action_sequence(state: RunningState):
         state["decision"]["meta_seq"].append(item)
     for item in meta_action_sequence.description_sequence:
         state["decision"]["action_description"].append(item)
-    save_decision_to_db(
-        state["userid"],
-        {
-            "meta_seq": meta_action_sequence.meta_action_sequence,
-            "action_description": meta_action_sequence.description_sequence,
-        },
-    )
+    # save_decision_to_db(
+    #     state["userid"],
+    #     {
+    #         "meta_seq": meta_action_sequence.meta_action_sequence,
+    #         "action_description": meta_action_sequence.description_sequence,
+    #     },
+    # )
 
     response = await send_message(
         state,
@@ -397,13 +399,13 @@ async def replan_action(state: RunningState):
         state["decision"]["new_plan"].append(item)
     for item in meta_action_sequence.description_sequence:
         state["decision"]["action_description"].append(item)
-    save_decision_to_db(
-        state["userid"],
-        {
-            "new_plan": meta_action_sequence.meta_action_sequence,
-            "action_description": meta_action_sequence.description_sequence,
-        },
-    )
+    # save_decision_to_db(
+    #     state["userid"],
+    #     {
+    #         "new_plan": meta_action_sequence.meta_action_sequence,
+    #         "action_description": meta_action_sequence.description_sequence,
+    #     },
+    # )
 
     # Send new action sequence to client
     response = await send_message(
@@ -574,7 +576,9 @@ async def generate_daily_reflection(state: RunningState):
     full_prompt = daily_reflection_prompt.format(**payload)
     logger.info("======generate_daily_reflection======\n" + full_prompt)
     state["decision"]["reflection"].append(daily_reflection.reflection)
-    save_decision_to_db(state["userid"], {"reflection": daily_reflection.reflection})
+    save_decision_to_db(
+        state["userid"], {"reflection": daily_reflection.reflection}, "reflection"
+    )
     response = await send_message(
         state,
         "daily_reflection",
@@ -1027,13 +1031,13 @@ async def replan_meta_action_seq_new(state: RunningState):
     for emoji_and_description in emoji_sequence.response:
         state["decision"]["action_description"].append(emoji_and_description.content)
 
-    save_decision_to_db(
-        state["userid"],
-        {
-            "meta_seq": state["decision"]["expanded_meta_seq"],
-            "action_description": state["decision"]["action_description"],
-        },
-    )
+    # save_decision_to_db(
+    #     state["userid"],
+    #     {
+    #         "meta_seq": state["decision"]["expanded_meta_seq"],
+    #         "action_description": state["decision"]["action_description"],
+    #     },
+    # )
 
     response = await send_message(
         state,
@@ -1138,8 +1142,8 @@ if __name__ == "__main__":
 
     # pprint(state["decision"]["detailed_meta_seq"])
 
-    # TEST PLANNING ROUTINES
-    # asyncio.run(generate_daily_objective(state))
-    # logger.success(f"🌞 User {state['userid']} finished daily objective")
-    # asyncio.run(generate_crafting_and_trading_sequence(state))
-    # logger.success(f"🌞 User {state['userid']} finished crafting and trading")
+    # # TEST PLANNING ROUTINES
+    asyncio.run(generate_daily_objective(state))
+    logger.success(f"🌞 User {state['userid']} finished daily objective")
+    asyncio.run(generate_crafting_and_trading_sequence(state))
+    logger.success(f"🌞 User {state['userid']} finished crafting and trading")

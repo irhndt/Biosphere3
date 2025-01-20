@@ -318,7 +318,7 @@ def save_action_to_db(userid: int, action: dict):
         logger.error(f"Failed to decode JSON from {url}")
 
 
-def save_decision_to_db(userid: int, decision: dict):
+def save_decision_to_db(userid: int, decision: dict, endpoint: str):
     """
     Save the decision to the game database.
 
@@ -326,7 +326,7 @@ def save_decision_to_db(userid: int, decision: dict):
         userid (int): The ID of the user.
         decision (dict): The decision data to save.
     """
-    url = f"{AGENT_BACKEND_URL}/action_log/"
+    url = f"{AGENT_BACKEND_URL}/{endpoint}/"
     decision["characterId"] = userid
     try:
         response = requests.post(
