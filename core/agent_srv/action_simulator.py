@@ -354,10 +354,12 @@ class ActionRunner:
             self.actions = []
             return self.actions
 
-        if state["market_data"][action_args[0]] < item_num:
-            # Current: Give up buy
-            self.actions = []
-            return self.actions
+        for m_data in market_data:
+            if m_data["itemName"] == action_args[0]:
+                if item_num > m_data["quantity"]:
+                    # Current: Give up buy
+                    self.actions = []
+                    return self.actions
 
         state["money"] -= cost
         if action_args[0] not in state["inventory"]:
