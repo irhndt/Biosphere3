@@ -1069,7 +1069,7 @@ async def replan_meta_action_seq_new(state: RunningState):
         "actionList",
         6,
         {
-            "command": list(state["decision"]["expanded_meta_seq"]),
+            "command": simulate_list,
             "emoji": [desc.emoji for desc in emoji_sequence.response],
             "description": [desc.content for desc in emoji_sequence.response],
         },
