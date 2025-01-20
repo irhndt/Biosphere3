@@ -62,6 +62,9 @@ simple_content_prompt = ChatPromptTemplate.from_template(
     The conversation should be explosive, intense, and create a huge buzz among the public.
     The topic is {topic}.
     
+    {from_name} thinks their relation is {relation_from}.
+    {to_name} thinks their relation is {relation_to}.
+    
     The conversation should not exceed 5 rounds, and each person should speak no more than 20 words.:
     
     Each conversation should be a str in the following format:
@@ -111,6 +114,11 @@ impression_update_prompt = ChatPromptTemplate.from_template(
     eg: David really likes travelling. He prefers to traveling everyday./ Alice do not have a good relaxation schedule and she is too devoted to studing.  
     
     Base on the given conversation content:{conversation}, update the impressions respectively.
+    Also consider the old relation between {from_name} and {to_name}.
+    {from_name} thinks their old relation is {relation_from}.
+    {to_name} thinks their old relation is {relation_to}.
+    Generate the new relations based on the old ones.
+    
     Impression1 is the impression from {from_name} to {to_name}.
     Impression2 is the impression from {to_name} to {from_name}.
     You should carefully check their names and the order of impression.
