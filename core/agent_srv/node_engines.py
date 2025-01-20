@@ -188,6 +188,7 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
         )
     except Exception as e:
         logger.warning("ActionSimulator Failed, use the original sequence")
+        print(traceback.format_exc())
         simulate_list = state["decision"]["meta_seq"]
     for item in simulate_list:
         state["decision"]["expanded_meta_seq"].append(item)
@@ -1007,6 +1008,7 @@ async def replan_meta_action_seq_new(state: RunningState):
         )
     except Exception as e:
         logger.warning("ActionSimulator Failed, use the original sequence")
+        print(traceback.format_exc())
         simulate_list = state["decision"]["meta_seq"]
     for item in simulate_list:
         state["decision"]["expanded_meta_seq"].append(item)
