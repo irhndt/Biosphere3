@@ -34,12 +34,14 @@ class ActionSimulator:
         state["location"] = ""
         for action in action_list:
             actions = self.simulate_single_action(action, state, market_data)
-            print("action: ", action)
-            print("actions: ", actions)
+            # print("action: ", action)
+            # print("actions: ", actions)
             # if not actions:
             #     break
             self.final_action_list.extend(actions)
         self.final_check_location()
+
+        return self.final_action_list
 
     def load_action_rules(self):
         """
@@ -128,11 +130,11 @@ class ActionRunner:
             return self.sell(action_args, state, market_data)
 
         if action_name == "craft":
-            print("before inventory:", state["inventory"])
-            print("before energy:", state["energy"])
+            # print("before inventory:", state["inventory"])
+            # print("before energy:", state["energy"])
             actions = self.craft(action_args, state, market_data)
-            print("after inventory:", state["inventory"])
-            print("after energy:", state["energy"])
+            # print("after inventory:", state["inventory"])
+            # print("after energy:", state["energy"])
             return actions
 
         return []
@@ -419,9 +421,9 @@ class ActionRunner:
         self, state: Dict, item_type: str, item_num: int
     ):
         actions = self.generate_craft_sequence(state, item_type, item_num)
-        print("before_check_actions: ", actions)
+        # print("before_check_actions: ", actions)
         actions = self.check_every_craft_action(actions, state)
-        print("after_check_actions: ", actions)
+        # print("after_check_actions: ", actions)
         return actions
 
     def generate_craft_sequence(self, state: Dict, item_type: str, item_num: int):
@@ -460,7 +462,7 @@ class ActionRunner:
         """
         # print("actions: ", actions)
         actions = self.decompose_large_craft_actions(actions)
-        print("decomposed_actions: ", actions)
+        # print("decomposed_actions: ", actions)
         insert_index_list = []
         for index, action in enumerate(actions):
             args = action.split(" ")

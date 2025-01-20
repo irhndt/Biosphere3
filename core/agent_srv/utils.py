@@ -821,3 +821,10 @@ def format_detailed_meta_seq(detailed_seq: list, false_action_name: str) -> str:
         formatted_str += f" | Reason: {action['reason']}\n"
         formatted_str += "------\n"
     return formatted_str
+
+
+def format_meta_seq(meta_seq: list) -> str:
+    formatted_str = ""
+    for i, action in enumerate(meta_seq, start=1):
+        formatted_str += f"Action {i}: {action}\n"
+    return formatted_str

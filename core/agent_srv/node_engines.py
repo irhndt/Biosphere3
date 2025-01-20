@@ -19,6 +19,7 @@ from core.agent_srv.node_model import (
     EmojiSequence,
 )
 from core.agent_srv.prompts import *
+from core.agent_srv.action_simulator import ActionSimulator
 from core.utils.llm_factory import llm_selector
 from core.db.database_api_utils import make_api_request_sync
 from core.db.game_api_utils import (
@@ -42,8 +43,8 @@ from core.agent_srv.utils import (
     format_status_changes,
     format_false_action_info,
     format_detailed_meta_seq,
+    format_meta_seq,
 )
-from core.agent_srv.action_filter import ActionFilter
 
 
 def create_planner(prompt_template, model_name, output_type, temperature=0.5):
@@ -168,9 +169,22 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
     # pprint.pprint(
     #     state["decision"]["detailed_meta_seq"],
     # )
+
     state["decision"]["meta_seq"] = [
         action.action for action in crafting_and_trading_sequence.action_sequence
     ]
+    state["decision"]["expanded_meta_seq"] = ActionSimulator().simulate(
+        state["decision"]["meta_seq"],
+        state["character_stats"],
+        state["public_data"]["market_data"],
+    )
+    logger.info(
+        f"🔨 CRAFTING_AND_TRADING_SEQUENCE INVOKED with {state['decision']['meta_seq']}"
+    )
+
+    logger.info(
+        f"🔨 CRAFTING_AND_TRADING_SEQUENCE EXPANDED with {state['decision']['expanded_meta_seq']}"
+    )
 
     emoji_seq_generator = create_planner(
         generate_emoji_sequence_prompt,
@@ -183,7 +197,7 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
 
     pay_load = {
         "personality": state["character_stats"]["personality"],
-        "action_list": state["decision"]["meta_seq"],
+        "action_list": state["decision"]["expanded_meta_seq"],
         "sequence_format": squence_format,
     }
     retry_count = 0
@@ -206,10 +220,10 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
     for emoji_and_description in emoji_sequence.response:
         state["decision"]["action_description"].append(emoji_and_description.content)
 
-    meta_action_sequence = [
-        action.action for action in crafting_and_trading_sequence.action_sequence
-    ]
-
+    # meta_action_sequence = [
+    #     action.action for action in crafting_and_trading_sequence.action_sequence
+    # ]
+    meta_action_sequence = state["decision"]["expanded_meta_seq"]
     save_decision_to_db(
         state["userid"],
         {
@@ -236,7 +250,9 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
             "description": state["decision"]["action_description"],
         },
     )
-    state["instance"].log_message("received", json.dumps(response))
+    if state.get("instance"):
+        state["instance"].log_message("received", json.dumps(response))
+    # state["instance"].log_message("received", json.dumps(response))
 
     return {"current_pointer": "meta_action_sequence"}
 
@@ -931,10 +947,10 @@ async def replan_meta_action_seq_new(state: RunningState):
             ],
         ),
         "market_data": format_market(state["public_data"]["market_data"]),
-        "current_action_list": format_detailed_meta_seq(
-            state["decision"]["detailed_meta_seq"],
-            false_action_info["actionName"],
-        ),
+        "current_action_list": format_meta_seq(state["decision"]["expanded_meta_seq"]),
+        # if use detailed_meta_seq, please add:
+        ## It includes the formatted list of actions the user has planned to take, as well as the reasons, effects and supposing status changes for each action.
+        ## But it may contain errors or infeasible actions, waiting for your correction.
         "fail_action_info": format_false_action_info(false_action_info),
     }
 
@@ -958,12 +974,16 @@ async def replan_meta_action_seq_new(state: RunningState):
         meta_seq_list.append(item.action)
 
     state["decision"]["meta_seq"] = meta_seq_list
-
+    state["decision"]["expanded_meta_seq"] = ActionSimulator().simulate(
+        state["decision"]["meta_seq"],
+        state["character_stats"],
+        state["public_data"]["market_data"],
+    )
     detailed_meta_seq = []
     for item in meta_action_sequence.action_sequence:
         detailed_meta_seq.append(item.model_dump())
 
-    pprint(detailed_meta_seq)
+    # pprint(detailed_meta_seq)
     state["decision"]["detailed_meta_seq"] = detailed_meta_seq
 
     emoji_sequence_generator = create_planner(
@@ -977,7 +997,7 @@ async def replan_meta_action_seq_new(state: RunningState):
 
     pay_load = {
         "personality": state["character_stats"]["personality"],
-        "action_list": state["decision"]["meta_seq"],
+        "action_list": state["decision"]["expanded_meta_seq"],
         "sequence_format": squence_format,
     }
 
@@ -1001,7 +1021,7 @@ async def replan_meta_action_seq_new(state: RunningState):
     save_decision_to_db(
         state["userid"],
         {
-            "meta_seq": state["decision"]["meta_seq"],
+            "meta_seq": state["decision"]["expanded_meta_seq"],
             "action_description": state["decision"]["action_description"],
         },
     )
@@ -1011,7 +1031,7 @@ async def replan_meta_action_seq_new(state: RunningState):
         "actionList",
         6,
         {
-            "command": state["decision"]["meta_seq"],
+            "command": state["decision"]["expanded_meta_seq"],
             "emoji": [desc.emoji for desc in emoji_sequence.response],
             "description": state["decision"]["action_description"],
         },
@@ -1095,7 +1115,7 @@ if __name__ == "__main__":
     state = asyncio.run(utils.get_initial_state_from_db(432543, "websocket"))
     # pprint.pprint(state)
     logger.info(f"🚀 User {state['userid']} starting node engines")
-    print(state)
+    # print(state)
     # TEST REPLAN ROUTINES
     # asyncio.run(test_put_false_action_info(state))
     # logger.success(f"🌞 User {state['userid']} finished putting false action info")
@@ -1105,7 +1125,7 @@ if __name__ == "__main__":
     #     f"🌞 User {state['userid']} finished replanning meta action sequence"
     # )
 
-    # # pprint.pprint(state["decision"]["meta_seq"])
+    # pprint.pprint(state["decision"]["meta_seq"])
 
     # pprint(state["decision"]["detailed_meta_seq"])
 
