@@ -904,9 +904,6 @@ replanner_prompt = ChatPromptTemplate.from_template(
 3. **Current Action List**: 
 {current_action_list}
 
-It includes the formatted list of actions the user has planned to take, as well as the reasons, effects and supposing status changes for each action. 
-But it may contain errors or infeasible actions, waiting for your correction.
-
 4. **Fail Action Info**:
 {fail_action_info}
 
