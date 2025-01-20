@@ -4,6 +4,7 @@ from pathlib import Path
 import logging
 import asyncio
 import os
+import copy
 
 logger = logging.getLogger(__name__)
 
@@ -51,11 +52,16 @@ class WebMonitor:
             return web.json_response({"error": "Character not found"}, status=404)
 
         try:
-            state_data = character.agent_instance.state
+            state_data = copy.deepcopy(character.agent_instance.state)
 
             for key in ["message_queue", "event_queue", "false_action_queue"]:
                 if key in state_data and isinstance(state_data[key], asyncio.Queue):
                     state_data[key] = list(state_data[key]._queue)
+
+            if "expanded_meta_seq" in state_data["decision"]:
+                state_data["decision"]["expanded_meta_seq"] = list(
+                    state_data["decision"]["expanded_meta_seq"]
+                )
 
             state_data.pop("websocket", None)
             state_data.pop("instance", None)

@@ -290,7 +290,7 @@ class ActionRunner:
             self.actions = []
             return self.actions
 
-        if action_args[0] not in list(self.craft_recipes.key()):
+        if action_args[0] not in list(self.craft_recipes.keys()):
             # Current: Give up use
             self.actions = []
             return self.actions
@@ -341,7 +341,7 @@ class ActionRunner:
             self.actions = []
             return self.actions
 
-        if action_args[0] not in list(self.craft_recipes.key()):
+        if action_args[0] not in list(self.craft_recipes.keys()):
             # Current: Give up use
             self.actions = []
             return self.actions
@@ -376,7 +376,7 @@ class ActionRunner:
             self.actions = []
             return self.actions
 
-        if action_args[0] not in list(self.craft_recipes.key()):
+        if action_args[0] not in list(self.craft_recipes.keys()):
             # Current: Give up use
             self.actions = []
             return self.actions
