@@ -965,7 +965,7 @@ async def replan_meta_action_seq_new(state: RunningState):
             ],
         ),
         "market_data": format_market(state["public_data"]["market_data"]),
-        "current_action_list": format_meta_seq(state["decision"]["expanded_meta_seq"]),
+        "current_action_list": format_meta_seq(list(state["decision"]["expanded_meta_seq"])),
         # if use detailed_meta_seq, please add:
         ## It includes the formatted list of actions the user has planned to take, as well as the reasons, effects and supposing status changes for each action.
         ## But it may contain errors or infeasible actions, waiting for your correction.
@@ -992,11 +992,12 @@ async def replan_meta_action_seq_new(state: RunningState):
         meta_seq_list.append(item.action)
 
     state["decision"]["meta_seq"] = meta_seq_list
-    state["decision"]["expanded_meta_seq"] = ActionSimulator().simulate(
+    simulate_list = ActionSimulator().simulate(
         state["decision"]["meta_seq"],
         state["character_stats"],
         get_amm_data_from_db(),
     )
+    state["decision"]["expanded_meta_seq"] = deque(simulate_list)
     detailed_meta_seq = []
     for item in meta_action_sequence.action_sequence:
         detailed_meta_seq.append(item.model_dump())
@@ -1015,7 +1016,7 @@ async def replan_meta_action_seq_new(state: RunningState):
 
     pay_load = {
         "personality": state["character_stats"]["personality"],
-        "action_list": state["decision"]["expanded_meta_seq"],
+        "action_list": format_meta_seq(list(state["decision"]["expanded_meta_seq"])),
         "sequence_format": squence_format,
     }
 
@@ -1049,7 +1050,7 @@ async def replan_meta_action_seq_new(state: RunningState):
         "actionList",
         6,
         {
-            "command": state["decision"]["expanded_meta_seq"],
+            "command": list(state["decision"]["expanded_meta_seq"]),
             "emoji": [desc.emoji for desc in emoji_sequence.response],
             "description": state["decision"]["action_description"],
         },

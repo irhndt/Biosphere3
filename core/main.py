@@ -71,7 +71,7 @@ class AI_WS_Server:
                         message_queue = agent_instance.state["message_queue"]
                         await asyncio.gather(
                             message_queue.put(data),
-                            conversation_instance.listener(data),
+                            # conversation_instance.listener(data),
                         )
 
                 except websockets.ConnectionClosed as e:
@@ -124,9 +124,10 @@ class AI_WS_Server:
 
         agent_instance = await LangGraphInstance.create(character_id, websocket)
 
-        conversation_instance = await ConversationInstance.create(
-            character_id, websocket
-        )
+        # conversation_instance = await ConversationInstance.create(
+        #     character_id, websocket
+        # )
+        conversation_instance = None
 
         self.character_manager.add_character(
             character_id, agent_instance, conversation_instance

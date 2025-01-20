@@ -458,6 +458,7 @@ async def get_initial_state_from_db(userid, websocket):
             "daily_objective": deque(maxlen=10),
             "meta_seq": [],
             "reflection": [],
+            "expanded_meta_seq": deque(),
         },
         "meta": {
             "tool_functions": tool_functions_live,
