@@ -8,6 +8,7 @@ import aiohttp
 from loguru import logger
 import math
 import copy
+from collections import deque
 
 load_dotenv()
 GAME_BACKEND_URL = os.getenv("GAME_BACKEND_URL")
@@ -445,7 +446,7 @@ async def get_initial_state_from_db(userid, websocket):
             "action_description": [],
             "action_result": [],
             "new_plan": [],
-            "daily_objective": [],
+            "daily_objective": deque(maxlen=10),
             "meta_seq": [],
             "reflection": [],
         },
@@ -697,8 +698,10 @@ def format_market(market_data: dict) -> str:
     return formatted_str
 
 
-def format_daily_obj(daily_objectives: list) -> str:
+def format_daily_obj(daily_objectives: deque) -> str:
     formatted_str = ""
+    if not daily_objectives:
+        return formatted_str
     for i, obj in enumerate(daily_objectives, start=1):
         formatted_str += f"Objective {i}: {obj}\n"
     return formatted_str
@@ -713,7 +716,7 @@ def clear_decision(state: dict):
     state["decision"]["action_description"] = []
     state["decision"]["action_result"] = []
     state["decision"]["new_plan"] = []
-    state["decision"]["daily_objective"] = []
+    state["decision"]["daily_objective"] = deque(maxlen=10)
     state["decision"]["meta_seq"] = []
     state["decision"]["reflection"] = []
 

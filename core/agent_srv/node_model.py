@@ -35,7 +35,7 @@ class Decision(TypedDict):
     action_description: List[str]
     action_result: List[str]
     new_plan: List[str]
-    daily_objective: List[str]
+    daily_objective: List[List[str]]
     meta_seq: List[str]
     reflection: List[str]
 

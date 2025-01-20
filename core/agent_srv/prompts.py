@@ -311,7 +311,7 @@ accommodation_decision_prompt = ChatPromptTemplate.from_template(
 # Key Considerations for Your Decision:
 
     Production Efficiency:
-        Production Efficiency = Health × Hunger × Energy × Wisdom.
+        Production Efficiency = Health * Hunger * Energy * Wisdom.
         Better accommodations improve maxHealth, maxEnergy, and maxHunger, boosting overall efficiency and ComputeCoin generation.
 
     Cost-effectiveness:
@@ -435,11 +435,11 @@ Action format: `craft [itemType:string] [amount:int]`
 
 ### Instructions
 
-1. **Consider the User’s State and Goals**  
+1. **Consider the User's State and Goals**  
    - Look at `User Stats` for energy, money, location, health, and any skill or stat that might limit crafting or working.  
    - Verify items in `Inventory` and their quantities for crafting requirements.  
    - Use `Market Data` to determine profitable buy/sell strategies.  
-   - Align the actions with `Daily Objectives` to meet or exceed the user’s goals.
+   - Align the actions with `Daily Objectives` to meet or exceed the user's goals.
 
 2. **Validate Constraints**  
    - Check that the user is at the correct location for an action (e.g., must be at “home” to sleep, must be at “school” to study, must be at “hospital” to seedoctor, etc.).  
@@ -664,12 +664,12 @@ example_out = """
             {
                 "action": "craft feed 5",
                 "reason": "Reason: Craft feed from rice to prepare for making chicken/beef.",
-                "cost": "25 energy total (5 energy per item × 5 items)"
+                "cost": "25 energy total (5 energy per item * 5 items)"
             },
             {
                 "action": "craft chicken 2",
                 "reason": "Use feed to craft chicken, sells well on the market.",
-                "cost": "10 energy total (5 energy per item × 2 items)"
+                "cost": "10 energy total (5 energy per item * 2 items)"
             },
             {
                 "action": "sell chicken 2",
@@ -687,7 +687,7 @@ forbidden_example_out = """
         {
             "action": "craft feed 5",
             "reason": "Reason: Craft feed from rice to prepare for making chicken/beef.",
-            "cost": "25 energy total (5 energy per item × 5)"
+            "cost": "25 energy total (5 energy per item * 5)"
             "effects: "Current energy is 20/100, the latter energy is -5/100" # This is not allowed!
         }
     ]
@@ -700,7 +700,7 @@ forbidden_example_out = """
         {
             "action": "craft feed 5",
             "reason": "Reason: Craft feed from rice to prepare for making chicken/beef.",
-            "cost": "25 energy total (5 energy per item × 5); 5 rice total (1 rice per item × 5)"
+            "cost": "25 energy total (5 energy per item * 5); 5 rice total (1 rice per item * 5)"
             "effects: "Initail energy is 100/100, the latter energy is 75/100; Initial rice is 2, the latter rice is -3" # This is not allowed!
         }
     ]
@@ -865,7 +865,7 @@ example_refine_action_sequence = """
 [
     {
         "action": "action1",
-        "cost": "25 energy total (5 energy per item × 5 items)",
+        "cost": "25 energy total (5 energy per item * 5 items)",
         "expected_effect": "Get X <item> from crafting"
     },
     {
@@ -935,13 +935,13 @@ replanner_prompt = ChatPromptTemplate.from_template(
    - Must use `goto [location]` when relocating before an action if needed.
 
 5. **Occupation Requirements**  
-   - `work` only if the user has an occupation and is at the occupation’s location.
+   - `work` only if the user has an occupation and is at the occupation's location.
 
 6. **Crafting Limits**  
    - Cannot craft more than **10** of any item per craft action.
    - Must have all required materials in the inventory.
    - Must be in the correct location to craft.
-   - Must have enough energy (item’s energy cost × quantity).
+   - Must have enough energy (item's energy cost * quantity).
 
 ---
 
@@ -955,6 +955,7 @@ replanner_prompt = ChatPromptTemplate.from_template(
 2. **sleep [hours:int]**  
    - Recover energy (10 per hour).
    - Must be at home.
+   - When you plan to sleep, you'd better sleep enough hours to reach full energy (100).
 
 3. **study [hours:int]**  
    - Costs 100 money/hour, consumes 10 energy/hour, grants 10 education XP/hour.
@@ -1048,7 +1049,7 @@ meta_seq_forbidden_example_out = """### Forbidden Example Output 1: The latter e
         {
             "action": "craft feed 5",
             "reason": "Reason: Craft feed from rice to prepare for making chicken/beef.",
-            "cost": "25 energy total (5 energy per item × 5)"
+            "cost": "25 energy total (5 energy per item * 5)"
             "status_before": "Current energy is 20/100",
             "status_after": "Later energy is -5/100" # This is not allowed!
             "inventory_before": "Current inventory is {apple: 2, rice: 7}",
@@ -1063,7 +1064,7 @@ meta_seq_forbidden_example_out = """### Forbidden Example Output 1: The latter e
         {
             "action": "study 1",
             "reason": "Reason: Study to gain experience.",
-            "cost": "100 money total (100 money per item × 1), 10 energy total (10 energy per item × 1)"
+            "cost": "100 money total (100 money per item * 1), 10 energy total (10 energy per item * 1)"
             "status_before": "Current money is 20; Current energy is 20/100",
             "status_after": "Later money is -80; Later energy is 10/100" # This is not allowed!
         }
@@ -1077,7 +1078,7 @@ meta_seq_forbidden_example_out = """### Forbidden Example Output 1: The latter e
         {
             "action": "craft feed 5",
             "reason": "Reason: Craft feed from rice to prepare for making chicken/beef.",
-            "cost": "25 energy total (5 energy per item × 5); 5 rice total (1 rice per item × 5)"
+            "cost": "25 energy total (5 energy per item * 5); 5 rice total (1 rice per item * 5)"
             "status_before": "Current energy is 20/100",   
             "status_after": "Later energy is 0/100",
             "inventory_before": "Current inventory is {apple: 2, rice: 3}",
@@ -1105,14 +1106,14 @@ meta_seq_example_out = """
     "result": [
             {
                 "action": "action1",,
-                "cost": "25 energy total (5 energy per item × 5)",
+                "cost": "25 energy total (5 energy per item * 5)",
                 "status_before": "Current energy is 65/100",
                 "status_after": "Later energy is 40/100",
                 "reason": "Reason for action1"
             },
             {
                 "action": "action2",
-                "cost": "10 energy total (5 energy per item × 2)",
+                "cost": "10 energy total (5 energy per item * 2)",
                 "status_before": "Current energy is 40/100",
                 "status_after": "Later energy is 30/100",
                 "inventory_before": "Current inventory is {apple: 2, rice: 3}",

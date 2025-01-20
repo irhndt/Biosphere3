@@ -80,9 +80,7 @@ async def generate_daily_objective(state: RunningState):
             state["character_stats"],
             fields=["money", "inventory"],
         ),
-        "past_objectives": (
-            last_decision.get("daily_objective", []) if last_decision else []
-        ),
+        "past_objectives": format_daily_obj(state["decision"]["daily_objective"]),
         "life_style": state["prompts"]["life_style"],
         "past_reflection": last_decision.get("reflection", []) if last_decision else [],
         "production_graph": state["meta"]["production_graph"],
@@ -101,8 +99,7 @@ async def generate_daily_objective(state: RunningState):
             continue
     full_prompt = obj_planner_prompt.format(**payload)
     logger.info("======generate_daily_objective======\n" + full_prompt)
-    for item in planner_response.objectives:
-        state["decision"]["daily_objective"].append(item)
+    state["decision"]["daily_objective"].append(planner_response.objectives)
     save_decision_to_db(
         state["userid"], {"daily_objective": planner_response.objectives}
     )
@@ -137,7 +134,11 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
             ],
         ),
         "market_data": format_market(state["public_data"]["market_data"]),
-        "daily_objectives": format_daily_obj(state["decision"]["daily_objective"]),
+        "daily_objectives": (
+            state["decision"]["daily_objective"][-1]
+            if state["decision"]["daily_objective"]
+            else []
+        ),
         "production_graph": state["meta"]["production_graph"],
         "example_output": meta_seq_example_out,
         "forbidden_example_output": meta_seq_forbidden_example_out,
@@ -356,7 +357,11 @@ async def replan_action(state: RunningState):
         "failed_action": failed_action,
         "error_message": error_message,
         "current_meta_seq": state["decision"]["meta_seq"][-1],
-        "daily_objective": state["decision"]["daily_objective"][-1],
+        "daily_objective": (
+            state["decision"]["daily_objective"][-1]
+            if state["decision"]["daily_objective"]
+            else []
+        ),
     }
     logger.info(f"🔧 User {state['userid']}: Error context: {error_context}")
     # try:
@@ -537,7 +542,7 @@ async def generate_daily_reflection(state: RunningState):
     )
     failed_actions = await format_queue_data(state["false_action_queue"])
     payload = {
-        "daily_objectives": state["decision"]["daily_objective"],
+        "daily_objectives": format_daily_obj(state["decision"]["daily_objective"]),
         "action_results": state["decision"]["action_result"],
         "failed_actions": failed_actions,
         "reflection_ar": state["prompts"]["reflection_ar"],
@@ -601,7 +606,7 @@ async def generate_character_arc(state: RunningState):
         {
             "character_stats": format_character_data(state["character_stats"]),
             "character_info": character_info,
-            "daily_objectives": state["decision"]["daily_objective"],
+            "daily_objectives": format_daily_obj(state["decision"]["daily_objective"]),
             "daily_reflection": state["decision"]["reflection"],
             "action_results": state["decision"]["action_result"],
         }
@@ -866,7 +871,11 @@ async def refine_meta_action_sequence(state: RunningState):
 ]
     """
     payload = {
-        "daily_objectives": (state["decision"]["daily_objective"]),
+        "daily_objectives": (
+            state["decision"]["daily_objective"][-1]
+            if state["decision"]["daily_objective"]
+            else []
+        ),
         "character_stats": format_character_data(
             state["character_stats"],
             fields=[
