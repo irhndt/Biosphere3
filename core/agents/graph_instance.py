@@ -69,74 +69,74 @@ class LangGraphInstance:
         Continuously processes incoming messages from the message queue.
         """
         while True:
-            msg = await self.state["message_queue"].get()
-            message_name = msg.get("messageName")
-            message_code = msg.get("messageCode")
-            message_data = msg.get("data")
-            if message_code >= 100:  # Ignore Conversation Messages
-                pass
-            elif message_name == "actionresult":
-                self.state["decision"]["action_result"].append(message_data["msg"])
-                if message_data.get("actionName").startswith("goto"):
-                    save_action_to_db(self.user_id, message_data)
-                # If the action result is False, put REPLAN into event_queue
-                if msg["data"]["result"] is False:
-                    try:
-                        self.logger.info(
-                            f"❌ User {self.user_id}: Put REPLAN into event_queue"
-                        )
-                        self.state["false_action_queue"].put_nowait(msg["data"])
-                        self.schedule_event("REPLAN")
-                    except Exception as e:
-                        self.logger.error(
-                            f"User {self.user_id}: Error putting REPLAN into event_queue: {e}"
-                        )
-                else:
-                    if (
-                        self.state["decision"]["expanded_meta_seq"]
-                        and self.state["decision"]["expanded_meta_seq"][0]
-                        == message_data["actionName"]
-                    ):
-                        self.state["decision"]["expanded_meta_seq"].popleft()
+            try:
+                msg = await self.state["message_queue"].get()
+                message_name = msg.get("messageName")
+                message_code = msg.get("messageCode")
+                message_data = msg.get("data")
+                if message_code >= 100:  # Ignore Conversation Messages
+                    pass
+                elif message_name == "actionresult":
+                    self.logger.info(
+                        f"🏃 User {self.user_id}: Received action result: {msg['data']}"
+                    )
+                    self.state["decision"]["action_result"].append(message_data["msg"])
+                    if message_data.get("actionName").startswith("goto"):
+                        save_action_to_db(self.user_id, message_data)
+                    # If the action result is False, put REPLAN into event_queue
+                    if msg["data"]["result"] is False:
+                        try:
+                            self.logger.info(
+                                f"❌ User {self.user_id}: Put REPLAN into event_queue"
+                            )
+                            self.state["false_action_queue"].put_nowait(msg["data"])
+                            self.schedule_event("REPLAN")
+                        except Exception as e:
+                            self.logger.error(
+                                f"User {self.user_id}: Error putting REPLAN into event_queue: {e}"
+                            )
                     else:
-                        self.logger.error(
-                            f"❌ User {self.user_id}: Action mismatch: {self.state['decision']['expanded_meta_seq'][0]} != {message_data['actionName']}"
-                        )
-
-                self.logger.info(
-                    f"🏃 User {self.user_id}: Received action result: {msg['data']}"
-                )
-            elif message_name == "onestep":
-                self.schedule_event("PLAN")
-            elif message_name == "check":
-                pprint(self.state["decision"]["action_result"])
-            elif message_name == "queue_visualizer":
-                pprint(self.state["event_queue"])
-            elif (
-                message_name == "eventInfo"
-                and message_data
-                and message_data.get("msg") == "ActionList Empty"
-            ):
-                self.schedule_event("PLAN")
-            elif (
-                message_name == "accommodation_event"
-                and message_data
-                and message_data.get("msg") == "House rent will expire tomorrow"
-            ):
-                self.schedule_event("ACCOMMODATION_EVENT")
-            elif message_name == "new_day":
-                update_state_daily(
-                    self.state, message_data.get("day", self.state["meta"]["day"] + 1)
-                )
-                self.schedule_event("CHARACTER_ARC")
-                self.schedule_event("DAILY_REFLECTION")
-                await generate_change_job_cv(self.state["instance"], msg)
-                await asyncio.sleep(60)
-                clear_decision(self.state)
-            else:
-                self.logger.error(
-                    f"User {self.user_id}: Unknown message: {message_name}"
-                )
+                        self.logger.info(f"User {self.user_id} current meta action list: {list(self.state['decision']['expanded_meta_seq'])}")
+                        self.state["decision"]["expanded_meta_seq"].popleft()
+                        self.logger.info(f"User {self.user_id} current meta action list: {list(self.state['decision']['expanded_meta_seq'])}")
+                elif message_name == "onestep":
+                    self.schedule_event("PLAN")
+                elif message_name == "check":
+                    pprint(self.state["decision"]["action_result"])
+                elif message_name == "queue_visualizer":
+                    pprint(self.state["event_queue"])
+                elif (
+                    message_name == "eventInfo"
+                    and message_data
+                    and message_data.get("msg") == "ActionList Empty"
+                ):
+                    logger.info(
+                        f"User {self.state['userid']} received ActionList Empty!"
+                    )
+                    self.schedule_event("PLAN")
+                elif (
+                    message_name == "accommodation_event"
+                    and message_data
+                    and message_data.get("msg") == "House rent will expire tomorrow"
+                ):
+                    self.schedule_event("ACCOMMODATION_EVENT")
+                elif message_name == "new_day":
+                    update_state_daily(
+                        self.state,
+                        message_data.get("day", self.state["meta"]["day"] + 1),
+                    )
+                    self.schedule_event("CHARACTER_ARC")
+                    self.schedule_event("DAILY_REFLECTION")
+                    await generate_change_job_cv(self.state["instance"], msg)
+                    await asyncio.sleep(60)
+                    clear_decision(self.state)
+                else:
+                    self.logger.error(
+                        f"User {self.user_id}: Unknown message: {message_name}"
+                    )
+            except Exception as e:
+                self.logger.error(f"User {self.user_id}: Error in msg_processor: {e}")
+                self.logger.error(traceback.format_exc())
 
     async def event_scheduler(self):
         try:

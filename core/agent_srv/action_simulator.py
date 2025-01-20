@@ -381,7 +381,7 @@ class ActionRunner:
             self.actions = []
             return self.actions
         reward = self.compute_amm_cost("sell", action_args, market_data)
-        if state["inventory"][action_args[0]] < item_num:
+        if state["inventory"].get(action_args[0], 0) < item_num:
             # Current: Generate Craft Sequence
             actions = self.generate_craft_sequence_and_check(
                 state, item_type=action_args[0], item_num=item_num

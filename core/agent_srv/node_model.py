@@ -38,6 +38,7 @@ class Decision(TypedDict):
     daily_objective: List[List[str]]
     meta_seq: List[str]
     reflection: List[str]
+    expanded_meta_seq: List[str]
 
 
 class Meta(TypedDict):

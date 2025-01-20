@@ -11,9 +11,9 @@ development:
 
 production:
   http_monitor_host: "0.0.0.0"
-  http_monitor_port: 8018
+  http_monitor_port: 8016
   websocket_host: "0.0.0.0"
-  websocket_port: 8008
+  websocket_port: 8015
   ssl_certfile: "/etc/ssl/certs/bio3.crt"
   ssl_keyfile: "/etc/ssl/certs/bio3.key"
   monitor_trigger: False
