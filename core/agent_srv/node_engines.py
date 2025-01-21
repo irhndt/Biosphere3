@@ -78,12 +78,15 @@ async def generate_daily_objective(state: RunningState):
     )
     last_decision = decision_response.get("data", {})
     retry_count = 0
+    daily_objectives_list = list(state["decision"]["daily_objective"])
+    if len(daily_objectives_list) > 0:
+        daily_objectives_list = daily_objectives_list[-1]
     payload = {
         "character_stats": format_character_data(
             state["character_stats"],
             fields=["money", "inventory"],
         ),
-        "past_objectives": format_daily_obj(state["decision"]["daily_objective"]),
+        "past_objectives": format_daily_obj(daily_objectives_list),
         "life_style": state["prompts"]["life_style"],
         "past_reflection": last_decision.get("reflection", []) if last_decision else [],
         "production_graph": state["meta"]["production_graph"],
