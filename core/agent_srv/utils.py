@@ -162,6 +162,7 @@ def get_market_data_from_db() -> dict:
     market_data_dict = dict({x["name"]: x["averagePrice"] for x in price_response})
     return market_data_dict
 
+
 def get_amm_data_from_db() -> dict:
     amm_response = fetch_json(
         url=f"{GAME_BACKEND_URL}/ammPool/getAll1",
@@ -723,12 +724,16 @@ def update_state_daily(state: dict, day: int):
 
 
 def clear_decision(state: dict):
-    state["decision"]["action_description"] = []
-    state["decision"]["action_result"] = []
-    state["decision"]["new_plan"] = []
-    state["decision"]["daily_objective"] = deque(maxlen=10)
-    state["decision"]["meta_seq"] = []
-    state["decision"]["reflection"] = []
+    state["decision"]["action_description"].clear()
+    state["decision"]["action_result"].clear()
+    state["decision"]["new_plan"].clear()
+    state["decision"]["meta_seq"].clear()
+    state["decision"]["reflection"].clear()
+
+    if "daily_objective" in state["decision"]:
+        state["decision"]["daily_objective"].clear()
+    else:
+        state["decision"]["daily_objective"] = deque(maxlen=10)
 
 
 def format_status_changes(past_status: dict, status: dict, fields: list = None) -> str:
