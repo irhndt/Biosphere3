@@ -352,6 +352,22 @@ def save_decision_to_db(userid: int, decision: dict, endpoint: str):
     except JSONDecodeError:
         logger.error(f"Failed to decode JSON from {url}")
 
+def save_reflection_to_db(user_id: int, reflection: dict):
+    url = f"{AGENT_BACKEND_URL}/reflection/"
+    reflection["characterId"] = user_id
+    try:
+        response = requests.patch(
+            url,
+            json=reflection,
+            timeout=GAME_BACKEND_TIMEOUT,
+        )
+        response.raise_for_status()
+    except requests.Timeout:
+        logger.error(f"Timeout while saving reflection to {url}")
+    except requests.HTTPError as e:
+        logger.error(f"HTTP error while saving reflection to {url}: {e}")
+    except JSONDecodeError:
+        logger.error(f"Failed to decode JSON from {url}")
 
 def save_token_consumption_to_db(token_consumption: dict):
     """
@@ -846,3 +862,70 @@ def format_meta_seq(meta_seq: list) -> str:
     for i, action in enumerate(meta_seq, start=1):
         formatted_str += f"Action {i}: {action}\n"
     return formatted_str
+
+def refine_craft_action(craft_action: str) -> str:
+    args = craft_action.split()
+    craft_item = args[1]
+    craft_num = args[2]
+    item_templates = {
+        "apple": "Pick {0} apple(s)",
+        "wheat": "Harvest {0} wheat(s)",
+        "pear": "Pick {0} pear(s)",
+        "rice": "Harvest {0} rice(s)",
+        "chicken": "Raise {0} chicken(s)",
+        "beef": "Raise {0} beef(s)",
+        "fish": "Catch {0} fish(es)",
+        "feed": "Make {0} feed(s)",
+        "flour": "Mill {0} flour(s)",
+        "bread": "Bake {0} bread(s)",
+        "apple_pie": "Bake {0} apple pie(s)",
+        "fruit_salad": "Make {0} fruit salad(s)",
+        "chicken_salad": "Make {0} chicken salad(s)",
+        "beef_rice": "Cook {0} beef rice(s)",
+        "sushi": "Make {0} sushi(es)",
+        "iron_ore": "Mine {0} iron ore(s)",
+        "wood": "Chop {0} wood(s)",
+        "copper_ore": "Mine {0} copper ore(s)",
+        "silicon_ore": "Mine {0} silicon ore(s)",
+        "iron_ingot": "Smelt {0} iron ingot(s)",
+        "wooden_board": "Craft {0} wooden board(s)",
+        "copper_ingot": "Smelt {0} copper ingot(s)",
+        "pure_silicon": "Refine {0} pure silicon(s)",
+        "tools": "Craft {0} tool(s)",
+        "iron_plate": "Forge {0} iron plate(s)",
+        "pulp": "Make {0} pulp(s)",
+        "books": "Print {0} book(s)",
+        "copper_wire": "Craft {0} copper wire(s)",
+        "transistor": "Make {0} transistor(s)",
+        "circuit_board": "Assemble {0} circuit board(s)",
+        "a100": "Manufacture {0} A100(s)",
+        "h100": "Manufacture {0} H100(s)",
+        "h200": "Manufacture {0} H200(s)",
+        "b200": "Manufacture {0} B200(s)",
+    }
+    
+    return item_templates[craft_item].replace("{0}", craft_num)
+    
+def refine_list(action_list: list) -> list:
+    new_list = []
+    for action in action_list:
+        if action.startswith("craft"):
+            new_list.append(refine_craft_action(action))
+        else:
+            new_list.append(action)
+    return new_list
+            
+if __name__ == "__main__":
+    # print(refine_craft_action("craft rice 2"))
+    list_1 = ['goto farm',
+             'craft rice 7',
+             'craft rice 3',
+             'goto home',
+             'sleep 3',
+             'goto farm',
+             'craft rice 2',
+             'goto home',
+             'sleep 3',
+             'goto foodfactory',
+             'craft feed 6']
+    print(refine_list(list_1))

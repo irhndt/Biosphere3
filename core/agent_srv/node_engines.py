@@ -31,6 +31,7 @@ from core.db.game_api_utils import (
 from core.agent_srv.utils import (
     format_dict,
     save_decision_to_db,
+    save_reflection_to_db,
     format_role_actions,
     format_market,
     format_character_data,
@@ -47,6 +48,7 @@ from core.agent_srv.utils import (
     format_false_action_info,
     format_detailed_meta_seq,
     format_meta_seq,
+    refine_list,
 )
 
 
@@ -108,8 +110,8 @@ async def generate_daily_objective(state: RunningState):
     state["decision"]["daily_objective"].append(planner_response.objectives)
     save_decision_to_db(
         state["userid"],
-        {"daily_objectives": planner_response.objectives},
-        "daily_objectives",
+        {"objectives": planner_response.objectives},
+        "daily_objectives"
     )
 
     logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response.progress}")
@@ -214,7 +216,7 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
 
     pay_load = {
         "personality": state["character_stats"]["personality"],
-        "action_list": simulate_list,
+        "action_list": refine_list(simulate_list),
         "sequence_format": squence_format,
     }
     retry_count = 0
@@ -590,8 +592,8 @@ async def generate_daily_reflection(state: RunningState):
     full_prompt = daily_reflection_prompt.format(**payload)
     logger.info("======generate_daily_reflection======\n" + full_prompt)
     state["decision"]["reflection"].append(daily_reflection.reflection)
-    save_decision_to_db(
-        state["userid"], {"reflection": daily_reflection.reflection}, "reflection"
+    save_reflection_to_db(
+        state["userid"], {"new_reflection": daily_reflection.reflection}
     )
     response = await send_message(
         state,
@@ -1034,7 +1036,7 @@ async def replan_meta_action_seq_new(state: RunningState):
 
     pay_load = {
         "personality": state["character_stats"]["personality"],
-        "action_list": simulate_list,
+        "action_list": refine_list(simulate_list),
         "sequence_format": squence_format,
     }
 
