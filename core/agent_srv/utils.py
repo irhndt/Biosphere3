@@ -162,6 +162,7 @@ def get_market_data_from_db() -> dict:
     market_data_dict = dict({x["name"]: x["averagePrice"] for x in price_response})
     return market_data_dict
 
+
 def get_amm_data_from_db() -> dict:
     amm_response = fetch_json(
         url=f"{GAME_BACKEND_URL}/ammPool/getAll1",
