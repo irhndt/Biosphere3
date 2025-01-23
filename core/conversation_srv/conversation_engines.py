@@ -786,8 +786,8 @@ def generate_talk_time(k: int):
 
 def mark_map(x: int):
     mapping = {
-        5: 5,
-        4: 3,
+        5: 8,
+        4: 4,
         3: 0,
         2: -3,
         1: -5
