@@ -1,4 +1,5 @@
 import sys
+import traceback
 
 sys.path.append(".")
 
@@ -9,21 +10,14 @@ from pprint import pprint
 from loguru import logger
 import websockets
 from langgraph.graph import StateGraph
-from core.agent_srv.node_engines import (
-    generate_daily_objective,
-    generate_meta_action_sequence,
-    replan_action,
-    sensing_environment,
-    generate_change_job_cv,
-    generate_character_arc,
-    generate_daily_reflection,
-    generate_accommodation_decision,
-)
+from core.agent_srv.node_engines import *
 from core.agent_srv.node_model import RunningState
 from core.agent_srv.utils import (
     get_initial_state_from_db,
     save_decision_to_db,
     save_action_to_db,
+    update_state_daily,
+    clear_decision,
 )
 
 
@@ -37,6 +31,7 @@ class LangGraphInstance:
         self.websocket = websocket
         self.signal = None
         self.state = {}
+        self.message_log = []
 
         self.websocket_lock = None
         self.graph = None
@@ -62,7 +57,7 @@ class LangGraphInstance:
         self.start_time = time.time()
 
         self.msg_processor_task = asyncio.create_task(self.msg_processor())
-        self.event_scheduler_task = asyncio.create_task(self.event_scheduler())
+        # self.event_scheduler_task = asyncio.create_task(self.event_scheduler())
         self.schedule_event("PLAN")
         self.logger.info(f"User {self.user_id} workflow initialized")
         self.task = asyncio.create_task(self.a_run())
@@ -74,59 +69,74 @@ class LangGraphInstance:
         Continuously processes incoming messages from the message queue.
         """
         while True:
-            msg = await self.state["message_queue"].get()
-            message_name = msg.get("messageName")
-            message_code = msg.get("messageCode")
-            message_data = msg.get("data")
-            if message_code >= 100:  # Ignore Conversation Messages
-                pass
-            elif message_name == "actionresult":
-                self.state["decision"]["action_result"].append(message_data["msg"])
-                save_decision_to_db(self.user_id, {"action_result": message_data})
-                if message_data.get("actionName") == "Nav":
-                    save_action_to_db(self.user_id, message_data)
-                # If the action result is False, put REPLAN into event_queue
-                if msg["data"]["result"] is False:
-                    try:
-                        self.logger.info(
-                            f"❌ User {self.user_id}: Put REPLAN into event_queue"
-                        )
-                        self.state["false_action_queue"].put_nowait(msg["data"])
-                        self.schedule_event("REPLAN")
-                    except Exception as e:
-                        self.logger.error(
-                            f"User {self.user_id}: Error putting REPLAN into event_queue: {e}"
-                        )
-
-                self.logger.info(
-                    f"🏃 User {self.user_id}: Received action result: {msg['data']}"
-                )
-            elif message_name == "cv_submission":
-                await generate_change_job_cv(self.state["instance"], msg)
-            elif message_name == "onestep":
-                self.schedule_event("PLAN")
-            elif message_name == "check":
-                pprint(self.state["decision"]["action_result"])
-            elif message_name == "queue_visualizer":
-                pprint(self.state["event_queue"])
-            elif (
-                message_name == "eventInfo"
-                and message_data.get("msg") == "ActionList Empty"
-            ):
-                self.schedule_event("PLAN")
-            elif (
-                message_name == "accommodation_event"
-                or message_data.get("msg") == "House rent will expire tomorrow"
-            ):
-                self.schedule_event("ACCOMMODATION_EVENT")
-            elif message_name == "new_day":
-                self.schedule_event("CHARACTER_ARC")
-                self.schedule_event("DAILY_REFLECTION")
-                self.state["meta"]["day"] = message_data.get("day", 1)
-            else:
-                self.logger.error(
-                    f"User {self.user_id}: Unknown message: {message_name}"
-                )
+            try:
+                msg = await self.state["message_queue"].get()
+                message_name = msg.get("messageName")
+                message_code = msg.get("messageCode")
+                message_data = msg.get("data")
+                if message_code >= 100:  # Ignore Conversation Messages
+                    pass
+                elif message_name == "actionresult":
+                    self.logger.info(
+                        f"🏃 User {self.user_id}: Received action result: {msg['data']}"
+                    )
+                    self.state["decision"]["action_result"].append(message_data["msg"])
+                    if message_data.get("actionName").startswith("goto"):
+                        save_action_to_db(self.user_id, message_data)
+                    # If the action result is False, put REPLAN into event_queue
+                    if msg["data"]["result"] is False:
+                        try:
+                            self.logger.info(
+                                f"❌ User {self.user_id}: Put REPLAN into event_queue"
+                            )
+                            self.state["false_action_queue"].put_nowait(msg["data"])
+                            self.schedule_event("REPLAN")
+                        except Exception as e:
+                            self.logger.error(
+                                f"User {self.user_id}: Error putting REPLAN into event_queue: {e}"
+                            )
+                    else:
+                        self.logger.info(f"User {self.user_id} current meta action list: {list(self.state['decision']['expanded_meta_seq'])}")
+                        self.state["decision"]["expanded_meta_seq"].popleft()
+                        self.logger.info(f"User {self.user_id} current meta action list: {list(self.state['decision']['expanded_meta_seq'])}")
+                elif message_name == "onestep":
+                    self.schedule_event("PLAN")
+                elif message_name == "check":
+                    pprint(self.state["decision"]["action_result"])
+                elif message_name == "queue_visualizer":
+                    pprint(self.state["event_queue"])
+                elif (
+                    message_name == "eventInfo"
+                    and message_data
+                    and message_data.get("msg") == "ActionList Empty"
+                ):
+                    logger.info(
+                        f"User {self.state['userid']} received ActionList Empty!"
+                    )
+                    self.schedule_event("PLAN")
+                elif (
+                    message_name == "accommodation_event"
+                    and message_data
+                    and message_data.get("msg") == "House rent will expire tomorrow"
+                ):
+                    self.schedule_event("ACCOMMODATION_EVENT")
+                elif message_name == "new_day":
+                    update_state_daily(
+                        self.state,
+                        message_data.get("day", self.state["meta"]["day"] + 1),
+                    )
+                    self.schedule_event("CHARACTER_ARC")
+                    self.schedule_event("DAILY_REFLECTION")
+                    await generate_change_job_cv(self.state["instance"], msg)
+                    await asyncio.sleep(60)
+                    clear_decision(self.state)
+                else:
+                    self.logger.error(
+                        f"User {self.user_id}: Unknown message: {message_name}"
+                    )
+            except Exception as e:
+                self.logger.error(f"User {self.user_id}: Error in msg_processor: {e}")
+                self.logger.error(traceback.format_exc())
 
     async def event_scheduler(self):
         try:
@@ -171,7 +181,7 @@ class LangGraphInstance:
 
                 if self.signal == "TERMINATE":
                     self.logger.error(
-                        f"⛔ Task run_event terminated due to termination signal."
+                        f"⛔ User {self.user_id}'s Task run_event terminated due to termination signal."
                     )
                     break
                 if event_name not in list(self.state["event_queue"]._queue):
@@ -183,10 +193,12 @@ class LangGraphInstance:
         workflow = StateGraph(RunningState)
         workflow.add_node("Sensing_Route", sensing_environment)
         workflow.add_node("Objectives_planner", generate_daily_objective)
-        workflow.add_node("meta_action_sequence", generate_meta_action_sequence)
+        workflow.add_node(
+            "meta_action_sequence", generate_crafting_and_trading_sequence
+        )
         workflow.add_node("Character_Arc", generate_character_arc)
         workflow.add_node("Daily_Reflection", generate_daily_reflection)
-        workflow.add_node("Replan_Action", replan_action)
+        workflow.add_node("Replan_Action", replan_meta_action_seq_new)
         workflow.add_node("Accommodation_Decision", generate_accommodation_decision)
 
         workflow.set_entry_point("Sensing_Route")
@@ -208,8 +220,10 @@ class LangGraphInstance:
             self.signal = "TERMINATE"
 
             self.logger.error(f"User {self.user_id} Error in workflow: {e}")
+            self.logger.error(traceback.format_exc())
             self.logger.error("⛔ Task a_run terminated due to termination signal.")
             self.task.cancel()
+            self.routine_tasks.cancel()
 
     async def send_message(self, message):
         async with self.websocket_lock:
@@ -229,3 +243,12 @@ class LangGraphInstance:
                 self.signal = "TERMINATE"
             except Exception as e:
                 self.logger.error(f"User {self.user_id}: Error sending message: {e}")
+
+    def log_message(self, direction: str, message: str):
+        self.message_log.append(
+            {
+                "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+                "direction": direction,
+                "message": message,
+            }
+        )

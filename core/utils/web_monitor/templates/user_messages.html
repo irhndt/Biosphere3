@@ -23,17 +23,58 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .direction-sent {
-            color: #4CAF50; /* 绿色 */
+            color: #4CAF50;
         }
         .direction-received {
-            color: #f44336; /* 红色 */
+            color: #f44336;
+        }
+        .state-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .state-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .state-content {
+            font-size: 14px;
+            color: #333;
+            white-space: pre-wrap;
+        }
+        .scrollable-table {
+            overflow-x: auto;
+        }
+        .refresh-btn {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .refresh-btn:hover {
+            background: #45a049;
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="header">
+            <h1>Character Messages</h1>
+            <button class="refresh-btn" onclick="refreshData()">Refresh</button>
+        </div>
+        <div class="card state-card">
+            <div class="state-title">Character State</div>
+            <div class="scrollable-table">
+                <div class="state-content" id="character-state">Loading state...</div>
+            </div>
+        </div>
         <div class="card">
-            <h2>Messages for Character ID: <span id="character-id"></span></h2>
+            <div class="state-title">Character Messages</div>
             <table class="table table-striped">
                 <thead>
                     <tr>
@@ -52,7 +93,41 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-jsonview/1.2.3/jquery.jsonview.min.js"></script>
     <script>
         const characterId = window.location.pathname.split('/').pop();
-        document.getElementById('character-id').textContent = characterId;
+
+        function loadCharacterState() {
+            fetch(`/api/state/${characterId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const stateTable = Object.entries(data).map(([key, value]) => `
+                        <tr>
+                            <td>${key}</td>
+                            <td><div class="json-viewer" data-json='${JSON.stringify(value)}'></div></td>
+                        </tr>
+                    `).join('');
+                    document.getElementById('character-state').innerHTML = `
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Key</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${stateTable}
+                            </tbody>
+                        </table>
+                    `;
+
+                    $('.json-viewer').each(function() {
+                        const jsonData = $(this).data('json');
+                        $(this).JSONView(jsonData, { collapsed: true });
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading character state:', error);
+                    document.getElementById('character-state').textContent = 'Error loading state';
+                });
+        }
 
         function loadMessages() {
             fetch(`/api/messages/${characterId}`)
@@ -80,7 +155,14 @@
                 });
         }
 
-        document.addEventListener('DOMContentLoaded', loadMessages);
+        function refreshData() {
+            loadCharacterState();
+            loadMessages();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshData();
+        });
     </script>
 </body>
 </html> 

@@ -1,17 +1,21 @@
 import requests
 import os
+import json
 from json import JSONDecodeError
 import asyncio
 from dotenv import load_dotenv
 import aiohttp
 from loguru import logger
 import math
+import copy
+from collections import deque
 
 load_dotenv()
 GAME_BACKEND_URL = os.getenv("GAME_BACKEND_URL")
 GAME_BACKEND_TIMEOUT = int(os.getenv("GAME_BACKEND_TIMEOUT"))
 AGENT_BACKEND_URL = os.getenv("AGENT_BACKEND_URL")
 DEFAULT_MODEL_TYPE = os.getenv("DEFAULT_MODEL_TYPE")
+skill2actions = json.load(open("core/files/skill2actions.json"))
 
 
 async def fetch_api_data_async(
@@ -159,6 +163,16 @@ def get_market_data_from_db() -> dict:
     return market_data_dict
 
 
+def get_amm_data_from_db() -> dict:
+    amm_response = fetch_json(
+        url=f"{GAME_BACKEND_URL}/ammPool/getAll1",
+        timeout=GAME_BACKEND_TIMEOUT,
+        _logger=logger,
+        error_message="Failed to get AMM data from game backend",
+    )
+    return amm_response
+
+
 async def get_prompt_data_from_db(userid: int):
     # Prompt data
     prompt_response = await fetch_json_async(
@@ -228,7 +242,8 @@ async def fetch_agent_db_response_async(userid: int) -> dict:
             "🆕 No character data found in agent database, creating new character"
         )
         return {}
-    return response.get("data", [])[0]
+    data = response.get("data", [])
+    return data[0] if data else {}
 
 
 async def fetch_model_type_response_async(userid: int) -> dict:
@@ -313,7 +328,7 @@ def save_action_to_db(userid: int, action: dict):
         logger.error(f"Failed to decode JSON from {url}")
 
 
-def save_decision_to_db(userid: int, decision: dict):
+def save_decision_to_db(userid: int, decision: dict, endpoint: str):
     """
     Save the decision to the game database.
 
@@ -321,10 +336,10 @@ def save_decision_to_db(userid: int, decision: dict):
         userid (int): The ID of the user.
         decision (dict): The decision data to save.
     """
-    url = f"{AGENT_BACKEND_URL}/decision/"
+    url = f"{AGENT_BACKEND_URL}/{endpoint}/"
     decision["characterId"] = userid
     try:
-        response = requests.patch(
+        response = requests.post(
             url,
             json=decision,
             timeout=GAME_BACKEND_TIMEOUT,
@@ -337,6 +352,22 @@ def save_decision_to_db(userid: int, decision: dict):
     except JSONDecodeError:
         logger.error(f"Failed to decode JSON from {url}")
 
+def save_reflection_to_db(user_id: int, reflection: dict):
+    url = f"{AGENT_BACKEND_URL}/reflection/"
+    reflection["characterId"] = user_id
+    try:
+        response = requests.patch(
+            url,
+            json=reflection,
+            timeout=GAME_BACKEND_TIMEOUT,
+        )
+        response.raise_for_status()
+    except requests.Timeout:
+        logger.error(f"Timeout while saving reflection to {url}")
+    except requests.HTTPError as e:
+        logger.error(f"HTTP error while saving reflection to {url}: {e}")
+    except JSONDecodeError:
+        logger.error(f"Failed to decode JSON from {url}")
 
 def save_token_consumption_to_db(token_consumption: dict):
     """
@@ -441,15 +472,17 @@ async def get_initial_state_from_db(userid, websocket):
             "action_description": [],
             "action_result": [],
             "new_plan": [],
-            "daily_objective": [],
+            "daily_objective": deque(maxlen=10),
             "meta_seq": [],
             "reflection": [],
+            "expanded_meta_seq": deque(),
         },
         "meta": {
             "tool_functions": tool_functions_live,
             "day": 0,
             "available_locations": available_locations,
         },
+        "past_stats": {},
         "prompts": prompt_data,
         "message_queue": asyncio.Queue(),
         "event_queue": asyncio.Queue(),
@@ -460,64 +493,9 @@ async def get_initial_state_from_db(userid, websocket):
     return state
 
 
-def generate_initial_state_hardcoded(userid, websocket):
-    initial_state = {
-        "userid": userid,
-        "character_stats": {
-            "name": "Alice",
-            "gender": "Female",
-            "slogan": "Need to be rich!Need to be educated!",
-            "description": "A risk lover. Always looking for the next big thing.",
-            "role": "Investor",
-            "inventory": get_inventory(userid),
-            "health": 100,
-            "energy": 100,
-        },
-        "decision": {
-            "need_replan": False,
-            "action_description": [],
-            "action_result": [],
-            "new_plan": [],
-            "daily_objective": [],
-            "meta_seq": [],
-            "reflection": [],
-        },
-        "meta": {
-            "tool_functions": tool_functions_live,
-            "day": "",
-            "available_locations": available_locations,
-        },
-        "prompts": {
-            "daily_goal": "",
-            "refer_to_previous": False,
-            "life_style": "Casual",
-            "daily_objective_ar": "",
-            "task_priority": [],
-            "max_actions": 10,
-            "meta_seq_ar": "",
-            "replan_time_limit": 3,
-            "meta_seq_adjuster_ar": "",
-            "focus_topic": [],
-            "depth_of_reflection": "Moderate",
-            "reflection_ar": "",
-            "level_of_detail": "Moderate",
-            "tone_and_style": "",
-        },
-        "public_data": {
-            "market_data": get_market_data_from_db(),
-        },
-        "message_queue": asyncio.Queue(),
-        "event_queue": asyncio.Queue(),
-        "false_action_queue": asyncio.Queue(),
-        "websocket": websocket,
-        "current_pointer": "Sensing_Route",
-    }
-    return initial_state
-
-
 tool_functions_live = """
 1. goto [placeName:string]: Go to a specified location.
-Constraints: Must in (school,workshop,home,farm,mall,square,councilHall,hospital,fruit,harvest,fishing,mine,orchard,foodfactory,factory,garden,policestation,library,supermarket,canteen).
+Constraints: Must in (school,workshop,home,farm,mall,square,councilhall,hospital,fruit,harvest,fishing,mine,orchard,foodfactory,factory,garden,policestation,library,supermarket,canteen).
 2. sleep [hours:int]: Sleep to recover energy (10 per hour).
 Constraints: Must be at home.
 3. study [hours:int]: Study to achieve a higher degree, cost money (100 per hour) and energy (10 per hour), gain education experience (10 per hour).
@@ -550,7 +528,7 @@ available_locations = [
     "farm",
     "mall",
     "square",
-    "councilHall",
+    "councilhall",
     "hospital",
     "fruit",
     "harvest",
@@ -692,11 +670,262 @@ async def format_queue_data(queue_data: asyncio.Queue) -> str:
     return ", ".join(items)
 
 
-def format_level_graph(level_graph_data: dict) -> str:
-    formatted_str = ""
-    for goal in level_graph_data:
+def format_level_graph(
+    level_graph_data: dict, inventory_info: dict, current_energy: int
+) -> str:
+    formatted_str = f"Current Energy: {current_energy}\n"
+    inventory_copy = inventory_info.copy()
+    inventory_copy = {key.lower(): value for key, value in inventory_copy.items()}
+
+    def get_cost(skill2actions, item):
+        # print(item)
+        for _, details in skill2actions.items():
+            if item in details["materials"].keys():
+                return details["cost"]
+        return 20
+
+    formatted_str += "Final Product: " + level_graph_data["final_product"] + "\n"
+    level_graph_data_list = level_graph_data["goals"]
+    for goal in level_graph_data_list:
         formatted_str += f"Level {goal['goal_number']}:\n"
         for obj in goal["objectives"]:
             formatted_str += f"  - {obj['item']} *{obj['quantity']}\n"
+            formatted_str += f"     | Inventory: {inventory_copy.get(obj['item'], 0)}, Lack {obj['quantity'] - inventory_copy.get(obj['item'], 0)}\n"
+            energy_cost = get_cost(skill2actions, obj["item"])
+            formatted_str += f"     | Energy Cost: {energy_cost} per item, max craft num {current_energy / energy_cost} \n"
         formatted_str += "\n"
+    return formatted_str
+
+
+def format_trade_and_craft_sequence(trade_and_craft_sequence: list):
+    formatted_str = ""
+    for action in trade_and_craft_sequence:
+        formatted_str += f"Action: {action['action']}\n"
+        formatted_str += f" | Reason: {action['reason']}\n"
+        if action.get("cost"):
+            formatted_str += f" | Cost: {action['cost']}\n"
+        if action.get("expected_revenue"):
+            formatted_str += f" | Expected Revenue: {action['expected_revenue']}\n"
+        formatted_str += "---\n"
     return formatted_str.strip()
+
+
+def format_dict(data: dict) -> str:
+    return "\n".join([f"{key}: {value}" for key, value in data.items()])
+
+
+def format_market(market_data: dict) -> str:
+    formatted_str = "{\n"
+    items = list(market_data.items())
+    for i in range(0, len(items), 4):
+        chunk = items[i : i + 4]
+        line = ", ".join([f"{item.lower()}: {price}" for item, price in chunk])
+        formatted_str += f" {line}\n"
+    formatted_str += "}"
+    return formatted_str
+
+
+def format_daily_obj(daily_objectives: deque) -> str:
+    formatted_str = ""
+    if not daily_objectives:
+        return formatted_str
+    for i, obj in enumerate(daily_objectives, start=1):
+        formatted_str += f"Objective {i}: {obj}\n"
+    return formatted_str
+
+
+def update_state_daily(state: dict, day: int):
+    state["meta"]["day"] = day
+    state["past_stats"] = copy.deepcopy(state["character_stats"])
+
+
+def clear_decision(state: dict):
+    state["decision"]["action_description"].clear()
+    state["decision"]["action_result"].clear()
+    state["decision"]["new_plan"].clear()
+    state["decision"]["meta_seq"].clear()
+    state["decision"]["reflection"].clear()
+
+    if "daily_objective" in state["decision"]:
+        state["decision"]["daily_objective"].clear()
+    else:
+        state["decision"]["daily_objective"] = deque(maxlen=10)
+
+
+def format_status_changes(past_status: dict, status: dict, fields: list = None) -> str:
+    if fields is None:
+        fields = status.keys()
+
+    formatted_data = []
+
+    if "health" in fields and "health" in past_status and "health" in status:
+        formatted_data.append(
+            f"Health: {past_status.get('health', 'N/A')} -> {status.get('health', 'N/A')}"
+        )
+    if "energy" in fields and "energy" in past_status and "energy" in status:
+        formatted_data.append(
+            f"Energy: {past_status.get('energy', 'N/A')} -> {status.get('energy', 'N/A')}"
+        )
+    if "hungry" in fields and "hungry" in past_status and "hungry" in status:
+        formatted_data.append(
+            f"Hungry: {past_status.get('hungry', 'N/A')} -> {status.get('hungry', 'N/A')}"
+        )
+    if "education" in fields and "education" in past_status and "education" in status:
+        formatted_data.append(
+            f"Education: {past_status.get('education', 'N/A')} -> {status.get('education', 'N/A')}"
+        )
+    if (
+        "education_experience" in fields
+        and "education_experience" in past_status
+        and "education_experience" in status
+    ):
+        formatted_data.append(
+            f"Education Experience: {past_status.get('education_experience', 'N/A')} -> {status.get('education_experience', 'N/A')}"
+        )
+    if "money" in fields and "money" in past_status and "money" in status:
+        formatted_data.append(
+            f"Money: {past_status.get('money', 'N/A')} -> {status.get('money', 'N/A')}"
+        )
+    if (
+        "occupation" in fields
+        and "occupation" in past_status
+        and "occupation" in status
+    ):
+        formatted_data.append(
+            f"Occupation: {past_status.get('occupation', 'N/A')} -> {status.get('occupation', 'N/A')}"
+        )
+    if (
+        "efficiency" in fields
+        and "efficiency" in past_status
+        and "efficiency" in status
+    ):
+        formatted_data.append(
+            f"Efficiency: {past_status.get('efficiency', 'N/A')} -> {status.get('efficiency', 'N/A')}"
+        )
+    if "inventory" in fields and "inventory" in past_status and "inventory" in status:
+        formatted_data.append(
+            f"Inventory: {past_status.get('inventory', 'N/A')} -> {status.get('inventory', 'N/A')}"
+        )
+
+    return "\n".join(formatted_data)
+
+
+def format_false_action_info(false_action_info: dict) -> str:
+    formatted_str = "Failed Action: " + false_action_info["actionName"] + "\n"
+    formatted_str += "| Result: " + false_action_info["msg"] + "\n"
+    formatted_str += "------\n"
+    return formatted_str
+
+
+def format_meta_seq(meta_seq: list, false_action_name: str) -> str:
+    formatted_str = ""
+    # find the location of the false action
+    false_action_index = 0
+    for i, action in enumerate(meta_seq):
+        if action == false_action_name:
+            false_action_index = i
+            break
+    meta_seq = meta_seq[false_action_index:]
+    for i, action in enumerate(meta_seq, start=1):
+        formatted_str += f"Action {i}: {action}\n"
+    return formatted_str
+
+
+def format_detailed_meta_seq(detailed_seq: list, false_action_name: str) -> str:
+    formatted_str = ""
+    # find the location of the false action
+    false_action_index = 0
+    for i, action in enumerate(detailed_seq):
+        if action["action"] == false_action_name:
+            false_action_index = i
+            break
+    detailed_seq = detailed_seq[false_action_index:]
+    for i, action in enumerate(detailed_seq, start=1):
+        formatted_str += f"Action {i}: {action['action']}\n"
+        if action.get("cost"):
+            formatted_str += f" | Cost: {action['cost']}\n"
+        if action.get("status_before"):
+            formatted_str += f" | Status Before: {action['status_before']}\n"
+        if action.get("status_after"):
+            formatted_str += f" | Status After: {action['status_after']}\n"
+        if action.get("inventory_before"):
+            formatted_str += f" | Inventory Before: {action['inventory_before']}\n"
+        if action.get("inventory_after"):
+            formatted_str += f" | Inventory After: {action['inventory_after']}\n"
+        formatted_str += f" | Reason: {action['reason']}\n"
+        formatted_str += "------\n"
+    return formatted_str
+
+
+def format_meta_seq(meta_seq: list) -> str:
+    formatted_str = ""
+    for i, action in enumerate(meta_seq, start=1):
+        formatted_str += f"Action {i}: {action}\n"
+    return formatted_str
+
+def refine_craft_action(craft_action: str) -> str:
+    args = craft_action.split()
+    craft_item = args[1]
+    craft_num = args[2]
+    item_templates = {
+        "apple": "Pick {0} apple(s)",
+        "wheat": "Harvest {0} wheat(s)",
+        "pear": "Pick {0} pear(s)",
+        "rice": "Harvest {0} rice(s)",
+        "chicken": "Raise {0} chicken(s)",
+        "beef": "Raise {0} beef(s)",
+        "fish": "Catch {0} fish(es)",
+        "feed": "Make {0} feed(s)",
+        "flour": "Mill {0} flour(s)",
+        "bread": "Bake {0} bread(s)",
+        "apple_pie": "Bake {0} apple pie(s)",
+        "fruit_salad": "Make {0} fruit salad(s)",
+        "chicken_salad": "Make {0} chicken salad(s)",
+        "beef_rice": "Cook {0} beef rice(s)",
+        "sushi": "Make {0} sushi(es)",
+        "iron_ore": "Mine {0} iron ore(s)",
+        "wood": "Chop {0} wood(s)",
+        "copper_ore": "Mine {0} copper ore(s)",
+        "silicon_ore": "Mine {0} silicon ore(s)",
+        "iron_ingot": "Smelt {0} iron ingot(s)",
+        "wooden_board": "Craft {0} wooden board(s)",
+        "copper_ingot": "Smelt {0} copper ingot(s)",
+        "pure_silicon": "Refine {0} pure silicon(s)",
+        "tools": "Craft {0} tool(s)",
+        "iron_plate": "Forge {0} iron plate(s)",
+        "pulp": "Make {0} pulp(s)",
+        "books": "Print {0} book(s)",
+        "copper_wire": "Craft {0} copper wire(s)",
+        "transistor": "Make {0} transistor(s)",
+        "circuit_board": "Assemble {0} circuit board(s)",
+        "a100": "Manufacture {0} A100(s)",
+        "h100": "Manufacture {0} H100(s)",
+        "h200": "Manufacture {0} H200(s)",
+        "b200": "Manufacture {0} B200(s)",
+    }
+    
+    return item_templates[craft_item].replace("{0}", craft_num)
+    
+def refine_list(action_list: list) -> list:
+    new_list = []
+    for action in action_list:
+        if action.startswith("craft"):
+            new_list.append(refine_craft_action(action))
+        else:
+            new_list.append(action)
+    return new_list
+            
+if __name__ == "__main__":
+    # print(refine_craft_action("craft rice 2"))
+    list_1 = ['goto farm',
+             'craft rice 7',
+             'craft rice 3',
+             'goto home',
+             'sleep 3',
+             'goto farm',
+             'craft rice 2',
+             'goto home',
+             'sleep 3',
+             'goto foodfactory',
+             'craft feed 6']
+    print(refine_list(list_1))

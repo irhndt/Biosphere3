@@ -7,7 +7,8 @@
             "craft rice <num>",
             "craft chicken <num>",
             "craft beef <num>",
-            "craft fish <num>"
+            "craft fish <num>",
+            "craft wood <num>"
         ],
         "cost": 5,
         "materials": {
@@ -15,9 +16,14 @@
             "wheat": [],
             "pear": [],
             "rice": [],
-            "chicken": ["2 feed"],
-            "beef": ["5 feed"],
-            "fish": []
+            "chicken": [
+                "2 feed"
+            ],
+            "beef": [
+                "3 feed"
+            ],
+            "fish": [],
+            "wood": []
         }
     },
     "FoodFactoryOwner": {
@@ -33,56 +39,92 @@
         ],
         "cost": 10,
         "materials": {
-            "feed": ["2 rice"],
-            "flour": ["2 wheat"],
-            "bread": ["2 flour"],
-            "apple_pie": ["1 apple", "1 flour"],
-            "fruit_salad": ["1 apple", "1 pear"],
-            "chicken_salad": ["2 chicken", "1 fruit_salad"],
-            "beef_rice": ["1 beef", "2 rice"],
-            "sushi": ["1 fish", "1 rice"]
+            "feed": [
+                "2 rice"
+            ],
+            "flour": [
+                "2 wheat"
+            ],
+            "bread": [
+                "2 flour"
+            ],
+            "apple_pie": [
+                "1 apple",
+                "1 flour"
+            ],
+            "fruit_salad": [
+                "1 apple",
+                "1 pear"
+            ],
+            "chicken_salad": [
+                "2 chicken",
+                "1 fruit_salad"
+            ],
+            "beef_rice": [
+                "1 beef",
+                "2 rice"
+            ],
+            "sushi": [
+                "1 fish",
+                "1 rice"
+            ]
         }
     },
-    "FactoryOwner": {
+    "MineOwner": {
         "actions": [
             "craft iron_ore <num>",
-            "craft timber <num>",
             "craft copper_ore <num>",
             "craft silicon_ore <num>"
         ],
         "cost": 5,
         "materials": {
             "iron_ore": [],
-            "timber": [],
             "copper_ore": [],
             "silicon_ore": []
         }
     },
-    "MineOwner": {
+    "FactoryOwner": {
         "actions": [
-            "craft iron_ingots <num>",
-            "craft wooden_boards <num>",
-            "craft copper_ingots <num>",
+            "craft iron_ingot <num>",
+            "craft wooden_board <num>",
+            "craft copper_ingot <num>",
             "craft pure_silicon <num>",
-            "craft pickaxes <num>",
-            "craft iron_plates <num>",
-            "craft paper_pulp <num>",
+            "craft pickax <num>",
+            "craft iron_plate <num>",
+            "craft pulp <num>",
             "craft books <num>",
             "craft copper_wire <num>",
-            "craft transistors <num>"
+            "craft transistor <num>"
         ],
         "cost": 10,
         "materials": {
-            "iron_ingots": ["5 iron_ore"],
-            "wooden_boards": ["5 wood"],
-            "copper_ingots": ["5 copper_ore"],
-            "pure_silicon": ["5 silicon_ore"],
-            "pickaxes": ["1 iron_ingots", "2 wood_planks"],
-            "iron_plates": ["2 iron_ingots"],
-            "paper_pulp": ["2 wood_planks"],
-            "books": ["5 paper_pulp"],
-            "copper_wire": ["2 copper_ingots"],
-            "transistors": ["2 pure_silicon"]
+            "iron_ingot": [
+                "3 iron_ore"
+            ],
+            "wooden_board": [
+                "3 wood"
+            ],
+            "copper_ingot": [
+                "3 copper_ore"
+            ],
+            "pure_silicon": [
+                "3 silicon_ore"
+            ],
+            "iron_plate": [
+                "2 iron_ingot"
+            ],
+            "pulp": [
+                "2 wooden_board"
+            ],
+            "books": [
+                "3 pulp"
+            ],
+            "copper_wire": [
+                "2 copper_ingot"
+            ],
+            "transistor": [
+                "2 pure_silicon"
+            ]
         }
     },
     "Scientist": {
@@ -95,11 +137,23 @@
         ],
         "cost": 20,
         "materials": {
-            "circuit_board": ["2 iron_plates", "3 copper_wire"],
-            "a100": ["4 circuit_board", "4 transistors"],
-            "h100": ["4 a100"],
-            "h200": ["4 h100"],
-            "b200": ["4 h200"]
+            "circuit_board": [
+                "2 iron_plate",
+                "2 copper_wire"
+            ],
+            "a100": [
+                "2 circuit_board",
+                "2 transistor"
+            ],
+            "h100": [
+                "2 a100"
+            ],
+            "h200": [
+                "2 h100"
+            ],
+            "b200": [
+                "2 h200"
+            ]
         }
     }
 }
