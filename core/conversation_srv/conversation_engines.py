@@ -62,7 +62,7 @@ async def generate_daily_conversation_plan(state: ConversationState):
     # generate conversation target list
     conversation_number = len(start_time_list)
     target_list = random_conversation_target(conversation_number, state["userid"])
-    # target_list[0] = 616422#test
+    # target_list[0] = 612456#test
     logger.info(
         f"User {state['userid']} planned to have conversation with {target_list}."
     )
@@ -205,6 +205,42 @@ async def start_conversation(state: ConversationState):
 
     logger.info(f"User {state['userid']} current topic is: {content_type}-{topic}")
 
+    # get impression:from
+    impression_query_data = {
+        "from_id": state["userid"],
+        "to_id": current_talk["to_id"],
+        "k": 1,
+    }
+    impression_response = make_api_request_sync(
+        "GET", "/impressions/", params=impression_query_data
+    )
+
+    if impression_response["data"]:
+        current_impression_from = impression_response["data"][0]
+    else:
+        current_impression_from = []
+    logger.info(
+        f"The current impression from User {state['userid']} to User {current_talk['to_id']} is {current_impression_from}"
+    )
+
+    # get impression:to
+    impression_query_data = {
+        "from_id": current_talk["to_id"],
+        "to_id": state["userid"],
+        "k": 1,
+    }
+    impression_response = make_api_request_sync(
+        "GET", "/impressions/", params=impression_query_data
+    )
+
+    if impression_response["data"]:
+        current_impression_to = impression_response["data"][0]
+    else:
+        current_impression_to = []
+    logger.info(
+        f"The current impression from User {current_talk['to_id']} to User {state['userid']} is {current_impression_to}"
+    )
+
     if content_type == "game":  # topic about games
         # get character_arc: from
         arc_response = make_api_request_sync(
@@ -230,49 +266,13 @@ async def start_conversation(state: ConversationState):
             arc_data_to.pop("characterId", None)
         logger.info(f"User {current_talk['to_id']} current character arc is {arc_data_to}")
 
-        # get impression:from
-        impression_query_data = {
-            "from_id": state["userid"],
-            "to_id": current_talk["to_id"],
-            "k": 1,
-        }
-        impression_response = make_api_request_sync(
-            "GET", "/impressions/", params=impression_query_data
-        )
-
-        if impression_response["data"]:
-            current_impression_from = impression_response["data"][0]
-        else:
-            current_impression_from = []
-        logger.info(
-            f"The current impression from User {state['userid']} to User {current_talk['to_id']} is {current_impression_from}"
-        )
-
-        # get impression:to
-        impression_query_data = {
-            "from_id": current_talk["to_id"],
-            "to_id": state["userid"],
-            "k": 1,
-        }
-        impression_response = make_api_request_sync(
-            "GET", "/impressions/", params=impression_query_data
-        )
-
-        if impression_response["data"]:
-            current_impression_to = impression_response["data"][0]
-        else:
-            current_impression_to = []
-        logger.info(
-            f"The current impression from User {current_talk['to_id']} to User {state['userid']} is {current_impression_to}"
-        )
-
         # get self action
         get_action_log_params = {"characterId": state["userid"], "k": 5}
         action_response = make_api_request_sync(
             "GET", "/action_log/", params=get_action_log_params
         )
-        if action_response["data"] is not None:
-            action_data = action_response["data"]
+        if action_response["data"]["log"] is not None:
+            action_data = action_response["data"]["log"]
             memory_from = {}
             for act in action_data:
                 key = act["command"]
@@ -288,8 +288,8 @@ async def start_conversation(state: ConversationState):
         action_response = make_api_request_sync(
             "GET", "/action_log/", params=get_action_log_params
         )
-        if action_response["data"] is not None:
-            action_data = action_response["data"]
+        if action_response["data"]["log"] is not None:
+            action_data = action_response["data"]["log"]
             memory_to = {}
             for act in action_data:
                 key = act["command"]
@@ -314,11 +314,15 @@ async def start_conversation(state: ConversationState):
         generator = conversation_generator
         generator_prompt = conversation_generator_prompt
     else:
+        relation_from = strip_relation(current_impression_from)
+        relation_to = strip_relation(current_impression_to)
         payload = {
             "type": content_type,
             "topic": topic,
             "from_name": my_name,
             "to_name": target_name,
+            "relation_from": relation_from,
+            "relation_to": relation_to
         }
         generator = simple_content_generator
         generator_prompt = simple_content_prompt
@@ -472,6 +476,46 @@ async def update_impression(id1: int, id2: int, conversation):
     else:
         target_name = profile["data"][0]["characterName"]
 
+    # get impression:from
+    impression_query_data = {
+        "from_id": id1,
+        "to_id": id2,
+        "k": 1,
+    }
+    impression_response = make_api_request_sync(
+        "GET", "/impressions/", params=impression_query_data
+    )
+
+    if impression_response["data"]:
+        current_impression_from = impression_response["data"][0]
+    else:
+        current_impression_from = []
+    logger.info(
+        f"The current impression from User {id1} to User {id2} is {current_impression_from}"
+    )
+
+    # get impression:to
+    impression_query_data = {
+        "from_id": id2,
+        "to_id": id1,
+        "k": 1,
+    }
+    impression_response = make_api_request_sync(
+        "GET", "/impressions/", params=impression_query_data
+    )
+
+    if impression_response["data"]:
+        current_impression_to = impression_response["data"][0]
+    else:
+        current_impression_to = []
+    logger.info(
+        f"The current impression from User {id2} to User {id1} is {current_impression_to}"
+    )
+
+    # strip relation
+    relation_from = strip_relation(current_impression_from)
+    relation_to = strip_relation(current_impression_to)
+
     # update impression
     retry_count = 0
     while retry_count < 3:
@@ -479,6 +523,8 @@ async def update_impression(id1: int, id2: int, conversation):
             payload = {
                 "conversation": conversation,
                 "relation_list": relation_list,
+                "relation_from": relation_from,
+                "relation_to": relation_to,
                 "from_name": my_name,
                 "to_name": target_name,
             }
@@ -747,3 +793,15 @@ def mark_map(x: int):
         1: -5
     }
     return mapping.get(x, 0)
+
+
+def strip_relation(impression: str):
+    try:
+        relation_start = impression.find("relation:") + len("relation:")
+        relation_end = impression.find("emotion:")
+        relation_info = impression[relation_start:relation_end].strip()
+    except Exception as e:
+        logger.error(f"Error in stripping relation from impression: {e}")
+        relation_info = "Strangers."
+        logger.warning(f"Using default relation: {relation_info}")
+    return relation_info
