@@ -14,7 +14,8 @@ default_value = {"code": 500, "msg": "Can not access Database...", "data": {}}
 
 def retry_with_fallback(
     max_retries: int = 3,
-    delay: float = 1.0,
+    initial_delay: float = 1.0,
+    exponential_base: float = 2.0,
     default_value: Any = default_value,
     try_fallback: bool = True,
 ):
@@ -28,6 +29,8 @@ def retry_with_fallback(
                 except httpx.HTTPError as e:
                     logger.warning(f"Attempt {attempt + 1}/{max_retries} failed: {e}")
                     if attempt < max_retries - 1:
+                        delay = initial_delay * (exponential_base**attempt)
+                        logger.info(f"Waiting {delay:.2f} seconds before next retry")
                         time.sleep(delay)
                     elif try_fallback and self.fallback_url:
                         original_base_url = self.base_url
@@ -55,6 +58,8 @@ def retry_with_fallback(
                 except httpx.HTTPError as e:
                     logger.warning(f"Attempt {attempt + 1}/{max_retries} failed: {e}")
                     if attempt < max_retries - 1:
+                        delay = initial_delay * (exponential_base**attempt)
+                        logger.info(f"Waiting {delay:.2f} seconds before next retry")
                         time.sleep(delay)
                     elif try_fallback and self.fallback_url:
                         original_base_url = self.base_url
@@ -144,7 +149,3 @@ class APIClient:
 
 game_api = APIClient(base_url=os.getenv("GAME_BACKEND_URL"))
 agent_api = APIClient(base_url=os.getenv("AGENT_BACKEND_URL"))
-
-if __name__ == "__main__":
-    response = agent_api.request_sync(method="GET", endpoint="/production_path/432543")
-    print(response)
