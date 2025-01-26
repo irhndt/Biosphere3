@@ -263,8 +263,7 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
         },
     )
     if state.get("instance"):
-        state["instance"].log_message("received", json.dumps(response))
-    # state["instance"].log_message("received", json.dumps(response))
+        state["instance"].log_message("received", response)
 
     return {"current_pointer": "meta_action_sequence"}
 
@@ -330,7 +329,7 @@ async def generate_meta_action_sequence(state: RunningState):
             "description": meta_action_sequence.description_sequence,
         },
     )
-    state["instance"].log_message("received", json.dumps(response))
+    state["instance"].log_message("received", response)
     logger.info(
         f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence.meta_action_sequence}"
     )
@@ -428,7 +427,7 @@ async def replan_action(state: RunningState):
             "description": meta_action_sequence.description_sequence,
         },
     )
-    state["instance"].log_message("received", json.dumps(response))
+    state["instance"].log_message("received", response)
 
     return {"current_pointer": "Replan_Action"}
 
@@ -487,7 +486,7 @@ async def generate_change_job_cv(instance, msg: dict):
                 "data": {"jobId": cv.job_id, "cv": cv.cv, **mayor_decision},
             }
         )
-        instance.log_message("received", json.dumps(response))
+        instance.log_message("received", response)
 
 
 async def generate_mayor_decision(
@@ -595,7 +594,7 @@ async def generate_daily_reflection(state: RunningState):
             "reflection": daily_reflection.reflection,
         },
     )
-    state["instance"].log_message("received", json.dumps(response))
+    state["instance"].log_message("received", response)
 
     logger.info(f"🔍 DAILY_REFLECTION INVOKED with {daily_reflection.reflection}")
 
@@ -632,7 +631,7 @@ async def generate_character_arc(state: RunningState):
         12,
         {"character_arc": character_arc_data},
     )
-    state["instance"].log_message("received", json.dumps(response))
+    state["instance"].log_message("received", response)
     logger.info(f"📜 Character Arc: {character_arc_data}")
     agent_api.request_sync(
         method="POST", endpoint="/character_arc/", data=character_arc_data
@@ -800,7 +799,7 @@ async def generate_accommodation_decision(state: RunningState):
             "comments": accommodation_decision.comments,
         },
     )
-    state["instance"].log_message("received", json.dumps(response))
+    state["instance"].log_message("received", response)
 
     return {"current_pointer": "Accommodation_Decision"}
 
@@ -1070,7 +1069,7 @@ async def replan_meta_action_seq_new(state: RunningState):
             "description": [desc.content for desc in emoji_sequence.response],
         },
     )
-    state["instance"].log_message("received", json.dumps(response))
+    state["instance"].log_message("received", response)
 
     return {"current_pointer": "Replan_Meta_Action"}
 
