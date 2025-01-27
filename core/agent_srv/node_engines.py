@@ -610,10 +610,10 @@ async def generate_accommodation_decision(state: RunningState):
     for acc in available_accommodations:
         weekly_rent = acc["weeklyRent"]
         if weekly_rent == 0:
-            acc["affordable_weeks"] = 12
+            acc["affordable_weeks"] = 4
         else:
             affordable_weeks = financial_status["money"] // weekly_rent
-            affordable_weeks = min(affordable_weeks, 12)
+            affordable_weeks = min(affordable_weeks, 4)
             acc["affordable_weeks"] = int(affordable_weeks)
 
     failure_reasons = []
@@ -670,9 +670,9 @@ async def generate_accommodation_decision(state: RunningState):
 
         lease_weeks = accommodation_decision.lease_weeks
 
-        if not (1 <= lease_weeks <= 12):
+        if not (1 <= lease_weeks <= 4):
             failure_message = (
-                f"Attempt {retries + 1}: Lease weeks {lease_weeks} is out of allowed range (1-12). "
+                f"Attempt {retries + 1}: Lease weeks {lease_weeks} is out of allowed range (1-4). "
                 f"Please choose a valid number of weeks."
             )
 
