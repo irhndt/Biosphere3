@@ -280,7 +280,7 @@ If the decision is not to offer the job:
 )
 
 accommodation_decision_prompt = ChatPromptTemplate.from_template(
-    """Based on the following information, decide which accommodation the user should rent next and for how many weeks (1-12).
+    """Based on the following information, decide which accommodation the user should rent next and for how many weeks (1-4).
 # Basic Information:
     User State:
     {character_stats}
@@ -298,13 +298,13 @@ accommodation_decision_prompt = ChatPromptTemplate.from_template(
     Your output should be a JSON object like:
     {{
         "accommodation_id": <int>,  # ID of the chosen accommodation
-        "lease_weeks": <int>,       # Number of weeks to lease (1-12)
+        "lease_weeks": <int>,       # Number of weeks to lease (1-4)
         "comments": "<Your comments>"
     }}
     For example:
     {{
         "accommodation_id": 8,
-        "lease_weeks": 8,
+        "lease_weeks": 2,
         "comments": "I can afford a Villa now, which would improve my quality of life and help me to get respect from others."
     {{
 
