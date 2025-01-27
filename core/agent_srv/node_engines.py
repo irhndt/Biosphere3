@@ -2,7 +2,6 @@ import json
 from loguru import logger
 import sys
 from pprint import pprint
-from collections import deque
 import traceback
 
 sys.path.append(".")
@@ -23,11 +22,7 @@ from core.agent_srv.node_model import (
 from core.agent_srv.prompts import *
 from core.agent_srv.action_simulator import ActionSimulator
 from core.utils.llm_factory import llm_selector
-from core.db.database_api_utils import make_api_request_sync
-from core.db.game_api_utils import (
-    make_api_request_async as make_api_request_async_backend,
-    make_api_request_sync as make_api_request_sync_backend,
-)
+from core.db.api_client import game_api, agent_api
 from core.agent_srv.utils import *
 
 
@@ -44,20 +39,20 @@ async def generate_daily_objective(state: RunningState):
         DailyObjective,
         0.7,
     )
-    dev_dict = make_api_request_sync("GET", f"/production_path/{state['userid']}").get(
-        "data", {}
+    dev_dict = agent_api.request_sync(
+        method="GET", endpoint=f"/production_path/{state['userid']}"
     )
-    # print(dev_dict)
     state["meta"]["production_graph"] = format_level_graph(
         dev_dict,
         state["character_stats"]["inventory"],
         state["character_stats"]["energy"],
     )
 
-    decision_response = make_api_request_sync(
-        "GET", "/action_log/", params={"characterId": state["userid"], "count": 5}
+    last_decision = agent_api.request_sync(
+        method="GET",
+        endpoint="/action_log/",
+        params={"characterId": state["userid"], "count": 5},
     )
-    last_decision = decision_response.get("data", {})
     retry_count = 0
     daily_objectives_list = list(state["decision"]["daily_objective"])
     if len(daily_objectives_list) > 0:
@@ -249,8 +244,7 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
         },
     )
     if state.get("instance"):
-        state["instance"].log_message("received", json.dumps(response))
-    # state["instance"].log_message("received", json.dumps(response))
+        state["instance"].log_message("received", response)
 
     return {"current_pointer": "meta_action_sequence"}
 
@@ -269,9 +263,10 @@ async def sensing_environment(state: RunningState):
 
 async def generate_change_job_cv(instance, msg: dict):
     cv_generator = create_planner(generate_cv_prompt, "gpt-4o-mini", CV, 0.5)
-    available_public_jobs = make_api_request_sync_backend(
-        "GET", "/publicWork/getAll"
-    ).get("data", [])
+    available_public_jobs = game_api.request_sync(
+        method="GET",
+        endpoint="/publicWork/getAll",
+    )
 
     user_id = msg.get("characterId")
     msg_data = msg.get("data", {})
@@ -291,10 +286,10 @@ async def generate_change_job_cv(instance, msg: dict):
 
     logger.info(f"📃 CV: {cv}")
 
-    job_detail = make_api_request_sync_backend(
-        "GET", f"/publicWork/getById/{cv.job_id}"
+    job_detail = game_api.request_sync(
+        method="GET", endpoint=f"/publicWork/getById/{cv.job_id}"
     )
-    job_name = job_detail.get("data", {}).get("jobName", "")
+    job_name = job_detail.get("jobName", "")
     cv_request = {
         "jobid": cv.job_id,
         "characterId": user_id,
@@ -306,7 +301,7 @@ async def generate_change_job_cv(instance, msg: dict):
         "jobName": job_name,
         "election_status": "not_yet",
     }
-    make_api_request_sync("POST", "/cv/", data=cv_request)
+    agent_api.request_sync(method="POST", endpoint="/cv/", data=cv_request)
 
     mayor_decision = await generate_mayor_decision(
         cv, user_id, studyXp, education, date
@@ -320,7 +315,7 @@ async def generate_change_job_cv(instance, msg: dict):
                 "data": {"jobId": cv.job_id, "cv": cv.cv, **mayor_decision},
             }
         )
-        instance.log_message("received", json.dumps(response))
+        instance.log_message("received", response)
 
 
 async def generate_change_job_cv_new(instance, msg: dict):
@@ -431,19 +426,19 @@ async def generate_mayor_decision(
     mayor_decision_generator = create_planner(
         mayor_decision_prompt, "gpt-4o-mini", MayorDecision, 0.7
     )
-    public_work_info = make_api_request_sync_backend(
-        "GET", f"/publicWork/getById/{cv.job_id}"
-    ).get("data", {})
-
-    check_result = make_api_request_sync_backend(
-        "POST",
-        "/publicWork/checkWork",
+    public_work_info = game_api.request_sync(
+        method="GET", endpoint=f"/publicWork/getById/{cv.job_id}"
+    )
+    check_result = game_api.request_sync(
+        method="POST",
+        endpoint="/publicWork/checkWork",
         data={
             "characterId": user_id,
             "newJobId": cv.job_id,
             "experience": experience,
             "education": education,
         },
+        return_data=False,
     )
     code = check_result.get("code", 0)
     message = check_result.get("message", "")
@@ -456,9 +451,9 @@ async def generate_mayor_decision(
     logger.info(f"🧔 Mayor decision: {mayor_decision.decision}")
     logger.info(f"🧔 Mayor comments: {mayor_decision.comments}")
 
-    make_api_request_sync(
-        "PUT",
-        "/cv/election_status",
+    agent_api.request_sync(
+        method="PUT",
+        endpoint="/cv/election_status",
         data={
             "characterId": user_id,
             "jobid": cv.job_id,
@@ -482,9 +477,9 @@ async def generate_daily_reflection(state: RunningState):
         Reflection,
         0.8,
     )
-    conversation = make_api_request_sync(
-        "GET",
-        "/conversation/",
+    conversation = agent_api.request_sync(
+        method="GET",
+        endpoint="/conversation/",
         params={"characterId": state["userid"], "start_day": state["meta"]["day"] - 1},
     )
     failed_actions = await format_queue_data(state["false_action_queue"])
@@ -512,9 +507,7 @@ async def generate_daily_reflection(state: RunningState):
                 "inventory",
             ],
         ),
-        "conversation_memory": format_conversation_data(
-            state["userid"], conversation.get("data", [])
-        ),
+        "conversation_memory": format_conversation_data(state["userid"], conversation),
     }
     daily_reflection = await daily_reflection_generator.ainvoke(payload)
 
@@ -532,7 +525,7 @@ async def generate_daily_reflection(state: RunningState):
             "reflection": daily_reflection.reflection,
         },
     )
-    state["instance"].log_message("received", json.dumps(response))
+    state["instance"].log_message("received", response)
 
     logger.info(f"🔍 DAILY_REFLECTION INVOKED with {daily_reflection.reflection}")
 
@@ -546,11 +539,10 @@ async def generate_character_arc(state: RunningState):
         CharacterArc,
         0.8,
     )
-    character_info_task = make_api_request_async_backend(
-        "GET", f"/characters/getById/{state['userid']}"
+
+    character_info = game_api.request_sync(
+        method="GET", endpoint=f"/characters/getById/{state['userid']}"
     )
-    character_info_response = await character_info_task
-    character_info = character_info_response.get("data", {})
     character_arc = await character_arc_generator.ainvoke(
         {
             "character_stats": format_character_data(state["character_stats"]),
@@ -570,9 +562,11 @@ async def generate_character_arc(state: RunningState):
         12,
         {"character_arc": character_arc_data},
     )
-    state["instance"].log_message("received", json.dumps(response))
+    state["instance"].log_message("received", response)
     logger.info(f"📜 Character Arc: {character_arc_data}")
-    make_api_request_sync("POST", "/character_arc/", data=character_arc_data)
+    agent_api.request_sync(
+        method="POST", endpoint="/character_arc/", data=character_arc_data
+    )
 
     return {"current_pointer": "Character_Arc"}
 
@@ -584,10 +578,10 @@ async def generate_accommodation_decision(state: RunningState):
         AccommodationDecision,
         0.5,
     )
-    current_accommodation_response = await make_api_request_async_backend(
-        "GET", f"/characterDormitory/getByCharacterIdNew/{state['userid']}"
+    current_accommodation_data = game_api.request_sync(
+        method="GET",
+        endpoint=f"/characterDormitory/getByCharacterIdNew/{state['userid']}",
     )
-    current_accommodation_data = current_accommodation_response.get("data", None)
 
     current_accommodation = {"id": 1, "type": "Shelter"}
     if current_accommodation_data:
@@ -598,11 +592,9 @@ async def generate_accommodation_decision(state: RunningState):
 
     financial_status = {"money": state["character_stats"].get("money", 0)}
 
-    accommodations_response = await make_api_request_async_backend(
-        "GET", "/dormitory/getAll"
+    accommodations_response = game_api.request_sync(
+        method="GET", endpoint="/dormitory/getAll"
     )
-    available_accommodations_raw = accommodations_response.get("data", [])
-
     necessary_fields = [
         "id",
         "type",
@@ -614,7 +606,7 @@ async def generate_accommodation_decision(state: RunningState):
     ]
     available_accommodations = [
         {key: accommodation[key] for key in necessary_fields}
-        for accommodation in available_accommodations_raw
+        for accommodation in accommodations_response
     ]
 
     for acc in available_accommodations:
@@ -738,7 +730,7 @@ async def generate_accommodation_decision(state: RunningState):
             "comments": accommodation_decision.comments,
         },
     )
-    state["instance"].log_message("received", json.dumps(response))
+    state["instance"].log_message("received", response)
 
     return {"current_pointer": "Accommodation_Decision"}
 
@@ -908,7 +900,7 @@ async def replan_meta_action_seq_new(state: RunningState):
             "description": [desc.content for desc in emoji_sequence.response],
         },
     )
-    state["instance"].log_message("received", json.dumps(response))
+    state["instance"].log_message("received", response)
 
     return {"current_pointer": "Replan_Meta_Action"}
 

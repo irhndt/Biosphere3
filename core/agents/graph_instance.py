@@ -244,7 +244,7 @@ class LangGraphInstance:
             except Exception as e:
                 self.logger.error(f"User {self.user_id}: Error sending message: {e}")
 
-    def log_message(self, direction: str, message: str):
+    def log_message(self, direction: str, message: dict):
         self.message_log.append(
             {
                 "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),

@@ -4,9 +4,6 @@ from typing import Literal
 import websockets
 import json
 from core.conversation_srv.conversation_utils import make_api_request_sync
-from core.db.game_api_utils import (
-    make_api_request_sync as make_backend_api_request_sync,
-)
 from datetime import datetime
 import random
 from langgraph.graph import StateGraph
@@ -786,8 +783,8 @@ def generate_talk_time(k: int):
 
 def mark_map(x: int):
     mapping = {
-        5: 5,
-        4: 3,
+        5: 8,
+        4: 4,
         3: 0,
         2: -3,
         1: -5

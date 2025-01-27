@@ -1,131 +1,22 @@
-import requests
 import os
 import json
-from json import JSONDecodeError
 import asyncio
 from dotenv import load_dotenv
-import aiohttp
 from loguru import logger
 import math
 import copy
 import pandas as pd
 from collections import deque
+from core.db.api_client import agent_api, game_api
 
 load_dotenv()
-GAME_BACKEND_URL = os.getenv("GAME_BACKEND_URL")
-GAME_BACKEND_TIMEOUT = int(os.getenv("GAME_BACKEND_TIMEOUT"))
-AGENT_BACKEND_URL = os.getenv("AGENT_BACKEND_URL")
 DEFAULT_MODEL_TYPE = os.getenv("DEFAULT_MODEL_TYPE")
 skill2actions = json.load(open("core/files/skill2actions.json"))
 
 
-async def fetch_api_data_async(
-    method: str,
-    endpoint: str,
-    userid: int,
-    _logger,
-    timeout: int = GAME_BACKEND_TIMEOUT,
-) -> dict:
-    """
-    Make an asynchronous API request with error handling.
-
-    Args:
-        method (str): HTTP method (e.g., 'POST').
-        endpoint (str): API endpoint.
-        userid (int): User ID.
-        _logger: The logger instance for logging errors.
-        timeout (int): The timeout for the request.
-
-    Returns:
-        dict: The API response data if successful, otherwise an empty dict.
-    """
-    url = f"{AGENT_BACKEND_URL}{endpoint}"
-    try:
-        if method == "GET":
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    url, params={"characterId": userid}, timeout=timeout
-                ) as response:
-                    response.raise_for_status()
-                    return await response.json()
-        else:
-            async with aiohttp.ClientSession() as session:
-                async with session.request(
-                    method, url, json={"characterId": userid}, timeout=timeout
-                ) as response:
-                    response.raise_for_status()
-                    return await response.json()
-    except asyncio.TimeoutError:
-        _logger.error(f"Timeout while accessing {endpoint}")
-    except aiohttp.ClientError as e:
-        _logger.error(f"HTTP error while accessing {endpoint}: {e}")
-    except JSONDecodeError:
-        _logger.error(f"Failed to decode JSON from {endpoint}")
-    return {}
-
-
-def fetch_json(url: str, timeout: int, _logger, error_message: str = "") -> dict:
-    """
-    Fetch JSON data from a given URL with error handling.
-
-    Args:
-        url (str): The URL to send the GET request to.
-        timeout (int): The timeout for the request.
-        _logger: The logger instance for logging errors.
-        error_message (str): Custom error message for timeout.
-
-    Returns:
-        dict: The JSON data if successful, otherwise an empty dict.
-    """
-    try:
-        response = requests.get(url, timeout=timeout)
-        response_data = response.json().get("data", {})
-        if response_data == None:
-            return {"code": 0, "data": None, "message": "Resource not found at GAMEDB"}
-        return response_data
-    except TimeoutError:
-        _logger.error(error_message)
-    except JSONDecodeError:
-        _logger.error(f"Failed to decode JSON from {url}")
-    return {"code": 0, "data": {}, "message": "Resource not found at GAMEDB"}
-
-
-async def fetch_json_async(
-    url: str, timeout: int, _logger, error_message: str = ""
-) -> dict:
-    """
-    Fetch JSON data from a given URL asynchronously with error handling.
-
-    Args:
-        url (str): The URL to send the GET request to.
-        timeout (int): The timeout for the request.
-        _logger: The logger instance for logging errors.
-        error_message (str): Custom error message for timeout.
-
-    Returns:
-        dict: The JSON data if successful, otherwise an empty dict.
-    """
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=timeout) as response:
-                response.raise_for_status()
-                response_data = await response.json()
-                return response_data.get("data", {}) if response_data else {}
-    except asyncio.TimeoutError:
-        _logger.error(error_message)
-    except aiohttp.ClientError as e:
-        _logger.error(f"HTTP error while accessing {url}: {e}")
-    except JSONDecodeError:
-        _logger.error(f"Failed to decode JSON from {url}")
-    return {"code": 0, "data": {}, "message": "Resource not found at GAMEDB"}
-
-
 def get_inventory(userid: int) -> dict:
-    response = fetch_json(
-        f"{GAME_BACKEND_URL}/bag/getByCharacterId/{userid}",
-        timeout=GAME_BACKEND_TIMEOUT,
-        _logger=logger,
-        error_message="Failed to get inventory from game backend",
+    response = game_api.request_sync(
+        method="GET", endpoint=f"/bag/getByCharacterId/{userid}"
     )
     inventory_dict = {}
     try:
@@ -137,11 +28,8 @@ def get_inventory(userid: int) -> dict:
 
 
 async def get_inventory_async(userid: int) -> dict:
-    response = await fetch_json_async(
-        f"{GAME_BACKEND_URL}/bag/getByCharacterId/{userid}",
-        timeout=GAME_BACKEND_TIMEOUT,
-        _logger=logger,
-        error_message="Failed to get inventory from game backend",
+    response = await game_api.request_async(
+        method="GET", endpoint=f"/bag/getByCharacterId/{userid}"
     )
     inventory_dict = {}
     try:
@@ -154,33 +42,22 @@ async def get_inventory_async(userid: int) -> dict:
 
 def get_market_data_from_db() -> dict:
     # Market data
-    price_response = fetch_json(
-        url=f"{GAME_BACKEND_URL}/ammPool/getAveragePrice",
-        timeout=GAME_BACKEND_TIMEOUT,
-        _logger=logger,
-        error_message="Failed to get market data from AMM pool",
+    price_response = game_api.request_sync(
+        method="GET", endpoint="/ammPool/getAveragePrice"
     )
     market_data_dict = dict({x["name"]: x["averagePrice"] for x in price_response})
     return market_data_dict
 
 
 def get_amm_data_from_db() -> dict:
-    amm_response = fetch_json(
-        url=f"{GAME_BACKEND_URL}/ammPool/getAll1",
-        timeout=GAME_BACKEND_TIMEOUT,
-        _logger=logger,
-        error_message="Failed to get AMM data from game backend",
-    )
+    amm_response = game_api.request_sync(method="GET", endpoint="/ammPool/getAll1")
     return amm_response
 
 
 async def get_prompt_data_from_db(userid: int):
     # Prompt data
-    prompt_response = await fetch_json_async(
-        url=f"{AGENT_BACKEND_URL}/agent_prompt/?characterId={userid}",
-        timeout=GAME_BACKEND_TIMEOUT,
-        _logger=logger,
-        error_message="Failed to get prompt data from game backend",
+    prompt_response = await agent_api.request_async(
+        method="GET", endpoint="/agent_prompt/", params={"characterId": userid}
     )
     dict = prompt_response[0] if prompt_response else {}
     fields = [
@@ -203,40 +80,18 @@ async def get_prompt_data_from_db(userid: int):
 
 
 async def fetch_game_db_character_response_async(userid: int) -> dict:
-    """
-    Asynchronously fetches character data from the game database.
-
-    Args:
-        userid (int): The ID of the user.
-
-    Returns:
-        dict: The game database character response.
-    """
-    response = await fetch_json_async(
-        f"{GAME_BACKEND_URL}/characters/getByIdS/{userid}",
-        timeout=GAME_BACKEND_TIMEOUT,
-        _logger=logger,
-        error_message="Failed to get character data from game backend",
+    response = await game_api.request_async(
+        method="GET", endpoint=f"/characters/getByIdS/{userid}"
     )
     return response
 
 
 async def fetch_agent_db_response_async(userid: int) -> dict:
-    """
-    Asynchronously fetches character data from the agent database.
-
-    Args:
-        userid (int): The ID of the user.
-
-    Returns:
-        dict: The agent database response.
-    """
-    response = await fetch_api_data_async(
-        "GET",
+    response = await agent_api.request_async(
+        method="GET",
         endpoint="/characters/",
-        userid=userid,
-        _logger=logger,
-        timeout=GAME_BACKEND_TIMEOUT,
+        params={"characterId": userid},
+        return_data=False,
     )
     if response.get("code") == 0:
         logger.info(
@@ -248,20 +103,8 @@ async def fetch_agent_db_response_async(userid: int) -> dict:
 
 
 async def fetch_model_type_response_async(userid: int) -> dict:
-    """
-    Asynchronously fetches model type from the character model service.
-
-    Args:
-        userid (int): The ID of the user.
-
-    Returns:
-        dict: The model type response.
-    """
-    response = await fetch_json_async(
-        f"{GAME_BACKEND_URL}/CharacterModel/getByCharacterId/{userid}",
-        timeout=GAME_BACKEND_TIMEOUT,
-        _logger=logger,
-        error_message="Failed to get model type from character model service",
+    response = await game_api.request_async(
+        method="GET", endpoint=f"/CharacterModel/getByCharacterId/{userid}"
     )
     return response
 
@@ -309,78 +152,37 @@ async def get_character_data_async(userid: int) -> dict:
 
 
 def save_action_to_db(userid: int, action: dict):
-    url = f"{AGENT_BACKEND_URL}/actions/"
-    data = {
-        "characterId": userid,
-        "location": action.get("location", ""),
-        "gameTime": action.get("gameTime", ""),
-    }
-    try:
-        response = requests.post(
-            url,
-            json=data,
-            timeout=GAME_BACKEND_TIMEOUT,
-        )
-        response.raise_for_status()
-    except requests.Timeout:
-        logger.error(f"Timeout while saving action to {url}")
-    except requests.HTTPError as e:
-        logger.error(f"HTTP error while saving action to {url}: {e}")
-    except JSONDecodeError:
-        logger.error(f"Failed to decode JSON from {url}")
+    agent_api.request_sync(
+        method="POST",
+        endpoint="/actions/",
+        data={
+            "characterId": userid,
+            "location": action.get("location", ""),
+            "gameTime": action.get("gameTime", ""),
+        },
+    )
 
 
 def save_decision_to_db(userid: int, decision: dict, endpoint: str):
-    """
-    Save the decision to the game database.
-
-    Args:
-        userid (int): The ID of the user.
-        decision (dict): The decision data to save.
-    """
-    url = f"{AGENT_BACKEND_URL}/{endpoint}/"
     decision["characterId"] = userid
-    try:
-        response = requests.post(
-            url,
-            json=decision,
-            timeout=GAME_BACKEND_TIMEOUT,
-        )
-        response.raise_for_status()
-    except requests.Timeout:
-        logger.error(f"Timeout while saving decision to {url}")
-    except requests.HTTPError as e:
-        logger.error(f"HTTP error while saving decision to {url}: {e}")
-    except JSONDecodeError:
-        logger.error(f"Failed to decode JSON from {url}")
+    agent_api.request_sync(
+        method="POST",
+        endpoint=f"/{endpoint}/",
+        data=decision,
+    )
+
 
 
 def save_reflection_to_db(user_id: int, reflection: dict):
-    url = f"{AGENT_BACKEND_URL}/reflection/"
     reflection["characterId"] = user_id
-    try:
-        response = requests.patch(
-            url,
-            json=reflection,
-            timeout=GAME_BACKEND_TIMEOUT,
-        )
-        response.raise_for_status()
-    except requests.Timeout:
-        logger.error(f"Timeout while saving reflection to {url}")
-    except requests.HTTPError as e:
-        logger.error(f"HTTP error while saving reflection to {url}: {e}")
-    except JSONDecodeError:
-        logger.error(f"Failed to decode JSON from {url}")
+    agent_api.request_sync(
+        method="PATCH",
+        endpoint="/reflection/",
+        data=reflection,
+    )
 
 
 def save_token_consumption_to_db(token_consumption: dict):
-    """
-    Save the token consumption to the game database.
-
-    Args:
-        token_consumption (dict): The token consumption data to save.
-    """
-    url = f"{GAME_BACKEND_URL}/modelToken/add/"
     for model_type, usage in token_consumption.items():
         data = {
             "modelType": model_type,
@@ -388,19 +190,7 @@ def save_token_consumption_to_db(token_consumption: dict):
             "completion": usage.get("completion", 0),
             "total": usage.get("total", 0),
         }
-        try:
-            response = requests.post(
-                url,
-                json=data,
-                timeout=GAME_BACKEND_TIMEOUT,
-            )
-            response.raise_for_status()
-        except requests.Timeout:
-            logger.error(f"Timeout while saving token consumption to {url}")
-        except requests.HTTPError as e:
-            logger.error(f"HTTP error while saving token consumption to {url}: {e}")
-        except JSONDecodeError:
-            logger.error(f"Failed to decode JSON from {url}")
+        game_api.request_sync(method="POST", endpoint="/modelToken/add/", data=data)
 
 
 def get_occupation(job_id: int) -> str:
@@ -984,7 +774,6 @@ def get_industry_and_goal(character_industry: str):
         "Food": "Acquire materials to make items and engage in buying and selling to earn more money",
     }
     return industry[character_industry], industry_goal_for_daily_obj[character_industry]
-
 
 if __name__ == "__main__":
     # print(refine_craft_action("craft rice 2"))
