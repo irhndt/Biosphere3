@@ -127,7 +127,7 @@ class LangGraphInstance:
                     )
                     self.schedule_event("CHARACTER_ARC")
                     self.schedule_event("DAILY_REFLECTION")
-                    await generate_change_job_cv(self.state["instance"], msg)
+                    await generate_change_job_cv_new(self.state["instance"], msg)
                     await asyncio.sleep(60)
                     clear_decision(self.state)
                 else:

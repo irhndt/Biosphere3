@@ -148,6 +148,7 @@ class CV(BaseModel):
     """CV to follow in future"""
 
     job_id: int = Field(description="job id")
+    job_name: str = Field(description="job name")
     cv: str = Field(description="cv")
 
 

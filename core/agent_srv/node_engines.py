@@ -319,12 +319,7 @@ async def generate_change_job_cv(instance, msg: dict):
 
 
 async def generate_change_job_cv_new(instance, msg: dict):
-    cv_generator = create_planner(
-        prompt_for_cv_new,
-        state.get("character_stats", {}).get("model_type"),
-        CV,
-        0.5,
-    )
+    cv_generator = create_planner(prompt_for_cv_new, "gpt-4o-mini", CV, 0.5)
     userid = msg.get("characterId")
     msg_data = msg.get("data", {})
     health = msg_data.get("health", 0)
@@ -336,22 +331,20 @@ async def generate_change_job_cv_new(instance, msg: dict):
     date = msg_data.get("date", 0)
     character_name = instance.state["character_stats"].get("name", "None")
 
-    character_industry = make_api_request_sync("GET", f"/industry/{userid}").get(
-        "data", {}
+    character_industry = agent_api.request_sync(
+        method="GET", endpoint=f"/industry/{userid}"
     )["industry"]
-    cv_data = make_api_request_sync("GET", "/cv/", params={"characterId": userid}).get(
-        "data", []
+    cv_data = agent_api.request_sync(
+        method="GET", endpoint="/cv/", params={"characterId": userid}
     )
-    all_public_jobs = make_api_request_sync_backend("GET", "/publicWork/getAll").get(
-        "data", []
-    )
+    all_public_jobs = game_api.request_sync(method="GET", endpoint="/publicWork/getAll")
     if not cv_data:
         past_work_experience = None
     else:
         past_work_experience = cv_data[0].get("experience", None)
-    biography = state["character_stats"].get("personality", "None")
-    job_data = make_api_request_sync_backend("GET", f"/publicWork/getById/{jobId}").get(
-        "data", {}
+    biography = instance.state["character_stats"].get("personality", "None")
+    job_data = game_api.request_sync(
+        method="GET", endpoint=f"/publicWork/getById/{jobId}"
     )
     eligible_jobs = filter_jobs(all_public_jobs, education, experience)
     if job_data:
@@ -404,7 +397,7 @@ async def generate_change_job_cv_new(instance, msg: dict):
         "jobName": cv.job_name,
         "election_status": "not_yet",
     }
-    make_api_request_sync("POST", "/cv/", data=cv_request)
+    agent_api.request_sync("POST", "/cv/", data=cv_request)
     mayor_decision = await generate_mayor_decision(
         cv, userid, experience, education, date
     )
@@ -414,7 +407,12 @@ async def generate_change_job_cv_new(instance, msg: dict):
                 "characterId": userid,
                 "messageName": "mayor_decision",
                 "messageCode": 10,
-                "data": {"jobId": cv.job_id, "cv": cv.cv, **mayor_decision},
+                "data": {
+                    "jobId": cv.job_id,
+                    "jobName": cv.job_name,
+                    "cv": cv.cv,
+                    **mayor_decision,
+                },
             }
         )
         instance.log_message("received", json.dumps(response))

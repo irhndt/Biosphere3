@@ -1146,7 +1146,8 @@ meta_seq_example_out = """
 trade_planner_prompt = """
 """
 
-prompt_for_cv_new = """{characterName} focuses on {industry}. The ultimate goal: {industry_goal_for_cv}.
+prompt_for_cv_new = ChatPromptTemplate.from_template(
+    """{characterName} focuses on {industry}. The ultimate goal: {industry_goal_for_cv}.
 
 # Personal Information
 Educational Background: {education}
@@ -1167,6 +1168,8 @@ The cv should be written in a lively, conversational first-person narrative (one
 The output format is in JSON format:
 {{
     "jobId": id,
+    "jobName": job_name,
     "cv": content
 }}
 """
+)
