@@ -23,28 +23,7 @@ from core.agent_srv.prompts import *
 from core.agent_srv.action_simulator import ActionSimulator
 from core.utils.llm_factory import llm_selector
 from core.db.api_client import game_api, agent_api
-from core.agent_srv.utils import (
-    format_dict,
-    save_decision_to_db,
-    save_reflection_to_db,
-    format_role_actions,
-    format_market,
-    format_character_data,
-    format_conversation_data,
-    format_queue_data,
-    format_trade_and_craft_sequence,
-    format_level_graph,
-    format_daily_obj,
-    get_character_data_async,
-    get_prompt_data_from_db,
-    get_market_data_from_db,
-    get_amm_data_from_db,
-    format_status_changes,
-    format_false_action_info,
-    format_detailed_meta_seq,
-    format_meta_seq,
-    refine_list,
-)
+from core.agent_srv.utils import *
 
 
 def create_planner(prompt_template, model_name, output_type, temperature=0.5):
@@ -88,6 +67,8 @@ async def generate_daily_objective(state: RunningState):
         "past_reflection": last_decision.get("reflection", []) if last_decision else [],
         "production_graph": state["meta"]["production_graph"],
     }
+
+    print(obj_planner_prompt.format(**payload))
     while retry_count < 3:
         try:
             planner_response = await obj_planner.ainvoke(payload)
@@ -146,7 +127,7 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
         "example_output": meta_seq_example_out,
         "forbidden_example_output": meta_seq_forbidden_example_out,
     }
-    # print(crafting_and_trading_prompt.format(**payload))
+    print(crafting_and_trading_prompt.format(**payload))
     retry_count = 0
     while retry_count < 3:
         try:
@@ -268,75 +249,6 @@ async def generate_crafting_and_trading_sequence(state: RunningState):
     return {"current_pointer": "meta_action_sequence"}
 
 
-async def generate_meta_action_sequence(state: RunningState):
-    meta_action_sequence_planner = create_planner(
-        meta_action_sequence_prompt,
-        state.get("character_stats", {}).get("model_type"),
-        MetaActionSequence,
-        0.3,
-    )
-    payload = {
-        "daily_objective": (
-            state["decision"]["daily_objective"][-1]
-            if state["decision"]["daily_objective"]
-            else []
-        ),
-        "tool_functions": state["meta"]["tool_functions"],
-        "locations": state["meta"]["available_locations"],
-        "inventory": state["character_stats"]["inventory"],
-        "market_data": state["public_data"]["market_data"],
-        "task_priority": state["prompts"]["task_priority"],
-        "max_actions": state["prompts"]["max_actions"],
-        "additional_requirements": state["prompts"]["meta_seq_ar"],
-    }
-
-    retry_count = 0
-    while retry_count < 3:
-        try:
-            meta_action_sequence = await meta_action_sequence_planner.ainvoke(payload)
-            break
-        except Exception as e:
-            logger.error(
-                f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
-            )
-            retry_count += 1
-            if retry_count == 3:
-                raise Exception("Too many retries on generate_meta_action_sequence")
-            continue
-
-    # full_prompt = meta_action_sequence_prompt.format(**payload)
-    # logger.info("======generate_meta_action_sequence======\n" + full_prompt)
-    for item in meta_action_sequence.meta_action_sequence:
-        state["decision"]["meta_seq"].append(item)
-    for item in meta_action_sequence.description_sequence:
-        state["decision"]["action_description"].append(item)
-    # save_decision_to_db(
-    #     state["userid"],
-    #     {
-    #         "meta_seq": meta_action_sequence.meta_action_sequence,
-    #         "action_description": meta_action_sequence.description_sequence,
-    #     },
-    # )
-
-    response = await send_message(
-        state,
-        "actionList",
-        6,
-        {
-            "command": meta_action_sequence.meta_action_sequence,
-            "action_emoji": meta_action_sequence.action_emoji_sequence,
-            "state_emoji": meta_action_sequence.state_emoji_sequence,
-            "description": meta_action_sequence.description_sequence,
-        },
-    )
-    state["instance"].log_message("received", response)
-    logger.info(
-        f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence.meta_action_sequence}"
-    )
-
-    return {"current_pointer": "meta_action_sequence"}
-
-
 async def sensing_environment(state: RunningState):
     # update the latest state from db
     character_data = await get_character_data_async(state["userid"])
@@ -347,89 +259,6 @@ async def sensing_environment(state: RunningState):
     state["public_data"]["market_data"] = market_data
 
     return {"current_pointer": "Sensing_Route"}
-
-
-async def replan_action(state: RunningState):
-    meta_seq_adjuster = create_planner(
-        meta_seq_adjuster_prompt,
-        state.get("character_stats", {}).get("model_type"),
-        MetaActionSequence,
-        0.3,
-    )
-    false_action = state["false_action_queue"].get_nowait()
-    failed_action = false_action.get("actionName")
-    error_message = false_action.get("msg")
-
-    logger.info(f"🔄 User {state['userid']}: Replanning failed action: {failed_action}")
-
-    # Analyze error type and context
-    error_context = {
-        "failed_action": failed_action,
-        "error_message": error_message,
-        "current_meta_seq": state["decision"]["meta_seq"][-1],
-        "daily_objective": (
-            state["decision"]["daily_objective"][-1]
-            if state["decision"]["daily_objective"]
-            else []
-        ),
-    }
-    logger.info(f"🔧 User {state['userid']}: Error context: {error_context}")
-    # try:
-    # Generate new meta sequence with error context
-    retry_count = 0
-    while retry_count < 3:
-        try:
-            meta_action_sequence = await meta_seq_adjuster.ainvoke(
-                {
-                    "meta_seq": state["decision"]["meta_seq"][-1],
-                    "tool_functions": state["meta"]["tool_functions"],
-                    "locations": state["meta"]["available_locations"],
-                    "failed_action": failed_action,
-                    "error_message": error_message,
-                    "replan_time_limit": state["prompts"]["replan_time_limit"],
-                    "additional_requirements": state["prompts"]["meta_seq_adjuster_ar"],
-                }
-            )
-            break
-        except Exception as e:
-            logger.error(
-                f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
-            )
-            retry_count += 1
-            if retry_count == 3:
-                raise Exception("Too many retries on replan_action")
-            continue
-
-    logger.info(
-        f"✨ User {state['userid']}: Generated new action sequence: {meta_action_sequence.meta_action_sequence}"
-    )
-    for item in meta_action_sequence.meta_action_sequence:
-        state["decision"]["new_plan"].append(item)
-    for item in meta_action_sequence.description_sequence:
-        state["decision"]["action_description"].append(item)
-    # save_decision_to_db(
-    #     state["userid"],
-    #     {
-    #         "new_plan": meta_action_sequence.meta_action_sequence,
-    #         "action_description": meta_action_sequence.description_sequence,
-    #     },
-    # )
-
-    # Send new action sequence to client
-    response = await send_message(
-        state,
-        "actionList",
-        6,
-        {
-            "command": meta_action_sequence.meta_action_sequence,
-            "action_emoji": meta_action_sequence.action_emoji_sequence,
-            "state_emoji": meta_action_sequence.state_emoji_sequence,
-            "description": meta_action_sequence.description_sequence,
-        },
-    )
-    state["instance"].log_message("received", response)
-
-    return {"current_pointer": "Replan_Action"}
 
 
 async def generate_change_job_cv(instance, msg: dict):
@@ -487,6 +316,108 @@ async def generate_change_job_cv(instance, msg: dict):
             }
         )
         instance.log_message("received", response)
+
+
+async def generate_change_job_cv_new(instance, msg: dict):
+    cv_generator = create_planner(
+        prompt_for_cv_new,
+        state.get("character_stats", {}).get("model_type"),
+        CV,
+        0.5,
+    )
+    userid = msg.get("characterId")
+    msg_data = msg.get("data", {})
+    health = msg_data.get("health", 0)
+    money = instance.state["character_stats"].get("money", 0)
+    experience = msg_data.get("studyXp", 0)
+    education = instance.state["character_stats"].get("education", "None")
+    jobId = instance.state["character_stats"].get("jobId", 0)
+    week = msg_data.get("week", 0)
+    date = msg_data.get("date", 0)
+    character_name = instance.state["character_stats"].get("name", "None")
+
+    character_industry = make_api_request_sync("GET", f"/industry/{userid}").get(
+        "data", {}
+    )["industry"]
+    cv_data = make_api_request_sync("GET", "/cv/", params={"characterId": userid}).get(
+        "data", []
+    )
+    all_public_jobs = make_api_request_sync_backend("GET", "/publicWork/getAll").get(
+        "data", []
+    )
+    if not cv_data:
+        past_work_experience = None
+    else:
+        past_work_experience = cv_data[0].get("experience", None)
+    biography = state["character_stats"].get("personality", "None")
+    job_data = make_api_request_sync_backend("GET", f"/publicWork/getById/{jobId}").get(
+        "data", {}
+    )
+    eligible_jobs = filter_jobs(all_public_jobs, education, experience)
+    if job_data:
+        current_job = {
+            job_data["jobName"]: {
+                "id": job_data["id"],
+                "jobType": job_data["jobType"],
+                "jobPlace": job_data["jobPlace"],
+                "dailyWages": job_data["dailyWages"],
+                "education": job_data["education"],
+                "wagePerHour": job_data["wagePerHour"],
+                # "populationRatioCap": job_data["populationRatioCap"],
+            }
+        }
+        current_job_str = f"""# Current Job\n{convert_to_table_string(current_job)}\n"""
+    else:
+        current_job_str = "# Current Job\nCurrently, you don't have a job.\n"
+    industry, industry_goal_for_cv = get_industry_and_goal(character_industry)
+    payload = {
+        "industry": industry,
+        "industry_goal_for_cv": industry_goal_for_cv,
+        "characterName": character_name,
+        "education": education,
+        "money": money,
+        "past_work_experience": past_work_experience,
+        "biography": biography,
+        "current_job_str": current_job_str,
+        "eligible_jobs_str": eligible_jobs,
+    }
+    max_retries = 3
+    while max_retries > 0:
+        try:
+            cv = await cv_generator.ainvoke(payload)
+            break
+        except Exception as e:
+            logger.error(f"Invoke LLM Failed: {e}")
+            max_retries -= 1
+            if max_retries == 0:
+                raise Exception("Too many retries on generate_change_job_cv_new")
+            continue
+    logger.info(f"📃 CV: {cv}")
+    cv_request = {
+        "jobid": cv.job_id,
+        "characterId": userid,
+        "CV_content": cv.cv,
+        "week": week,
+        "health": health,
+        "studyxp": experience,
+        "date": date,
+        "jobName": cv.job_name,
+        "election_status": "not_yet",
+    }
+    make_api_request_sync("POST", "/cv/", data=cv_request)
+    mayor_decision = await generate_mayor_decision(
+        cv, userid, experience, education, date
+    )
+    if instance:
+        response = await instance.send_message(
+            {
+                "characterId": userid,
+                "messageName": "mayor_decision",
+                "messageCode": 10,
+                "data": {"jobId": cv.job_id, "cv": cv.cv, **mayor_decision},
+            }
+        )
+        instance.log_message("received", json.dumps(response))
 
 
 async def generate_mayor_decision(
@@ -842,98 +773,6 @@ async def generate_emoji_seq(state):
     # return emoji_sequence
 
 
-async def refine_meta_action_sequence(state: RunningState):
-    meta_action_general_part_refiner = create_planner(
-        meta_action_general_part_refiner_prompt,
-        state.get("character_stats", {}).get("model_type"),
-        RefinedMetaActionSequence,
-        0.5,
-    )
-
-    example_out = """
-[
-    {
-        "action": "action1",
-        "cost": "25 energy total (5 energy per item × 5 items)",
-        "expected_effect": "Get X <item> from crafting"
-    },
-    {
-        "action": "action2",
-        "cost": "None",
-        "expected_effect": "Get X gold refund from selling"
-    },
-    {
-        "action": "sleep 3,
-        "cost": "None",
-        "expected_effect": "Recover energy 30 (3x10) from sleeping"
-    }
-    {
-        "action": "action3",
-        "cost": "X gold",
-        "expected_effect": ""
-    },
-    {
-        "action": "goto school",
-        "cost": "None",
-        "expected_effect": "Get to school, ready to study"
-    },
-    ...
-]
-    """
-    payload = {
-        "daily_objectives": (
-            state["decision"]["daily_objective"][-1]
-            if state["decision"]["daily_objective"]
-            else []
-        ),
-        "character_stats": format_character_data(
-            state["character_stats"],
-            fields=[
-                "money",
-                "energy",
-                "health",
-                "hunger",
-                "education",
-                "education_experience",
-                "occupation",
-                "effciency",
-            ],
-        ),
-        "market_data": format_dict(state["public_data"]["market_data"]),
-        "inventory": format_dict(state["character_stats"]["inventory"]),
-        "current_trade_and_craft_sequence": format_trade_and_craft_sequence(
-            state["decision"]["crafting_and_trading"]
-        ),
-        "example_output": example_out,
-    }
-
-    print(meta_action_general_part_refiner_prompt.format(**payload))
-
-    retry_count = 0
-    while retry_count < 3:
-        try:
-            meta_action_sequence = await meta_action_general_part_refiner.ainvoke(
-                payload
-            )
-            break
-        except Exception as e:
-            logger.error(
-                f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
-            )
-            retry_count += 1
-            if retry_count == 3:
-                raise Exception("Too many retries on refine_meta_action_sequence")
-            continue
-
-    print("meta_action_sequence: ", meta_action_sequence)
-
-    meta_seq_list = []
-    for item in meta_action_sequence.meta_action_sequence:
-        meta_seq_list.append(item.model_dump())
-
-    state["decision"]["refined_meta_seq"] = meta_seq_list
-
-
 async def replan_meta_action_seq_new(state: RunningState):
     meta_action_replanner = create_planner(
         replanner_prompt,
@@ -975,7 +814,7 @@ async def replan_meta_action_seq_new(state: RunningState):
         "fail_action_info": format_false_action_info(false_action_info),
     }
 
-    # print(replanner_prompt.format(**payload))
+    print(replanner_prompt.format(**payload))
     retry_count = 0
     while retry_count < 3:
         try:
@@ -1051,14 +890,6 @@ async def replan_meta_action_seq_new(state: RunningState):
                 raise Exception("Too many retries on replan_meta_action_seq_new")
             continue
 
-    # save_decision_to_db(
-    #     state["userid"],
-    #     {
-    #         "meta_seq": state["decision"]["expanded_meta_seq"],
-    #         "action_description": state["decision"]["action_description"],
-    #     },
-    # )
-
     response = await send_message(
         state,
         "actionList",
@@ -1074,91 +905,89 @@ async def replan_meta_action_seq_new(state: RunningState):
     return {"current_pointer": "Replan_Meta_Action"}
 
 
-async def test_put_false_action_info(state: RunningState):
-    false_action_info = {
-        "actionName": "goto forest",
-        "result": "No location named 'forest'.",
-    }
-    state["false_action_queue"].put_nowait(false_action_info)
-    state["decision"]["detailed_meta_seq"] = [
-        {
-            "action": "goto forest",
-            "cost": None,
-            "inventory_after": None,
-            "inventory_before": None,
-            "reason": "Move to the forest to gather wood.",
-            "status_after": None,
-            "status_before": None,
-        },
-        {
-            "action": "craft wood 10",
-            "cost": "50 energy total (5 energy per item × 10)",
-            "inventory_after": "Later inventory is {wood: 10}",
-            "inventory_before": "Current inventory is {}",
-            "reason": "Gather wood to prepare for crafting wooden_boards.",
-            "status_after": "Later energy is 50/100",
-            "status_before": "Current energy is 100/100",
-        },
-        {
-            "action": "goto workshop",
-            "cost": None,
-            "inventory_after": None,
-            "inventory_before": None,
-            "reason": "Move to the workshop to craft wooden_boards.",
-            "status_after": None,
-            "status_before": None,
-        },
-        {
-            "action": "craft wooden_board 3",
-            "cost": "30 energy total (10 energy per item × 3)",
-            "inventory_after": "Later inventory is {wood: 1, wooden_board: 3}",
-            "inventory_before": "Current inventory is {wood: 10}",
-            "reason": "Craft wooden_boards to prepare for book production.",
-            "status_after": "Later energy is 20/100",
-            "status_before": "Current energy is 50/100",
-        },
-        {
-            "action": "goto home",
-            "cost": None,
-            "inventory_after": None,
-            "inventory_before": None,
-            "reason": "Go home to rest and recover energy.",
-            "status_after": None,
-            "status_before": None,
-        },
-        {
-            "action": "sleep 8",
-            "cost": "None",
-            "inventory_after": None,
-            "inventory_before": None,
-            "reason": "The energy is too low, need to sleep to recover energy.",
-            "status_after": "Later energy is 100/100",
-            "status_before": "Current energy is 20/100",
-        },
-    ]
-    return {"current_pointer": "Test_Put_False_Action_Info"}
-
-
 if __name__ == "__main__":
     import asyncio
     import core.agent_srv.utils as utils
 
     # import pprint
+    async def test_put_false_action_info(state: RunningState):
+        false_action_info = {
+            "actionName": "goto forest",
+            "msg": "No location named 'forest'.",
+        }
+        state["false_action_queue"].put_nowait(false_action_info)
+        state["decision"]["detailed_meta_seq"] = [
+            {
+                "action": "goto forest",
+                "cost": None,
+                "inventory_after": None,
+                "inventory_before": None,
+                "reason": "Move to the forest to gather wood.",
+                "status_after": None,
+                "status_before": None,
+            },
+            {
+                "action": "craft wood 10",
+                "cost": "50 energy total (5 energy per item × 10)",
+                "inventory_after": "Later inventory is {wood: 10}",
+                "inventory_before": "Current inventory is {}",
+                "reason": "Gather wood to prepare for crafting wooden_boards.",
+                "status_after": "Later energy is 50/100",
+                "status_before": "Current energy is 100/100",
+            },
+            {
+                "action": "goto workshop",
+                "cost": None,
+                "inventory_after": None,
+                "inventory_before": None,
+                "reason": "Move to the workshop to craft wooden_boards.",
+                "status_after": None,
+                "status_before": None,
+            },
+            {
+                "action": "craft wooden_board 3",
+                "cost": "30 energy total (10 energy per item × 3)",
+                "inventory_after": "Later inventory is {wood: 1, wooden_board: 3}",
+                "inventory_before": "Current inventory is {wood: 10}",
+                "reason": "Craft wooden_boards to prepare for book production.",
+                "status_after": "Later energy is 20/100",
+                "status_before": "Current energy is 50/100",
+            },
+            {
+                "action": "goto home",
+                "cost": None,
+                "inventory_after": None,
+                "inventory_before": None,
+                "reason": "Go home to rest and recover energy.",
+                "status_after": None,
+                "status_before": None,
+            },
+            {
+                "action": "sleep 8",
+                "cost": "None",
+                "inventory_after": None,
+                "inventory_before": None,
+                "reason": "The energy is too low, need to sleep to recover energy.",
+                "status_after": "Later energy is 100/100",
+                "status_before": "Current energy is 20/100",
+            },
+        ]
+        return {"current_pointer": "Test_Put_False_Action_Info"}
 
     state = asyncio.run(utils.get_initial_state_from_db(432543, "websocket"))
     # pprint.pprint(state)
     logger.info(f"🚀 User {state['userid']} starting node engines")
 
-    pprint(state["public_data"]["market_data"])
+    # pprint(state["public_data"]["market_data"])
     # print(state)
     # TEST REPLAN ROUTINES
-    # asyncio.run(test_put_false_action_info(state))
-    # logger.success(f"🌞 User {state['userid']} finished putting false action info")
+    asyncio.run(test_put_false_action_info(state))
+    logger.success(f"🌞 User {state['userid']} finished putting false action info")
 
-    # asyncio.run(replan_meta_action_seq_new(state))
-    # logger.success(
-    #     f"🌞 User {state['userid']} finished replanning meta action sequence"
-    # )
+    asyncio.run(replan_meta_action_seq_new(state))
+    logger.success(
+        f"🌞 User {state['userid']} finished replanning meta action sequence"
+    )
 
     # pprint.pprint(state["decision"]["meta_seq"])
 

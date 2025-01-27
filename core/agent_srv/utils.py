@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from loguru import logger
 import math
 import copy
+import pandas as pd
 from collections import deque
 from core.db.api_client import agent_api, game_api
 
@@ -130,6 +131,7 @@ async def get_character_data_async(userid: int) -> dict:
             "education": game_db_character_response.get("education"),
             "education_experience": game_db_character_response.get("experience"),
             "money": game_db_character_response.get("money"),
+            "jobId": game_db_character_response.get("jobId"),
             "occupation": get_occupation(game_db_character_response.get("jobId")),
             "work_place": get_work_place(game_db_character_response.get("jobId")),
             "efficiency": compute_efficiency(game_db_character_response),
@@ -168,6 +170,7 @@ def save_decision_to_db(userid: int, decision: dict, endpoint: str):
         endpoint=f"/{endpoint}/",
         data=decision,
     )
+
 
 
 def save_reflection_to_db(user_id: int, reflection: dict):
@@ -708,6 +711,69 @@ def refine_list(action_list: list) -> list:
             new_list.append(action)
     return new_list
 
+
+def filter_jobs(all_public_jobs, education, experience):
+    # 学历排序（从低到高）
+    education_order = [
+        "None",
+        "PrimarySchool",
+        "SecondarySchool",
+        "University",
+        "Master",
+        "Doctorate",
+    ]
+
+    try:
+        role_edu_index = education_order.index(education)
+    except ValueError:
+        return {}
+
+    # 将 eligible_jobs 初始化为一个字典
+    eligible_jobs = {}
+    for job in all_public_jobs:
+        # 条件验证
+        job_edu_index = education_order.index(job["education"])
+        if role_edu_index >= job_edu_index and experience >= job["experience"]:
+
+            # 按需过滤字段
+            filtered_job = {
+                "id": job["id"],
+                "jobType": job["jobType"],
+                "jobPlace": job["jobPlace"],
+                "dailyWages": job["dailyWages"],
+                "education": job["education"],
+                "wagePerHour": job["wagePerHour"],
+                # "populationRatioCap": job["populationRatioCap"],
+            }
+            # 使用 jobName 作为键，将 filtered_job 添加到字典中
+            eligible_jobs[job["jobName"]] = filtered_job
+
+    return eligible_jobs
+
+
+def convert_to_table_string(dict_data):
+    """
+    将给定的字典数据转换为表格形式的字符串
+    参数:
+    sellable_items (dict): 包含商品信息的字典，结构为 {商品名: {属性: 值}}
+    返回:
+    str: 转换后的表格字符串
+    """
+    if not dict_data:
+        return None
+    df = pd.DataFrame.from_dict(dict_data, orient="index")
+    return df.to_string()
+
+
+def get_industry_and_goal(character_industry: str):
+    industry = {"Manufacture": "industry", "Study": "academia", "Food": "business"}
+
+    industry_goal_for_daily_obj = {
+        "Manufacture": "Acquire materials to build an A100",
+        "Study": "Acquire materials to create books, increase experience, and earn money to fund your studies",
+        "Food": "Acquire materials to make items and engage in buying and selling to earn more money",
+    }
+    return industry[character_industry], industry_goal_for_daily_obj[character_industry]
 
 if __name__ == "__main__":
     # print(refine_craft_action("craft rice 2"))
