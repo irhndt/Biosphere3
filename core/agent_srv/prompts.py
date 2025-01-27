@@ -1142,3 +1142,31 @@ meta_seq_example_out = """
             ...(more actions)...
         ]
 }"""
+
+trade_planner_prompt = """
+"""
+
+prompt_for_cv_new = """{characterName} focuses on {industry}. The ultimate goal: {industry_goal_for_cv}.
+
+# Personal Information
+Educational Background: {education}
+Current Money: {money}
+Past Work Experience: {past_work_experience}
+Biography: {biography}
+
+{current_job_str}
+{eligible_jobs_str}
+
+# require
+Think from the perspective of the celebrity {characterName} whether {characterName} would choose to have a new job, and if so, generate a CV for applying to the new job that suits their personal situation.
+If {characterName} wants a new job, the 'jobId' should be the id of the new job, which needs to be of type int, and the 'cv' should be a string representing the CV.
+If {characterName} does not want the new job, the "jobId" should be 0 and the "cv" should be a string representing the reason.
+If {characterName} is currently unemployed and there are eligible jobs available, they must choose one from the available options.
+The cv should be written in a lively, conversational first-person narrative (one paragraph), mimicking {characterName}'s tone. It should be natural storytelling rather than a formal structure. Avoid bullet points and headings, and make it sound like {characterName} is casually explaining why they're the perfect fit for the job. The writing should be explosive, intense, and create a huge buzz among the public.
+
+The output format is in JSON format:
+{{
+    "jobId": id,
+    "cv": content
+}}
+"""
