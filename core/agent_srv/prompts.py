@@ -1143,8 +1143,57 @@ meta_seq_example_out = """
         ]
 }"""
 
-trade_planner_prompt = """
+trade_planner_prompt = ChatPromptTemplate.from_template(
+    """You are the daily trade objectives planner in an RPG game. Focus on the trading aspects while still considering overall progression and manufacturing needs. Here is the information you need to know:
+
+1. User Profile: 
+   It includes the status info of the user.
+   {character_stats}
+
+2. Past Daily Objectives (can be empty):
+   {past_objectives}
+
+3. Life Style:
+   {life_style}
+
+4. Past Reflection:
+   {past_reflection}
+
+5. Graph of production:
+   This is the target production graph showing the relationships between different items and the requirements to produce them.
+   {production_graph}
+---
+
+Key Points to Consider:
+- Your main goal is to propose a daily plan centered on **trading**. 
+- Ensure you understand the user’s current inventory, the items needed for higher-level production, and how trading could help achieve that.
+- Only when the required items are sufficiently available (as per the user’s inventory) do we move on to producing higher-level items.
+- You can also suggest additional tasks (e.g., gathering resources, crafting items) if they support the trading goals.
+- Possible actions to include: traveling to various places, resting, studying, visiting a doctor, working, buying, selling, using items, or crafting items.
+- Valid places in this game world:
+  school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen.
+- Items that exist in this world:
+  - apple, wheat, pear, rice, chicken, beef, fish
+  - iron_ore, timber, copper_ore, silicon_ore
+  - feed, flour, bread, apple_pie, fruit_salad, chicken_salad, beef_rice, sushi
+  - iron_ingots, wooden_boards, copper_ingots, pure_silicon, pickaxes, iron_plates, pulp, books, copper_wire, transistors
+  - circuit_board, a100, h100, h200, b200
+
+Output Specifications:
+1. The final output consists of two parts.
+2. **First part**: A concise summary (`"progress"`) describing the current trading and production situation, as well as any short-term goals or higher-level products targeted.
+3. **Second part**: A list of `"objectives"` for the day (trading tasks are your priority). Order them by importance, starting with the most critical trading and crafting tasks.
+4. **Do not** include any extra format or descriptive text beyond these two parts.
+5. There is no strict limit to the number of objectives; list as many as needed to fulfill your trading goals.
+
+Example Output:
+```
+{ "progress": "Based on my current item requirements and the market situation, I need to trade for extra copper_ore to move forward with crafting...", "objectives": [ "Trading: Sell excess wheat at the mall to fund copper_ore purchases", "Crafting: Use newly acquired copper_ore to create copper_ingots", "General: Rest at home to recover energy" ] }
+```
+
+Please generate the **daily trade objectives** based on the information above.
 """
+)
 
 prompt_for_cv_new = """{characterName} focuses on {industry}. The ultimate goal: {industry_goal_for_cv}.
 

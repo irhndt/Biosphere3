@@ -1,22 +1,19 @@
 from core.agent_srv.node_engines import create_planner
 from utils import *
 from node_model import *
-from core.db.database_api_utils import make_api_request_sync
-from core.db.game_api_utils import (
-    make_api_request_async as make_api_request_async_backend,
-    make_api_request_sync as make_api_request_sync_backend,
-)
+
 from core.agent_srv.prompts import trade_planner_prompt
+from core.db import game_api, agent_api
 
 
 async def generate_trading_objective(state: RunningState):
     obj_planner = create_planner(
-        obj_planner_prompt,
+        trade_planner_prompt,
         state.get("character_stats", {}).get("model_type"),
         DailyObjective,
         0.7,
     )
-    dev_dict = make_api_request_sync("GET", f"/production_path/{state['userid']}").get(
+    dev_dict = game_api.request_sync("GET", f"/production_path/{state['userid']}").get(
         "data", {}
     )
     # print(dev_dict)
@@ -45,7 +42,7 @@ async def generate_trading_objective(state: RunningState):
         "production_graph": state["meta"]["production_graph"],
     }
 
-    print(obj_planner_prompt.format(**payload))
+    print(trade_planner_prompt.format(**payload))
     while retry_count < 3:
         try:
             planner_response = await obj_planner.ainvoke(payload)
