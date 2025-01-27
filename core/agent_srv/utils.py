@@ -125,6 +125,7 @@ async def get_character_data_async(userid: int) -> dict:
     # Construct character_data
     try:
         character_data = {
+            "name": game_db_character_response.get("characterName"),
             "health": game_db_character_response.get("health"),
             "energy": game_db_character_response.get("energy"),
             "hungry": game_db_character_response.get("hungry"),

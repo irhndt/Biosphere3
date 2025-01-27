@@ -148,6 +148,7 @@ class CV(BaseModel):
     """CV to follow in future"""
 
     job_id: int = Field(description="job id")
+    job_name: str = Field(description="job name")
     cv: str = Field(description="cv")
 
 
@@ -182,7 +183,7 @@ class AccommodationDecision(BaseModel):
     """Accommodation decision including accommodation_id and lease_weeks."""
 
     accommodation_id: int = Field(description="ID of the chosen accommodation")
-    lease_weeks: int = Field(description="Number of weeks to lease (1-12)")
+    lease_weeks: int = Field(description="Number of weeks to lease (1-4)")
     comments: str = Field(description="comments")
 
 
