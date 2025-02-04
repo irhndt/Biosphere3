@@ -1,9 +1,8 @@
 from core.agent_srv.node_engines import create_planner
-from utils import *
-from node_model import *
-
-from core.agent_srv.prompts import trade_planner_prompt
-from core.db import game_api, agent_api
+from core.agent_srv.utils import *
+from core.agent_srv.node_model import *
+from core.agent_srv.prompts import trade_planner_prompt, merger_prompt
+from core.db.api_client import game_api, agent_api
 
 
 async def generate_trading_objective(state: RunningState):
@@ -13,20 +12,20 @@ async def generate_trading_objective(state: RunningState):
         DailyObjective,
         0.7,
     )
-    dev_dict = game_api.request_sync("GET", f"/production_path/{state['userid']}").get(
-        "data", {}
+    dev_dict = agent_api.request_sync(
+        method="GET", endpoint=f"/production_path/{state['userid']}"
     )
-    # print(dev_dict)
     state["meta"]["production_graph"] = format_level_graph(
         dev_dict,
         state["character_stats"]["inventory"],
         state["character_stats"]["energy"],
     )
 
-    decision_response = make_api_request_sync(
-        "GET", "/action_log/", params={"characterId": state["userid"], "count": 5}
+    last_decision = agent_api.request_sync(
+        method="GET",
+        endpoint="/action_log/",
+        params={"characterId": state["userid"], "count": 5},
     )
-    last_decision = decision_response.get("data", {})
     retry_count = 0
     daily_objectives_list = list(state["decision"]["daily_objective"])
     if len(daily_objectives_list) > 0:
@@ -37,7 +36,6 @@ async def generate_trading_objective(state: RunningState):
             fields=["money", "inventory"],
         ),
         "past_objectives": format_daily_obj(daily_objectives_list),
-        "life_style": state["prompts"]["life_style"],
         "past_reflection": last_decision.get("reflection", []) if last_decision else [],
         "production_graph": state["meta"]["production_graph"],
     }
@@ -55,14 +53,51 @@ async def generate_trading_objective(state: RunningState):
             if retry_count == 3:
                 raise Exception("Too many retries on generate_daily_objective")
             continue
-    full_prompt = obj_planner_prompt.format(**payload)
+    full_prompt = trade_planner_prompt.format(**payload)
     logger.info("======generate_daily_objective======\n" + full_prompt)
-    state["decision"]["daily_objective"].append(planner_response.objectives)
-    save_decision_to_db(
-        state["userid"], {"objectives": planner_response.objectives}, "daily_objectives"
-    )
+    state["decision"]["trade_objective"].append(planner_response.objectives)
+    # save_decision_to_db(
+    #     state["userid"], {"objectives": planner_response.objectives}, "daily_objectives"
+    # )
 
     logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response.progress}")
     logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response.objectives}")
 
     return {"current_pointer": "objectives_planner"}
+
+
+async def merge_objectives(state: RunningState):
+    # merge objectives
+    merger = create_planner(
+        merger_prompt,
+        state.get("character_stats", {}).get("model_type"),
+        DailyObjective,
+        0.7,
+    )
+    daily_objectives_list = list(state["decision"]["daily_objective"])
+    last_daily_objective = daily_objectives_list[-1]  # MUST HAVE AT LEAST 1 OBJECTIVE
+    last_trade_objective = state["decision"]["trade_objective"]
+    payload = {
+        "current_daily_objectives": format_daily_obj(last_daily_objective),
+        "past_daily_objectives": format_daily_obj(daily_objectives_list[-2]),
+        "current_trade_objectives": format_daily_obj(last_trade_objective),
+        "additional_info": state.get("decision", {}).get("additional_info", ""),
+    }
+
+    print(merger_prompt.format(**payload))
+    merger_response = await merger.ainvoke(payload)
+
+    full_prompt = merger_prompt.format(**payload)
+
+    logger.info("======merge_objectives======\n" + full_prompt)
+    state["decision"]["daily_objective"] = merger_response.objectives
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    state = asyncio.run(get_initial_state_from_db(432543, "websocket"))
+    # pprint.pprint(state)
+    logger.info(f"🚀 User {state['userid']} starting node engines")
+
+    asyncio.run(generate_trading_objective(state))

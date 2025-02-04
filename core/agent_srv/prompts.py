@@ -1153,13 +1153,10 @@ trade_planner_prompt = ChatPromptTemplate.from_template(
 2. Past Daily Objectives (can be empty):
    {past_objectives}
 
-3. Life Style:
-   {life_style}
-
-4. Past Reflection:
+3. Past Reflection:
    {past_reflection}
 
-5. Graph of production:
+4. Graph of production:
    This is the target production graph showing the relationships between different items and the requirements to produce them.
    {production_graph}
 ---
@@ -1168,8 +1165,6 @@ Key Points to Consider:
 - Your main goal is to propose a daily plan centered on **trading**. 
 - Ensure you understand the user’s current inventory, the items needed for higher-level production, and how trading could help achieve that.
 - Only when the required items are sufficiently available (as per the user’s inventory) do we move on to producing higher-level items.
-- You can also suggest additional tasks (e.g., gathering resources, crafting items) if they support the trading goals.
-- Possible actions to include: traveling to various places, resting, studying, visiting a doctor, working, buying, selling, using items, or crafting items.
 - Valid places in this game world:
   school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen.
 - Items that exist in this world:
@@ -1182,13 +1177,16 @@ Key Points to Consider:
 Output Specifications:
 1. The final output consists of two parts.
 2. **First part**: A concise summary (`"progress"`) describing the current trading and production situation, as well as any short-term goals or higher-level products targeted.
-3. **Second part**: A list of `"objectives"` for the day (trading tasks are your priority). Order them by importance, starting with the most critical trading and crafting tasks.
+3. **Second part**: A list of `"objectives"` for the day (trading tasks are your priority). Order them by importance, starting with the most critical trading tasks.
 4. **Do not** include any extra format or descriptive text beyond these two parts.
 5. There is no strict limit to the number of objectives; list as many as needed to fulfill your trading goals.
 
 Example Output:
 ```
-{ "progress": "Based on my current item requirements and the market situation, I need to trade for extra copper_ore to move forward with crafting...", "objectives": [ "Trading: Sell excess wheat at the mall to fund copper_ore purchases", "Crafting: Use newly acquired copper_ore to create copper_ingots", "General: Rest at home to recover energy" ] }
+{{ 
+    "progress": "Based on my current item requirements and the market situation, I need to trade...", 
+    "objectives": [ "Trading: Sell excess wheat at the mall to fund copper_ore purchases" ] 
+}}
 ```
 
 Please generate the **daily trade objectives** based on the information above.
@@ -1217,8 +1215,36 @@ The cv should be written in a lively, conversational first-person narrative (one
 The output format is in JSON format:
 {{
     "jobId": id,
-    "jobName": job_name,
     "cv": content
 }}
 """
+)
+
+merger_prompt = ChatPromptTemplate.from_template(
+    """
+You are a daily objective merger in an RPG game. Your goal is to merge the daily objectives of the user to create a concise, organized, and achievable list. Here is the information you need to know:
+
+1. **Past Daily Objectives**:
+{past_daily_objectives}
+
+2. **Current Crafting Objectives**:
+{current_crafting_objectives}
+
+3. **Current Trading Objectives**:
+{current_trading_objectives}
+
+{additional_info}
+---
+**Your Task**:
+1. Review all the objectives above.
+2. Identify any overlaps, redundancies, or dependencies.
+3. According to additional information (if provided), add study or work objectives to the list.
+4. Generate a concise merged list that preserves essential crafting and trading goals while removing unnecessary duplications.
+5. Output your final plan in **JSON format** containing two keys:
+   - **"progress"**: a brief summary of the combined objectives and their relevance to the user’s current situation.
+   - **"objectives"**: an ordered list of tasks (from highest to lowest priority) that the user should follow.
+6. Do not include any other commentary, formatting, or text aside from what is explicitly requested above.
+
+Please merge the daily objectives to create a coherent and efficient plan for the user.
+    """
 )

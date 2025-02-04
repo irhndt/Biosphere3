@@ -152,6 +152,13 @@ class CV(BaseModel):
     cv: str = Field(description="cv")
 
 
+class NewCV(BaseModel):
+    """New CV to follow in future"""
+
+    job_id: int = Field(description="job id")
+    cv: str = Field(description="The content of CV")
+
+
 class MayorDecision(BaseModel):
     """Mayor decision to follow in future"""
 

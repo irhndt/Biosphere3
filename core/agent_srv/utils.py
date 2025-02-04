@@ -173,7 +173,6 @@ def save_decision_to_db(userid: int, decision: dict, endpoint: str):
     )
 
 
-
 def save_reflection_to_db(user_id: int, reflection: dict):
     reflection["characterId"] = user_id
     agent_api.request_sync(
@@ -775,6 +774,14 @@ def get_industry_and_goal(character_industry: str):
         "Food": "Acquire materials to make items and engage in buying and selling to earn more money",
     }
     return industry[character_industry], industry_goal_for_daily_obj[character_industry]
+
+
+def get_job_name(job_id: int, all_public_jobs: list):
+    for job in all_public_jobs:
+        if job["id"] == job_id:
+            return job["jobName"]
+    return "Unemployed"
+
 
 if __name__ == "__main__":
     # print(refine_craft_action("craft rice 2"))
