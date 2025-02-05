@@ -280,7 +280,7 @@ If the decision is not to offer the job:
 )
 
 accommodation_decision_prompt = ChatPromptTemplate.from_template(
-    """Based on the following information, decide which accommodation the user should rent next and for how many weeks (1-12).
+    """Based on the following information, decide which accommodation the user should rent next and for how many weeks (1-4).
 # Basic Information:
     User State:
     {character_stats}
@@ -298,13 +298,13 @@ accommodation_decision_prompt = ChatPromptTemplate.from_template(
     Your output should be a JSON object like:
     {{
         "accommodation_id": <int>,  # ID of the chosen accommodation
-        "lease_weeks": <int>,       # Number of weeks to lease (1-12)
+        "lease_weeks": <int>,       # Number of weeks to lease (1-4)
         "comments": "<Your comments>"
     }}
     For example:
     {{
         "accommodation_id": 8,
-        "lease_weeks": 8,
+        "lease_weeks": 2,
         "comments": "I can afford a Villa now, which would improve my quality of life and help me to get respect from others."
     {{
 
@@ -1142,3 +1142,34 @@ meta_seq_example_out = """
             ...(more actions)...
         ]
 }"""
+
+trade_planner_prompt = """
+"""
+
+prompt_for_cv_new = ChatPromptTemplate.from_template(
+    """{characterName} focuses on {industry}. The ultimate goal: {industry_goal_for_cv}.
+
+# Personal Information
+Educational Background: {education}
+Current Money: {money}
+Past Work Experience: {past_work_experience}
+Biography: {biography}
+
+{current_job_str}
+{eligible_jobs_str}
+
+# require
+Think from the perspective of the celebrity {characterName} whether {characterName} would choose to have a new job, and if so, generate a CV for applying to the new job that suits their personal situation.
+If {characterName} wants a new job, the 'jobId' should be the id of the new job, which needs to be of type int, and the 'cv' should be a string representing the CV.
+If {characterName} does not want the new job, the "jobId" should be 0 and the "cv" should be a string representing the reason.
+If {characterName} is currently unemployed and there are eligible jobs available, they must choose one from the available options.
+The cv should be written in a lively, conversational first-person narrative (one paragraph), mimicking {characterName}'s tone. It should be natural storytelling rather than a formal structure. Avoid bullet points and headings, and make it sound like {characterName} is casually explaining why they're the perfect fit for the job. The writing should be explosive, intense, and create a huge buzz among the public.
+
+The output format is in JSON format:
+{{
+    "jobId": id,
+    "jobName": job_name,
+    "cv": content
+}}
+"""
+)

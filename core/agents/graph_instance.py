@@ -127,7 +127,7 @@ class LangGraphInstance:
                     )
                     self.schedule_event("CHARACTER_ARC")
                     self.schedule_event("DAILY_REFLECTION")
-                    await generate_change_job_cv(self.state["instance"], msg)
+                    await generate_change_job_cv_new(self.state["instance"], msg)
                     await asyncio.sleep(60)
                     clear_decision(self.state)
                 else:
@@ -244,7 +244,7 @@ class LangGraphInstance:
             except Exception as e:
                 self.logger.error(f"User {self.user_id}: Error sending message: {e}")
 
-    def log_message(self, direction: str, message: str):
+    def log_message(self, direction: str, message: dict):
         self.message_log.append(
             {
                 "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),

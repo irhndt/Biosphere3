@@ -131,27 +131,68 @@
 
         function loadMessages() {
             fetch(`/api/messages/${characterId}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    const messageLog = data.map(log => `
-                        <tr>
-                            <td>${log.time}</td>
-                            <td class="${log.direction === 'sent' ? 'direction-sent' : 'direction-received'}">
-                                ${log.direction === 'sent' ? 'Sent' : 'Received'}
-                            </td>
-                            <td><div class="json-viewer" data-json='${log.message}'></div></td>
-                        </tr>
-                    `).join('');
-                    document.getElementById('message-log').innerHTML = messageLog;
+                    if (!Array.isArray(data)) {
+                        throw new Error('Invalid response data');
+                    }
+
+                    const messageLog = data.map(log => {
+                        const timestamp = new Date(log.time);
+                        const formattedTime = timestamp.toLocaleString('zh-CN', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        });
+
+                        const safeMessage = JSON.stringify(log.message).replace(/'/g, '&#39;');
+                        
+                        return `
+                            <tr>
+                                <td>${formattedTime}</td>
+                                <td class="${log.direction === 'sent' ? 'direction-sent' : 'direction-received'}">
+                                    ${log.direction === 'sent' ? 'Sent' : 'Recieved'}
+                                </td>
+                                <td><div class="json-viewer" data-json='${safeMessage}'></div></td>
+                            </tr>
+                        `;
+                    }).join('');
+                    
+                    const messageContainer = document.getElementById('message-log');
+                    if (!messageContainer) {
+                        throw new Error('Cannot find message log container');
+                    }
+                    messageContainer.innerHTML = messageLog;
 
                     $('.json-viewer').each(function() {
-                        const jsonData = $(this).data('json');
-                        $(this).JSONView(jsonData, { collapsed: true });
+                        try {
+                            const jsonData = $(this).data('json');
+                            $(this).JSONView(jsonData, { 
+                                collapsed: true,
+                                nl2br: true,
+                                recursive_collapser: true
+                            });
+                        } catch (e) {
+                            console.error('Parsing JSON Error:', e);
+                            $(this).text('Invalid JSON');
+                        }
                     });
                 })
                 .catch(error => {
-                    console.error('Error loading messages:', error);
-                    document.getElementById('message-log').innerHTML = '<tr><td colspan="3">Error loading messages</td></tr>';
+                    console.error('Loading Error:', error);
+                    document.getElementById('message-log').innerHTML = 
+                        `<tr><td colspan="3" class="error-message">
+                            <i class="fas fa-exclamation-circle"></i> 
+                            Loading Error: ${error.message}
+                        </td></tr>`;
                 });
         }
 

@@ -52,19 +52,33 @@ class WebMonitor:
             return web.json_response({"error": "Character not found"}, status=404)
 
         try:
-            state_data = copy.deepcopy(character.agent_instance.state)
+            state_data = {}
+            original_state = character.agent_instance.state
 
-            for key in ["message_queue", "event_queue", "false_action_queue"]:
-                if key in state_data and isinstance(state_data[key], asyncio.Queue):
-                    state_data[key] = list(state_data[key]._queue)
-
-            if "expanded_meta_seq" in state_data["decision"]:
-                state_data["decision"]["expanded_meta_seq"] = list(
-                    state_data["decision"]["expanded_meta_seq"]
-                )
-
-            state_data.pop("websocket", None)
-            state_data.pop("instance", None)
+            for key, value in original_state.items():
+                if isinstance(value, (asyncio.Future, asyncio.Task)):
+                    continue
+                if isinstance(value, asyncio.Queue):
+                    state_data[key] = list(value._queue)
+                    continue
+                if key in ["websocket", "instance"]:
+                    continue
+                if key == "decision":
+                    state_data[key] = {}
+                    for dk, dv in value.items():
+                        if dk in ["expanded_meta_seq", "daily_objective"]:
+                            state_data[key][dk] = list(dv)
+                        else:
+                            try:
+                                state_data[key][dk] = copy.deepcopy(dv)
+                            except:
+                                logger.warning(f"Cannot copy decision.{dk}, skipping")
+                    continue
+                try:
+                    state_data[key] = copy.deepcopy(value)
+                except:
+                    logger.warning(f"Error copying state for key {key}")
+                    continue
 
             logger.info(f"Character {character_id} state: {state_data}")
             return web.json_response(state_data)

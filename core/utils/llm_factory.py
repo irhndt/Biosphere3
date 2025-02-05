@@ -4,7 +4,7 @@ from typing import Dict, DefaultDict, Literal
 from dotenv import load_dotenv
 import os
 from langchain.callbacks.base import BaseCallbackHandler
-from core.db.game_api_utils import make_api_request_sync
+from core.db.api_client import game_api
 
 load_dotenv()
 
@@ -41,9 +41,8 @@ class LLMSelector:
 
     @classmethod
     def initialize_token_usage(cls):
-        modelToken = make_api_request_sync("GET", "/modelToken/getLatestModelToken")
-        data = modelToken.get("data", [])
-        for item in data:
+        modelToken = game_api.request_sync(method="GET", endpoint="/modelToken/getLatestModelToken")
+        for item in modelToken:
             if not item:
                 continue
             model_type = item.get("modelType")
