@@ -1224,11 +1224,11 @@ merger_prompt = ChatPromptTemplate.from_template(
     """
 You are a daily objective merger in an RPG game. Your goal is to merge the daily objectives of the user to create a concise, organized, and achievable list. Here is the information you need to know:
 
-1. **Past Daily Objectives**:
+1. **Past Daily Objectives** (If any):
 {past_daily_objectives}
 
-2. **Current Crafting Objectives**:
-{current_crafting_objectives}
+2. **Current Daily Objectives**:
+{current_daily_objectives}
 
 3. **Current Trading Objectives**:
 {current_trading_objectives}

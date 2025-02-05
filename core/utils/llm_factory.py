@@ -1,10 +1,11 @@
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, AzureChatOpenAI
 from collections import defaultdict
 from typing import Dict, DefaultDict, Literal
 from dotenv import load_dotenv
 import os
 from langchain.callbacks.base import BaseCallbackHandler
 from core.db.api_client import game_api
+from httpx import AsyncClient, Client
 
 load_dotenv()
 
@@ -12,6 +13,11 @@ ModelType = Literal["PLAN", "CHAT"]
 
 openai_api_keys = [os.getenv(f"OPENAI_API_KEY_{i}") for i in range(1, 11)]
 deepseek_api_keys = [os.getenv(f"DEEPSEEK_API_KEY_{i}") for i in range(1, 6)]
+azure_api_keys = [
+    os.getenv(f"AZURE_API_KEY_{i}")
+    for i in range(1, 3)
+    if os.getenv(f"AZURE_API_KEY_{i}")
+]
 openai_request_count = 0
 deepseek_request_count = 0
 
@@ -41,7 +47,9 @@ class LLMSelector:
 
     @classmethod
     def initialize_token_usage(cls):
-        modelToken = game_api.request_sync(method="GET", endpoint="/modelToken/getLatestModelToken")
+        modelToken = game_api.request_sync(
+            method="GET", endpoint="/modelToken/getLatestModelToken"
+        )
         for item in modelToken:
             if not item:
                 continue
@@ -72,6 +80,7 @@ class LLMSelector:
     ):
         callbacks = [TokenUsageHandler(model_name)]
         api_key = get_api_key(model_name)
+        print(model_name)
         if model_name.startswith("gpt"):
             return ChatOpenAI(
                 base_url="https://api.aiproxy.io/v1",
@@ -79,7 +88,16 @@ class LLMSelector:
                 model=model_name,
                 temperature=temperature,
                 callbacks=callbacks,
+                streaming=False,
             )
+            # return AzureChatOpenAI(
+            #     azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
+            #     api_key=azure_api_keys[0],
+            #     api_version=os.environ.get("AZURE_OPENAI_API_VERSION"),
+            #     temperature=temperature,
+            #     callbacks=callbacks,
+            #     model="gpt-4o-mini",
+            # )
         elif model_name.startswith("deepseek"):
             return ChatOpenAI(
                 base_url="https://api.deepseek.com/v1",

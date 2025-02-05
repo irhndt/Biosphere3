@@ -267,6 +267,7 @@ async def get_initial_state_from_db(userid, websocket):
             "action_result": [],
             "new_plan": [],
             "daily_objective": deque(maxlen=10),
+            "trade_objective": [],
             "meta_seq": [],
             "reflection": [],
             "expanded_meta_seq": deque(),

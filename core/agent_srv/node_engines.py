@@ -78,6 +78,7 @@ async def generate_daily_objective(state: RunningState):
             logger.error(
                 f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
             )
+            print(traceback.format_exc())
             retry_count += 1
             if retry_count == 3:
                 raise Exception("Too many retries on generate_daily_objective")
