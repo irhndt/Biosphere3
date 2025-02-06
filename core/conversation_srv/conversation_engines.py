@@ -24,6 +24,8 @@ async def generate_daily_conversation_plan(state: ConversationState):
     profile = make_api_request_sync(
         "GET", "/characters/", params=character_data
     )
+    if not profile["message"]:
+        logger.error(f"⛔ User {state['userid']} failed to fetch profile.")
     if not profile["data"]:
         state["character_stats"] = {}
     else:
@@ -124,10 +126,9 @@ async def start_conversation(state: ConversationState):
     character_data = {"characterId": userid}
     profile = make_api_request_sync("GET", "/characters/", params=character_data)
     if not profile["data"]:
-        state["character_stats"] = {}
+        logger.warning(f"User {state['userid']} failed to fetch profile. Run the workflow with old profile.")
     else:
         state["character_stats"] = profile["data"][0]
-    logger.info(f"User {state['userid']}: {profile['message']}")
     logger.info(f"User {state['userid']} current state is: {state['character_stats']}")
 
     # ensure that this target is not the one whom the agent is talking with
@@ -138,7 +139,7 @@ async def start_conversation(state: ConversationState):
     talking_response = make_api_request_sync(
         "GET", "/conversation/", params=talking_data
     )
-    if talking_response["data"]:
+    if isinstance(talking_response["data"], list):
         talking_conversation = talking_response["data"][0]
         talking_id = talking_conversation["from_id"]
         if talking_id == current_talk["to_id"]:
@@ -155,7 +156,6 @@ async def start_conversation(state: ConversationState):
                 f"User {state['userid']}: new player to talk {current_talk['to_id']}."
             )
 
-    # only go through the following process when the conversation is checked to be necessary
     # get target name
     userid = current_talk["to_id"]
     character_data = {"characterId": userid}
@@ -187,7 +187,7 @@ async def start_conversation(state: ConversationState):
     else:
         content_type = "game"
         topic = ""
-        logger.warning(f"User {state['userid']} failed to fetch topic. Using backup topic...")
+        logger.warning(f"User {state['userid']} failed to fetch topic. Using default topic {content_type}.")
 
     # special pair
     if {state['userid'], current_talk['to_id']} == {616422, 804851}:
@@ -326,6 +326,7 @@ async def start_conversation(state: ConversationState):
 
     # generate conversation content
     retry_count = 0
+    all_content = ""
     while retry_count < 3:
         try:
             conversation_content = generator.invoke(
@@ -335,11 +336,7 @@ async def start_conversation(state: ConversationState):
             logger.info("======conversation_generator======\n" + full_prompt)
 
             # Reconstruct the format
-            lines = conversation_content["content"].strip().split('\n')
-            all_content = []
-            for line in lines:
-                key, value = line.split(':')
-                all_content.append({key.strip(): value.strip()})
+            all_content = reformat_conversation(conversation_content["content"])
             break
         except Exception as e:
             logger.error(
@@ -348,10 +345,13 @@ async def start_conversation(state: ConversationState):
             retry_count += 1
             continue
 
-    logger.info(
-        f"The conversation FROM {current_talk['from_id']} at GAME TIME {current_talk['start_time']} on topic {topic} has been generated."
-    )
-    logger.info(f"{all_content}")
+    if all_content != "":
+        logger.info(
+            f"The conversation FROM {current_talk['from_id']} at GAME TIME {current_talk['start_time']} on topic {topic} has been generated."
+        )
+        logger.info(f"{all_content}")
+    else:
+        logger.error(f"⛔ User {state['userid']} failed to generate conversation content.")
 
     from_to_count = 0
     for sentence in all_content:
@@ -386,9 +386,12 @@ async def start_conversation(state: ConversationState):
         store_response = make_api_request_sync(
             "POST", "/conversation/", data=store_conversation_data
         )
-        logger.info(
-            f"User {id1} conversation message stored: {store_response['message']}"
-        )
+        if store_response["message"]:
+            logger.info(
+                f"User {id1} conversation message stored: {store_response['message']}"
+            )
+        else:
+            logger.warning(f"User {id1} failed to store conversation message.")
         from_to_count += 1
 
     # update the daily_task list
@@ -513,19 +516,19 @@ async def update_impression(id1: int, id2: int, conversation):
     relation_from = strip_relation(current_impression_from)
     relation_to = strip_relation(current_impression_to)
 
-    # update impression
+    # update impression: from->to
     retry_count = 0
+    impression1 = ""
     while retry_count < 3:
         try:
             payload = {
                 "conversation": conversation,
                 "relation_list": relation_list,
                 "relation_from": relation_from,
-                "relation_to": relation_to,
                 "from_name": my_name,
                 "to_name": target_name,
             }
-            impression = impression_update.invoke(
+            impression1 = impression_update.invoke(
                 payload
             )
             full_prompt = impression_update_prompt.format(**payload)
@@ -533,33 +536,74 @@ async def update_impression(id1: int, id2: int, conversation):
             break
         except Exception as e:
             logger.error(
-                f"⛔ User {id1} and User {id2} Error in update impressions: {e}"
+                f"⛔ Error in update impressions from User {id1} to User {id2}: {e}"
             )
             retry_count += 1
             continue
 
-    logger.info(f"🧠 IMPRESSION FROM USER {id1} to USER {id2} UPDATED...")
-    logger.info(impression.impression1)
-    logger.info(f"🧠 IMPRESSION FROM USER {id2} to USER {id1} UPDATED...")
-    logger.info(impression.impression2)
+    if impression1 != "":
+        logger.info(f"🧠 IMPRESSION FROM USER {id1} to USER {id2} UPDATED...")
+        logger.info(impression1.impression)
+    else:
+        impression1 = current_impression_from
+        logger.warning(f"⛔ Impression from User {id1} to User {id2} failed to update. Keep using the old one.")
+
+    # update impression: to->from
+    retry_count = 0
+    impression2 = ""
+    while retry_count < 3:
+        try:
+            payload = {
+                "conversation": conversation,
+                "relation_list": relation_list,
+                "relation_from": relation_to,
+                "from_name": target_name,
+                "to_name": my_name,
+            }
+            impression2 = impression_update.invoke(
+                payload
+            )
+            full_prompt = impression_update_prompt.format(**payload)
+            logger.info("======impression_update======\n" + full_prompt)
+            break
+        except Exception as e:
+            logger.error(
+                f"⛔ Error in update impressions from User {id2} to User {id1}: {e}"
+            )
+            retry_count += 1
+            continue
+
+    if impression2 != "":
+        logger.info(f"🧠 IMPRESSION FROM USER {id2} to USER {id1} UPDATED...")
+        logger.info(impression2.impression)
+    else:
+        impression2 = current_impression_to
+        logger.warning(f"⛔ Impression from User {id2} to User {id1} failed to update. Keep using the old one.")
 
     # Insert impressions to database
-    document1 = {"from_id": id1, "to_id": id2, "impression": impression.impression1}
+    document1 = {"from_id": id1, "to_id": id2, "impression": impression1.impression}
     store_impression1_response = make_api_request_sync(
         "POST", "/impressions/", data=document1
     )
-    logger.info(
-        f"From User {id1} to User {id2}: {store_impression1_response['message']}."
-    )
+    if store_impression1_response["message"]:
+        logger.info(
+            f"From User {id1} to User {id2}: {store_impression1_response['message']}."
+        )
+    else:
+        logger.warning(f"From User {id1} to User {id2}: failed to store new impression.")
 
-    document2 = {"from_id": id2, "to_id": id1, "impression": impression.impression2}
+    document2 = {"from_id": id2, "to_id": id1, "impression": impression2.impression}
     store_impression2_response = make_api_request_sync(
         "POST", "/impressions/", data=document2
     )
-    logger.info(
-        f"From User {id2} to User {id1}: {store_impression2_response['message']}."
-    )
-    return {"new impressions": [impression.impression1, impression.impression2]}
+    if store_impression2_response["message"]:
+        logger.info(
+            f"From User {id2} to User {id1}: {store_impression2_response['message']}."
+        )
+    else:
+        logger.warning(f"From User {id2} to {id1}: failed to store new impression.")
+
+    return {"new impressions": [impression1, impression2]}
 
 
 # initialize conversation state when a ws connection is built for certain agent
@@ -567,12 +611,16 @@ def initialize_conversation_state(userid, websocket) -> ConversationState:
     # get profile
     character_data = {"characterId": userid}
     profile = make_api_request_sync("GET", "/characters/", params=character_data)
-    if not profile["data"]:
+    if not profile["message"]:
         character_stats = {}
+        logger.error(f"⛔ Error in initializing conversation instance: fail to fetch profile.")
+    elif not profile["data"]:
+        character_stats = {}
+        logger.error(f"⛔ Error in initializing conversation instance: {profile['message']}.")
     else:
         character_stats = profile["data"][0]
-    logger.info(f"User {userid}: {profile['message']}")
-    logger.info(f"User {userid} current state is: {character_stats}")
+        logger.info(f"User {userid}: {profile['message']}")
+        logger.info(f"User {userid} current state is: {character_stats}")
 
     initial_prompt = {
         "topic_requirements": "",
@@ -610,7 +658,9 @@ def start_conversation_workflow():
 # update intimacy marks
 async def update_intimacy(id1: int, id2: int, conversation):
     logger.info(f"🧠 MARKING THE CONVERSATION...")
+    logger.info(f"The conversation is {conversation}.")
 
+    # Get profiles
     character_data = {"characterId": id1}
     profile_response_1 = make_api_request_sync("GET", "/characters/", params=character_data)
     if profile_response_1["data"]:
@@ -625,39 +675,7 @@ async def update_intimacy(id1: int, id2: int, conversation):
     else:
         profile2 = ""
 
-    retry_count = 0
-    while retry_count < 3:
-        try:
-            payload = {
-                    "profile1": profile1,
-                    "profile2": profile2,
-                    "conversation": conversation,
-            }
-            intimacy_mark = conversation_intimacy_mark.invoke(
-                payload
-            )
-            full_prompt = intimacy_mark_prompt.format(**payload)
-            logger.info("======intimacy_mark======\n" + full_prompt)
-            break
-        except Exception as e:
-            logger.error(
-                f"⛔ User {id1} and User {id2} Error in updating intimacy score: {e}"
-            )
-            retry_count += 1
-            continue
-
-    logger.info(f"The conversation is {conversation}.")
-
-    mark1 = mark_map(intimacy_mark.mark1)
-    mark2 = mark_map(intimacy_mark.mark2)
-
-    logger.info(
-        f"User {id1}'s attitude towards the conversation is: {mark1}"
-    )
-    logger.info(
-        f"User {id2}'s attitude towards the conversation is: {mark2}"
-    )
-
+    # Get old intimacy marks
     intimacy_query_data = {"from_id": id1, "to_id": id2}
     response = make_api_request_sync("GET", "/intimacy/", params=intimacy_query_data)
     if response["data"] is None:
@@ -683,6 +701,43 @@ async def update_intimacy(id1: int, id2: int, conversation):
         f"Past intimacy mark from User {id2} to User {id1} is {current_intimacy_2}."
     )
 
+    # Generate new intimacy marks
+    retry_count = 0
+    intimacy_mark = ""
+    while retry_count < 3:
+        try:
+            payload = {
+                    "profile1": profile1,
+                    "profile2": profile2,
+                    "conversation": conversation,
+            }
+            intimacy_mark = conversation_intimacy_mark.invoke(
+                payload
+            )
+            full_prompt = intimacy_mark_prompt.format(**payload)
+            logger.info("======intimacy_mark======\n" + full_prompt)
+            break
+        except Exception as e:
+            logger.error(
+                f"⛔ User {id1} and User {id2} Error in updating intimacy score: {e}"
+            )
+            retry_count += 1
+            continue
+
+    if intimacy_mark != "":
+        mark1 = mark_map(intimacy_mark.mark1)
+        mark2 = mark_map(intimacy_mark.mark2)
+    else:
+        mark1 = 0
+        mark2 = 0
+
+    logger.info(
+        f"User {id1}'s attitude towards the conversation is: {mark1}"
+    )
+    logger.info(
+        f"User {id2}'s attitude towards the conversation is: {mark2}"
+    )
+
     current_intimacy_1 += mark1
     current_intimacy_1 = min(current_intimacy_1, 100)
     current_intimacy_1 = max(current_intimacy_1, 0)
@@ -703,7 +758,10 @@ async def update_intimacy(id1: int, id2: int, conversation):
     update_intimacy_data = {"from_id": id1, "to_id": id2, name: current_intimacy_1}
     endpoint = "/intimacy/"
     response = make_api_request_sync(type_1, endpoint, data=update_intimacy_data)
-    logger.info(f"From User {id1} to User {id2}: {response['message']}.")
+    if response["message"]:
+        logger.info(f"From User {id1} to User {id2}: {response['message']}.")
+    else:
+        logger.warning(f"From User {id1} to User {id2}: failed to update intimacy mark.")
 
     name = "intimacy_level"
     if type_2 == "PUT":
@@ -711,94 +769,8 @@ async def update_intimacy(id1: int, id2: int, conversation):
     update_intimacy_data = {"from_id": id2, "to_id": id1, name: current_intimacy_2}
     endpoint = "/intimacy/"
     response = make_api_request_sync(type_2, endpoint, data=update_intimacy_data)
-    logger.info(f"From User {id2} to User {id1}: {response['message']}.")
+    if response["message"]:
+        logger.info(f"From User {id2} to User {id1}: {response['message']}.")
+    else:
+        logger.warning(f"From User {id2} to User {id1}: failed to update intimacy mark.")
 
-
-# a tool for transferring real_time to game_time
-def calculate_game_time(real_time=datetime.now(), day1_str="2024-7-1 3:00"):
-    day1 = datetime.strptime(day1_str, "%Y-%m-%d %H:%M")
-    elapsed_time = real_time - day1
-    game_elapsed_time = elapsed_time * 7
-    game_day = game_elapsed_time.days
-    total_seconds = int(game_elapsed_time.total_seconds())
-    remaining_seconds = total_seconds - (game_day * 86400)
-    game_hour, remainder = divmod(remaining_seconds, 3600)
-    game_minute, seconds = divmod(remainder, 60)
-    return [game_day+1, game_hour, game_minute]
-
-
-# Randomly return k players, excluding the user.
-def random_conversation_target(k: int, my_id: int):
-    if k == 0:
-        return []
-    while True:
-        try:
-            all_player_list = make_api_request_sync("GET", "/characters/ids_and_names")
-        except Exception as e:
-            logger.error(f"User {my_id} error in selecting conversation target: {e}")
-        else:
-            break
-
-    all_id_list = []
-    for player in all_player_list["data"]:
-        if player["characterId"] != my_id:
-            all_id_list.append(player["characterId"])
-
-    total_players = len(all_id_list)
-    random_id_list = random.sample(range(total_players), k)
-    random_player_list = [all_id_list[i] for i in random_id_list]
-    return random_player_list
-
-
-# randomly generate k conversation times from the current time until 10 minutes before the end of the message value
-def generate_talk_time(k: int):
-    day, hour, minute = calculate_game_time(real_time=datetime.now())
-
-    largest_minute = ((24 - hour) * 60 + (0 - minute)) // 7
-    k = min(k - 1, largest_minute // 10) + 1
-    time_slot = largest_minute // k
-
-    time_list = []
-    sorted_numbers = []
-    d = min(5, time_slot // 3)
-    for kk in range(k):
-        sorted_numbers.append(
-            random.randint(kk * time_slot + d, (kk + 1) * time_slot - d) * 7
-        )
-
-    # only for test, set the first conversation to happen after 5 minutes in game time
-    # sorted_numbers[0] = 1
-
-    for t in sorted_numbers:
-        add_hour, add_minute = divmod(minute + t, 60)
-        if (hour + add_hour) >= 24:
-            break
-        elif (hour + add_hour) == 23 and add_minute >= 40:
-            break
-        start_time = f"{(hour+add_hour):02}" + ":" + f"{add_minute:02}"
-        time_list.append(start_time)
-
-    return time_list
-
-
-def mark_map(x: int):
-    mapping = {
-        5: 8,
-        4: 4,
-        3: 0,
-        2: -3,
-        1: -5
-    }
-    return mapping.get(x, 0)
-
-
-def strip_relation(impression: str):
-    try:
-        relation_start = impression.find("relation:") + len("relation:")
-        relation_end = impression.find("emotion:")
-        relation_info = impression[relation_start:relation_end].strip()
-    except Exception as e:
-        logger.error(f"Error in stripping relation from impression: {e}")
-        relation_info = "Strangers."
-        logger.warning(f"Using default relation: {relation_info}")
-    return relation_info
