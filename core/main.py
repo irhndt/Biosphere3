@@ -162,7 +162,9 @@ class AI_WS_Server:
             await asyncio.sleep(1800)
 
     async def run(self):
-        asyncio.create_task(self.periodic_saving())
+        # Periodic Saving Task
+        if self.config.get("save_trigger"):
+            asyncio.create_task(self.periodic_saving())
 
         # Heartbeat Monitor
         if self.config.get("monitor_trigger"):
