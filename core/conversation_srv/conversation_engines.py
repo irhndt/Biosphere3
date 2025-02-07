@@ -47,6 +47,13 @@ async def generate_daily_conversation_plan(state: ConversationState):
     else:
         conversation_number = random.randint(1, 3)
 
+    # check talked data, avoid too much talk every day
+    talked_volume = check_daily_conversation_volume(state["userid"])
+    conversation_number = max(0, conversation_number-talked_volume)
+    if conversation_number == 0:
+        logger.info(f"Today User {state['userid']} has already talked for {talked_volume} times. Stop socializing.")
+        return state
+
     # generate conversation time list
     start_time_list = []
     try:
@@ -112,7 +119,9 @@ async def start_conversation(state: ConversationState):
         logger.info(
             f"User {state['userid']}: next conversation will be started after {sleep_time} seconds."
         )
-        await asyncio.sleep(sleep_time - 5)
+        sleep_connected = await sleep_with_connection(sleep_time, state)
+        if not sleep_connected:
+            return state
     else:
         logger.info(
             f"User {state['userid']} missed one conversation. Start this task right now..."
@@ -606,55 +615,6 @@ async def update_impression(id1: int, id2: int, conversation):
     return {"new impressions": [impression1, impression2]}
 
 
-# initialize conversation state when a ws connection is built for certain agent
-def initialize_conversation_state(userid, websocket) -> ConversationState:
-    # get profile
-    character_data = {"characterId": userid}
-    profile = make_api_request_sync("GET", "/characters/", params=character_data)
-    if not profile["message"]:
-        character_stats = {}
-        logger.error(f"⛔ Error in initializing conversation instance: fail to fetch profile.")
-    elif not profile["data"]:
-        character_stats = {}
-        logger.error(f"⛔ Error in initializing conversation instance: {profile['message']}.")
-    else:
-        character_stats = profile["data"][0]
-        logger.info(f"User {userid}: {profile['message']}")
-        logger.info(f"User {userid} current state is: {character_stats}")
-
-    initial_prompt = {
-        "topic_requirements": "",
-        "impression_impact": {
-            "Relation": "Relation influences the length of conversation and how much information from player profiles should be included.",
-            "Emotion": "Emotion determines the tone of the players.",
-            "Personlality": "Personality influence the length of each player's answer and their willingness towards conversation.",
-            "Habits and preferences": "Habits and preferences are something that one player thinks the other could be interested in and can also be mentioned in the conversation.",
-        },
-    }
-    state = ConversationState(
-        userid=userid,
-        character_stats=character_stats,
-        ongoing_task=[],
-        daily_task=[],
-        message_queue=asyncio.Queue(),
-        waiting_response=asyncio.Queue(),
-        websocket=websocket,
-        prompt=initial_prompt,
-    )
-    return state
-
-
-# workflow for planning conversation tasks and starting conversations
-def start_conversation_workflow():
-    workflow = StateGraph(ConversationState)
-    workflow.add_node("Conversation_planner", generate_daily_conversation_plan)
-    workflow.add_node("Conversation_starter", start_conversation)
-    workflow.set_entry_point("Conversation_planner")
-    workflow.add_conditional_edges("Conversation_starter", all_conversation_started)
-    workflow.add_edge("Conversation_planner", "Conversation_starter")
-    return workflow.compile()
-
-
 # update intimacy marks
 async def update_intimacy(id1: int, id2: int, conversation):
     logger.info(f"🧠 MARKING THE CONVERSATION...")
@@ -773,4 +733,54 @@ async def update_intimacy(id1: int, id2: int, conversation):
         logger.info(f"From User {id2} to User {id1}: {response['message']}.")
     else:
         logger.warning(f"From User {id2} to User {id1}: failed to update intimacy mark.")
+
+
+
+# initialize conversation state when a ws connection is built for certain agent
+def initialize_conversation_state(userid, websocket) -> ConversationState:
+    # get profile
+    character_data = {"characterId": userid}
+    profile = make_api_request_sync("GET", "/characters/", params=character_data)
+    if not profile["message"]:
+        character_stats = {}
+        logger.error(f"⛔ Error in initializing conversation instance: fail to fetch profile.")
+    elif not profile["data"]:
+        character_stats = {}
+        logger.error(f"⛔ Error in initializing conversation instance: {profile['message']}.")
+    else:
+        character_stats = profile["data"][0]
+        logger.info(f"User {userid}: {profile['message']}")
+        logger.info(f"User {userid} current state is: {character_stats}")
+
+    initial_prompt = {
+        "topic_requirements": "",
+        "impression_impact": {
+            "Relation": "Relation influences the length of conversation and how much information from player profiles should be included.",
+            "Emotion": "Emotion determines the tone of the players.",
+            "Personlality": "Personality influence the length of each player's answer and their willingness towards conversation.",
+            "Habits and preferences": "Habits and preferences are something that one player thinks the other could be interested in and can also be mentioned in the conversation.",
+        },
+    }
+    state = ConversationState(
+        userid=userid,
+        character_stats=character_stats,
+        ongoing_task=[],
+        daily_task=[],
+        message_queue=asyncio.Queue(),
+        waiting_response=asyncio.Queue(),
+        websocket=websocket,
+        prompt=initial_prompt,
+    )
+    return state
+
+
+# workflow for planning conversation tasks and starting conversations
+def start_conversation_workflow():
+    workflow = StateGraph(ConversationState)
+    workflow.add_node("Conversation_planner", generate_daily_conversation_plan)
+    workflow.add_node("Conversation_starter", start_conversation)
+    workflow.set_entry_point("Conversation_planner")
+    workflow.add_conditional_edges("Conversation_starter", all_conversation_started)
+    workflow.add_edge("Conversation_planner", "Conversation_starter")
+    return workflow.compile()
 
