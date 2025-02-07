@@ -16,20 +16,10 @@ class Character:
         self.last_heartbeat = time.time()
         self.heartbeat_count = 1
         self.callback: Optional[Callable[[], Coroutine[Any, Any, None]]] = None
-        self.message_log = []
 
     def update_heartbeat(self):
         self.last_heartbeat = time.time()
         self.heartbeat_count += 1
-
-    def log_message(self, direction: str, message: str):
-        self.message_log.append(
-            {
-                "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-                "direction": direction,
-                "message": message,
-            }
-        )
 
 
 class CharacterManager:
@@ -91,7 +81,7 @@ class CharacterManager:
 
     async def _check_heartbeats(self) -> None:
         while True:
-            logger.info("🔍 Performing heartbeat check...")
+            # logger.info("🔍 Performing heartbeat check...")
             for character_id, character in self._characters.items():
                 if time.time() - character.last_heartbeat > self.timeout:
                     logger.error(f"💔 Character {character_id} heartbeat timeout")

@@ -1,0 +1,42 @@
+[
+    {
+        "name": "goto",
+        "Description": "goto [placeName:string]: Go to a specified location.",
+        "Constraints": "Must be in (school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen)."
+    },
+    {
+        "name": "sleep",
+        "Description": "sleep [hours:int]: Sleep to recover energy (10 per hour).",
+        "Constraints": "Must be at home."
+    },
+    {
+        "name": "study",
+        "Description": "study [hours:int]: Study to achieve a higher degree, cost money (100 per hour) and energy (10 per hour), gain education experience (10 per hour).",
+        "Constraints": "Must be in school and have enough money."
+    },
+    {
+        "name": "seedoctor",
+        "Description": "seedoctor [hours:int]: See a doctor, cost money (100 per hour), gain health (10 per hour).",
+        "Constraints": "Must be in the hospital and have enough money."
+    },
+    {
+        "name": "work",
+        "Description": "work [hours:int]: Work to earn money (you should check your salary per hour), cost energy (10 per hour).",
+        "Constraints": "Must have an occupation and be in the corresponding workplace."
+    },
+    {
+        "name": "use",
+        "Description": "use [itemType:string] [amount:int]: Use items in your inventory to get corresponding effects. Here are the effects of different items:\n- apple: +10 hungry\n- pear: +15 hungry\n- bread: +25 hungry\n- applepie: +20 hungry\n- fruitsalad: +35 hungry\n- chickensalad: +35 hungry and +10 energy\n- beefrice: +50 hungry and +5 energy\n- sushi: +30 hungry\n- book: +10 education experience",
+        "Constraints": "Must have enough items in inventory."
+    },
+    {
+        "name": "buy",
+        "Description": "buy [itemType:string] [amount:int]: Purchase items, costing money (you should check the market data to get the price of different items).",
+        "Constraints": "Must have enough money, and items must be available in sufficient quantity in the AMM."
+    },
+    {
+        "name": "sell",
+        "Description": "sell [itemType:string] [amount:int]: Sell items to get money (you should check the market data to get the price of different items).",
+        "Constraints": "Must have enough items in inventory."
+    }
+]

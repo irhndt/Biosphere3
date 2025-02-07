@@ -52,13 +52,13 @@ class AI_WS_Server:
             agent_instance = character.agent_instance
             conversation_instance = character.conversation_instance
 
-            character.log_message("received", response)
+            agent_instance.log_message("received", json.loads(response))
 
             while True:
                 try:
                     message = await websocket.recv()
                     data = json.loads(message)
-                    character.log_message("sent", message)
+                    agent_instance.log_message("sent", data)
 
                     if data.get("messageName") == "heartbeat":
                         character.update_heartbeat()
@@ -66,7 +66,7 @@ class AI_WS_Server:
                             character_id, "heartbeat", 0, **{"status": "ok"}
                         )
                         await websocket.send(heartbeat_response)
-                        character.log_message("received", heartbeat_response)
+                        agent_instance.log_message("received", json.loads(heartbeat_response))
                     else:
                         message_queue = agent_instance.state["message_queue"]
                         await asyncio.gather(
@@ -132,9 +132,7 @@ class AI_WS_Server:
             character_id, agent_instance, conversation_instance
         )
 
-        self.character_manager.get_character(character_id).log_message(
-            "sent", init_message
-        )
+        agent_instance.log_message("sent", init_data)
 
         return (
             True,
