@@ -47,10 +47,11 @@ class PlanningHandler(BaseHandler):
         }
 
         print(obj_planner_prompt.format(**payload))
-        planner_response = self.api_retry(
+        planner_response = await self.api_retry(
             obj_planner.ainvoke,
             payload,
             state,
+            DailyObjective,
         )
         full_prompt = obj_planner_prompt.format(**payload)
         logger.info("======generate_daily_objective======\n" + full_prompt)
@@ -101,18 +102,15 @@ class PlanningHandler(BaseHandler):
             "forbidden_example_output": meta_seq_forbidden_example_out,
         }
         print(crafting_and_trading_prompt.format(**payload))
-        crafting_and_trading_sequence = self.api_retry(
+        crafting_and_trading_sequence = await self.api_retry(
             crafting_and_trading_planner.ainvoke,
             payload,
             state,
+            DetailedMetaActionSequence,
         )
         state["decision"]["detailed_meta_seq"] = []
         for craft_and_trade in crafting_and_trading_sequence.action_sequence:
             state["decision"]["detailed_meta_seq"].append(craft_and_trade.model_dump())
-
-        # pprint.pprint(
-        #     state["decision"]["detailed_meta_seq"],
-        # )
 
         state["decision"]["meta_seq"] = [
             action.action for action in crafting_and_trading_sequence.action_sequence
@@ -137,49 +135,7 @@ class PlanningHandler(BaseHandler):
             f"🔨 User {state['userid']}: CRAFTING_AND_TRADING_SEQUENCE EXPANDED with {state['decision']['expanded_meta_seq']}"
         )
 
-        emoji_seq_generator = self.create_planner(
-            generate_emoji_sequence_prompt,
-            state.get("character_stats", {}).get("model_type"),
-            EmojiSequence,
-            0.8,
-        )
-
-        squence_format = """{"response": [{"content": "I hate work overtime!", "emoji": "🥺😭"}, {"content": "So tired, but got lots of fishes", "emoji": "🐟😆"}]}"""
-
-        pay_load = {
-            "personality": state["character_stats"]["personality"],
-            "action_list": refine_list(simulate_list),
-            "sequence_format": squence_format,
-        }
-        emoji_sequence = self.api_retry(
-            emoji_seq_generator.ainvoke,
-            pay_load,
-            state,
-        )
-
-        meta_action_sequence = list(state["decision"]["expanded_meta_seq"])
-
-        response = await self.send_message(
-            state,
-            "actionList",
-            6,
-            {
-                "command": meta_action_sequence,
-                "emoji": [desc.emoji for desc in emoji_sequence.response],
-                "description": [desc.content for desc in emoji_sequence.response],
-            },
-        )
-        logger.info(f"🧠 META_ACTION_SEQUENCE INVOKED with {meta_action_sequence}")
-        pprint(
-            {
-                "command": meta_action_sequence,
-                "emoji": [desc.emoji for desc in emoji_sequence.response],
-                "description": [desc.content for desc in emoji_sequence.response],
-            },
-        )
-        if state.get("instance"):
-            state["instance"].log_message("received", response)
-
+        await self.generate_emoji_sequence(state, simulate_list)
         return {"current_pointer": "meta_action_sequence"}
 
     async def replan_meta_action(self, state):
@@ -219,10 +175,11 @@ class PlanningHandler(BaseHandler):
             ),
             "fail_action_info": format_false_action_info(false_action_info),
         }
-        meta_action_sequence = self.api_retry(
+        meta_action_sequence = await self.api_retry(
             meta_action_replanner.ainvoke,
             payload,
             state,
+            DetailedMetaActionSequence,
         )
 
         meta_seq_list = []
@@ -250,39 +207,7 @@ class PlanningHandler(BaseHandler):
         # pprint(detailed_meta_seq)
         state["decision"]["detailed_meta_seq"] = detailed_meta_seq
 
-        emoji_sequence_generator = self.create_planner(
-            generate_emoji_sequence_prompt,
-            state.get("character_stats", {}).get("model_type"),
-            EmojiSequence,
-            0.7,
-        )
-
-        squence_format = """{"response": [{"content": "I hate work overtime!", "emoji": "🥺😭"}, {"content": "So tired, but got lots of fishes", "emoji": "🐟😆"}]}"""
-
-        pay_load = {
-            "personality": state["character_stats"]["personality"],
-            "action_list": refine_list(simulate_list),
-            "sequence_format": squence_format,
-        }
-
-        # TODO: 10个 10个地处理emoji_sequence
-        emoji_sequence = self.api_retry(
-            emoji_sequence_generator.ainvoke,
-            pay_load,
-            state,
-        )
-
-        response = await self.send_message(
-            state,
-            "actionList",
-            6,
-            {
-                "command": simulate_list,
-                "emoji": [desc.emoji for desc in emoji_sequence.response],
-                "description": [desc.content for desc in emoji_sequence.response],
-            },
-        )
-        state["instance"].log_message("received", response)
+        await self.generate_emoji_sequence(state, simulate_list)
 
         return {"current_pointer": "Replan_Meta_Action"}
 
@@ -306,10 +231,11 @@ class PlanningHandler(BaseHandler):
                 "action_list": refine_list(action_list[i : i + 10]),
                 "sequence_format": squence_format,
             }
-            emoji_sequence_sep = self.api_retry(
+            emoji_sequence_sep = await self.api_retry(
                 emoji_seq_generator.ainvoke,
                 pay_load,
                 state,
+                EmojiSequence,
             )
             emojis.extend([desc.emoji for desc in emoji_sequence_sep.response])
             descriptions.extend([desc.content for desc in emoji_sequence_sep.response])

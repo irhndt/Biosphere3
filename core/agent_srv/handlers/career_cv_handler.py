@@ -68,17 +68,12 @@ class CareerCVHandler(BaseHandler):
             "current_job_str": current_job_str,
             "eligible_jobs_str": eligible_jobs,
         }
-        max_retries = 3
-        while max_retries > 0:
-            try:
-                cv = await cv_generator.ainvoke(payload)
-                break
-            except Exception as e:
-                logger.error(f"Invoke LLM Failed: {e}")
-                max_retries -= 1
-                if max_retries == 0:
-                    raise Exception("Too many retries on generate_change_job_cv_new")
-                continue
+        cv = await self.api_retry(
+            cv_generator.ainvoke,
+            payload,
+            state=instance.state,
+            node_model=NewCV,
+        )
         logger.info(f"📃 CV: {cv}")
         if cv.job_id == 0:
             logger.info("📃 CV: No job selected. Agent want to keep the original job. ")
@@ -98,7 +93,7 @@ class CareerCVHandler(BaseHandler):
         }
         agent_api.request_sync("POST", "/cv/", data=cv_request)
         mayor_decision = await self.generate_mayor_decision(
-            cv, userid, experience, education, week
+            cv, instance.state, userid, experience, education, week
         )
         if instance:
             response = await instance.send_message(
@@ -116,7 +111,15 @@ class CareerCVHandler(BaseHandler):
             )
             instance.log_message("received", json.dumps(response))
 
-    async def generate_mayor_decision(self, cv, user_id, experience, education, week):
+    async def generate_mayor_decision(
+        self,
+        state,
+        cv,
+        user_id,
+        experience,
+        education,
+        week,
+    ):
         mayor_decision_generator = self.create_planner(
             mayor_decision_prompt, "gpt-4o-mini", MayorDecision, 0.7
         )
@@ -141,7 +144,12 @@ class CareerCVHandler(BaseHandler):
             "public_work_info": public_work_info,
             "meet_requirements": {"meet": code == 1, "message": message},
         }
-        mayor_decision = await mayor_decision_generator.ainvoke(payload)
+        mayor_decision = await self.api_retry(
+            mayor_decision_generator.ainvoke,
+            payload,
+            state={},
+            node_model=MayorDecision,
+        )
         logger.info(f"🧔 Mayor decision: {mayor_decision.decision}")
         logger.info(f"🧔 Mayor comments: {mayor_decision.comments}")
 

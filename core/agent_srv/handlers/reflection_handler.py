@@ -52,7 +52,12 @@ class ReflectionHandler(BaseHandler):
                 state["userid"], conversation
             ),
         }
-        daily_reflection = await daily_reflection_generator.ainvoke(payload)
+        daily_reflection = await self.api_retry(
+            daily_reflection_generator.ainvoke,
+            payload,
+            state,
+            Reflection,
+        )
 
         full_prompt = daily_reflection_prompt.format(**payload)
         logger.info("======generate_daily_reflection======\n" + full_prompt)

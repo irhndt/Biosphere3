@@ -69,19 +69,12 @@ class AccommodationHandler(BaseHandler):
                 "financial_status": financial_status,
                 "failure_reasons": failure_reasons,
             }
-
-            try:
-                accommodation_decision = await accommodation_decision_generator.ainvoke(
-                    payload
-                )
-                print("accommodation_decision: ", accommodation_decision)
-            except Exception as e:
-                logger.error(f"Invoke LLM Failed: {e}")
-                failure_reasons.append(
-                    f"Attempt {retries + 1}: LLM invocation failed with error: {e}"
-                )
-                retries += 1
-                continue
+            accommodation_decision = await self.api_retry(
+                accommodation_decision_generator.ainvoke,
+                payload,
+                state,
+                AccommodationDecision,
+            )
 
             logger.info(f"🏠 Attempt {retries + 1}:")
             logger.info(
