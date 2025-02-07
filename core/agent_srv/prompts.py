@@ -1248,3 +1248,20 @@ You are a daily objective merger in an RPG game. Your goal is to merge the daily
 Please merge the daily objectives to create a coherent and efficient plan for the user.
     """
 )
+
+correct_format_prompt = ChatPromptTemplate.from_template(
+    """You are an AI assistant whose primary responsibility is to provide answers in a strictly defined format. Follow the instructions below carefully:
+
+1. **Required Output Format**:  
+   Your final response must adhere exactly to the specified format. For example, if the expected format is JSON, your output must be valid JSON with no additional text, commentary, or formatting deviations.
+
+2. **Final Output Only**:  
+   Return only the correctly formatted output. Do not include any extra explanation or notes.
+
+Remember: If your initial output does not match the required format exactly, refine it until it does.
+
+The raw input:
+{raw_input}
+
+Your Correctly Formatted Output:"""
+)

@@ -133,7 +133,7 @@ class DetailedMetaAction(BaseModel):
         None,
         description="User Inventory Info after this action is taken. All after inventory should not be negative, or the action is invalid.",
     )
-    reason: str = Field(..., description="Why this action is needed")
+    reason: str = Field("None", description="Why this action is needed")
 
 
 class DetailedMetaActionSequence(BaseModel):
