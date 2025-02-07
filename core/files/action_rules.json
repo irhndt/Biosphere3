@@ -1,0 +1,53 @@
+{
+    "goto": {
+        "cost": {
+            "hungry": 0
+        },
+        "effect": {
+            "location": "<arg1>"
+        }
+    },
+    "sleep": {
+        "require": {
+            "location": "home"
+        },
+        "effect": {
+            "energy": 10
+        }
+    },
+    "study": {
+        "require": {
+            "location": "school",
+            "money": 100
+        },
+        "cost": {
+            "energy": 10
+        },
+        "effect": {
+            "education": 10
+        }
+    },
+    "seedoctor": {
+        "require": {
+            "location": "hospital"
+        },
+        "cost": {
+            "money": 100,
+            "energy": 10
+        },
+        "effect": {
+            "health": 10
+        }
+    },
+    "work": {
+        "cost": {
+            "energy": 10
+        }
+    },
+    "use": {
+        "require": {
+            "itemType": "<arg1>",
+            "amount": "<arg2>"
+        }
+    }
+}

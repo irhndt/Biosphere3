@@ -5,12 +5,11 @@ import asyncio
 
 # daily topic plan
 class ConversationTopics(TypedDict):
-    topics: List[str]
+    topics: str
 
 
-class PreConversationTask(TypedDict):
-    # start_time: str
-    first_sentence: str
+class ConversationContent(TypedDict):
+    content: str
 
 
 class CheckResult(TypedDict):
@@ -70,18 +69,7 @@ class EndConversation(TypedDict):
 
 # Update the impressions after the conversation is completed, generating two impressions simultaneously
 class ImpressionUpdate(BaseModel):
-    impression1: str = Field(description="new impression from player1 to player2")
-    impression2: str = Field(description="new impression from player2 to player1")
-
-
-class Knowledge(BaseModel):
-    time: str = Field(description="The day before the knowledge is generated")
-    environment_information: str = Field(
-        description="Short-term memory related to environment"
-    )
-    personal_information: str = Field(
-        description="Long-term memory related to personal profile"
-    )
+    impression: str = Field(description="The new impression.")
 
 
 class DailyConversationPlan(BaseModel):

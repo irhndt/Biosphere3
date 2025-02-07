@@ -83,17 +83,36 @@
             text-align: right;
             margin-bottom: 10px;
         }
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        .refresh-btn, .log-btn {
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .refresh-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+        }
+        .refresh-btn:hover {
+            background: #45a049;
+        }
+        .log-btn:hover {
+            background: #f0f2f5;
+        }
     </style>
     <script>
         function formatData(data) {
             const monitorStatus = data.character_monitor?.monitor_status || {};
             const clients = data.character_monitor?.clients || { active_characters: [], hosted_characters: [] };
 
-            // 更新服务器时间
             document.getElementById('server-time').textContent = 
                 `Server Time: ${data.server_time || 'N/A'}`;
             
-            // 更新统计数据
             document.getElementById('stats').innerHTML = `
                 <div class="stat-card">
                     <div class="stat-value">${monitorStatus.uptime_seconds || 'N/A'}</div>
@@ -109,7 +128,6 @@
                 </div>
             `;
             
-            // 更新活跃角色表格
             const activeCharactersTable = clients.active_characters.length > 0 ? clients.active_characters.map(client => `
                 <tr>
                     <td><a href="/user/${client.character_id}">${client.character_id}</a></td>
@@ -137,7 +155,6 @@
                 </table>
             `;
 
-            // 更新托管角色表格
             const hostedCharactersTable = clients.hosted_characters.length > 0 ? clients.hosted_characters.map(client => `
                 <tr>
                     <td>${client.character_id}</td>
@@ -182,9 +199,7 @@
                 });
         }
 
-        // 页面加载时刷新一次
         document.addEventListener('DOMContentLoaded', refreshData);
-        // 每5秒自动刷新
         setInterval(refreshData, 5000);
     </script>
 </head>
@@ -192,7 +207,10 @@
     <div class="container">
         <div class="header">
             <h1>WebSocket Server Monitor</h1>
-            <button class="refresh-btn" onclick="refreshData()">Refresh</button>
+            <div class="button-group">
+                <button class="refresh-btn" onclick="refreshData()">Refresh</button>
+                <button class="log-btn" onclick="window.location.href='/logs/output'" style="background: white; color: #4CAF50; border: 1px solid #4CAF50;">View Logs</button>
+            </div>
         </div>
         
         <div class="server-time" id="server-time">

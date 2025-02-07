@@ -1,126 +1,22 @@
-import requests
 import os
-from json import JSONDecodeError
+import json
 import asyncio
 from dotenv import load_dotenv
-import aiohttp
 from loguru import logger
 import math
+import copy
+import pandas as pd
+from collections import deque
+from core.db.api_client import agent_api, game_api
 
 load_dotenv()
-GAME_BACKEND_URL = os.getenv("GAME_BACKEND_URL")
-GAME_BACKEND_TIMEOUT = int(os.getenv("GAME_BACKEND_TIMEOUT"))
-AGENT_BACKEND_URL = os.getenv("AGENT_BACKEND_URL")
 DEFAULT_MODEL_TYPE = os.getenv("DEFAULT_MODEL_TYPE")
-
-
-async def fetch_api_data_async(
-    method: str,
-    endpoint: str,
-    userid: int,
-    _logger,
-    timeout: int = GAME_BACKEND_TIMEOUT,
-) -> dict:
-    """
-    Make an asynchronous API request with error handling.
-
-    Args:
-        method (str): HTTP method (e.g., 'POST').
-        endpoint (str): API endpoint.
-        userid (int): User ID.
-        _logger: The logger instance for logging errors.
-        timeout (int): The timeout for the request.
-
-    Returns:
-        dict: The API response data if successful, otherwise an empty dict.
-    """
-    url = f"{AGENT_BACKEND_URL}{endpoint}"
-    try:
-        if method == "GET":
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    url, params={"characterId": userid}, timeout=timeout
-                ) as response:
-                    response.raise_for_status()
-                    return await response.json()
-        else:
-            async with aiohttp.ClientSession() as session:
-                async with session.request(
-                    method, url, json={"characterId": userid}, timeout=timeout
-                ) as response:
-                    response.raise_for_status()
-                    return await response.json()
-    except asyncio.TimeoutError:
-        _logger.error(f"Timeout while accessing {endpoint}")
-    except aiohttp.ClientError as e:
-        _logger.error(f"HTTP error while accessing {endpoint}: {e}")
-    except JSONDecodeError:
-        _logger.error(f"Failed to decode JSON from {endpoint}")
-    return {}
-
-
-def fetch_json(url: str, timeout: int, _logger, error_message: str = "") -> dict:
-    """
-    Fetch JSON data from a given URL with error handling.
-
-    Args:
-        url (str): The URL to send the GET request to.
-        timeout (int): The timeout for the request.
-        _logger: The logger instance for logging errors.
-        error_message (str): Custom error message for timeout.
-
-    Returns:
-        dict: The JSON data if successful, otherwise an empty dict.
-    """
-    try:
-        response = requests.get(url, timeout=timeout)
-        response_data = response.json().get("data", {})
-        if response_data == None:
-            return {"code": 0, "data": None, "message": "Resource not found at GAMEDB"}
-        return response_data
-    except TimeoutError:
-        _logger.error(error_message)
-    except JSONDecodeError:
-        _logger.error(f"Failed to decode JSON from {url}")
-    return {"code": 0, "data": {}, "message": "Resource not found at GAMEDB"}
-
-
-async def fetch_json_async(
-    url: str, timeout: int, _logger, error_message: str = ""
-) -> dict:
-    """
-    Fetch JSON data from a given URL asynchronously with error handling.
-
-    Args:
-        url (str): The URL to send the GET request to.
-        timeout (int): The timeout for the request.
-        _logger: The logger instance for logging errors.
-        error_message (str): Custom error message for timeout.
-
-    Returns:
-        dict: The JSON data if successful, otherwise an empty dict.
-    """
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=timeout) as response:
-                response.raise_for_status()
-                response_data = await response.json()
-                return response_data.get("data", {}) if response_data else {}
-    except asyncio.TimeoutError:
-        _logger.error(error_message)
-    except aiohttp.ClientError as e:
-        _logger.error(f"HTTP error while accessing {url}: {e}")
-    except JSONDecodeError:
-        _logger.error(f"Failed to decode JSON from {url}")
-    return {"code": 0, "data": {}, "message": "Resource not found at GAMEDB"}
+skill2actions = json.load(open("core/files/skill2actions.json"))
 
 
 def get_inventory(userid: int) -> dict:
-    response = fetch_json(
-        f"{GAME_BACKEND_URL}/bag/getByCharacterId/{userid}",
-        timeout=GAME_BACKEND_TIMEOUT,
-        _logger=logger,
-        error_message="Failed to get inventory from game backend",
+    response = game_api.request_sync(
+        method="GET", endpoint=f"/bag/getByCharacterId/{userid}"
     )
     inventory_dict = {}
     try:
@@ -132,11 +28,8 @@ def get_inventory(userid: int) -> dict:
 
 
 async def get_inventory_async(userid: int) -> dict:
-    response = await fetch_json_async(
-        f"{GAME_BACKEND_URL}/bag/getByCharacterId/{userid}",
-        timeout=GAME_BACKEND_TIMEOUT,
-        _logger=logger,
-        error_message="Failed to get inventory from game backend",
+    response = await game_api.request_async(
+        method="GET", endpoint=f"/bag/getByCharacterId/{userid}"
     )
     inventory_dict = {}
     try:
@@ -149,23 +42,22 @@ async def get_inventory_async(userid: int) -> dict:
 
 def get_market_data_from_db() -> dict:
     # Market data
-    price_response = fetch_json(
-        url=f"{GAME_BACKEND_URL}/ammPool/getAveragePrice",
-        timeout=GAME_BACKEND_TIMEOUT,
-        _logger=logger,
-        error_message="Failed to get market data from AMM pool",
+    price_response = game_api.request_sync(
+        method="GET", endpoint="/ammPool/getAveragePrice"
     )
     market_data_dict = dict({x["name"]: x["averagePrice"] for x in price_response})
     return market_data_dict
 
 
+def get_amm_data_from_db() -> dict:
+    amm_response = game_api.request_sync(method="GET", endpoint="/ammPool/getAll1")
+    return amm_response
+
+
 async def get_prompt_data_from_db(userid: int):
     # Prompt data
-    prompt_response = await fetch_json_async(
-        url=f"{AGENT_BACKEND_URL}/agent_prompt/?characterId={userid}",
-        timeout=GAME_BACKEND_TIMEOUT,
-        _logger=logger,
-        error_message="Failed to get prompt data from game backend",
+    prompt_response = await agent_api.request_async(
+        method="GET", endpoint="/agent_prompt/", params={"characterId": userid}
     )
     dict = prompt_response[0] if prompt_response else {}
     fields = [
@@ -188,64 +80,31 @@ async def get_prompt_data_from_db(userid: int):
 
 
 async def fetch_game_db_character_response_async(userid: int) -> dict:
-    """
-    Asynchronously fetches character data from the game database.
-
-    Args:
-        userid (int): The ID of the user.
-
-    Returns:
-        dict: The game database character response.
-    """
-    response = await fetch_json_async(
-        f"{GAME_BACKEND_URL}/characters/getByIdS/{userid}",
-        timeout=GAME_BACKEND_TIMEOUT,
-        _logger=logger,
-        error_message="Failed to get character data from game backend",
+    response = await game_api.request_async(
+        method="GET", endpoint=f"/characters/getByIdS/{userid}"
     )
     return response
 
 
 async def fetch_agent_db_response_async(userid: int) -> dict:
-    """
-    Asynchronously fetches character data from the agent database.
-
-    Args:
-        userid (int): The ID of the user.
-
-    Returns:
-        dict: The agent database response.
-    """
-    response = await fetch_api_data_async(
-        "GET",
+    response = await agent_api.request_async(
+        method="GET",
         endpoint="/characters/",
-        userid=userid,
-        _logger=logger,
-        timeout=GAME_BACKEND_TIMEOUT,
+        params={"characterId": userid},
+        return_data=False,
     )
     if response.get("code") == 0:
         logger.info(
             "🆕 No character data found in agent database, creating new character"
         )
         return {}
-    return response.get("data", [])[0]
+    data = response.get("data", [])
+    return data[0] if data else {}
 
 
 async def fetch_model_type_response_async(userid: int) -> dict:
-    """
-    Asynchronously fetches model type from the character model service.
-
-    Args:
-        userid (int): The ID of the user.
-
-    Returns:
-        dict: The model type response.
-    """
-    response = await fetch_json_async(
-        f"{GAME_BACKEND_URL}/CharacterModel/getByCharacterId/{userid}",
-        timeout=GAME_BACKEND_TIMEOUT,
-        _logger=logger,
-        error_message="Failed to get model type from character model service",
+    response = await game_api.request_async(
+        method="GET", endpoint=f"/CharacterModel/getByCharacterId/{userid}"
     )
     return response
 
@@ -266,12 +125,14 @@ async def get_character_data_async(userid: int) -> dict:
     # Construct character_data
     try:
         character_data = {
+            "name": game_db_character_response.get("characterName"),
             "health": game_db_character_response.get("health"),
             "energy": game_db_character_response.get("energy"),
             "hungry": game_db_character_response.get("hungry"),
             "education": game_db_character_response.get("education"),
             "education_experience": game_db_character_response.get("experience"),
             "money": game_db_character_response.get("money"),
+            "jobId": game_db_character_response.get("jobId"),
             "occupation": get_occupation(game_db_character_response.get("jobId")),
             "work_place": get_work_place(game_db_character_response.get("jobId")),
             "efficiency": compute_efficiency(game_db_character_response),
@@ -291,39 +152,38 @@ async def get_character_data_async(userid: int) -> dict:
     return character_data
 
 
-def save_decision_to_db(userid: int, decision: dict):
-    """
-    Save the decision to the game database.
+def save_action_to_db(userid: int, action: dict):
+    agent_api.request_sync(
+        method="POST",
+        endpoint="/actions/",
+        data={
+            "characterId": userid,
+            "location": action.get("location", ""),
+            "gameTime": action.get("gameTime", ""),
+        },
+    )
 
-    Args:
-        userid (int): The ID of the user.
-        decision (dict): The decision data to save.
-    """
-    url = f"{AGENT_BACKEND_URL}/decision/"
+
+def save_decision_to_db(userid: int, decision: dict, endpoint: str):
     decision["characterId"] = userid
-    try:
-        response = requests.patch(
-            url,
-            json=decision,
-            timeout=GAME_BACKEND_TIMEOUT,
-        )
-        response.raise_for_status()
-    except requests.Timeout:
-        logger.error(f"Timeout while saving decision to {url}")
-    except requests.HTTPError as e:
-        logger.error(f"HTTP error while saving decision to {url}: {e}")
-    except JSONDecodeError:
-        logger.error(f"Failed to decode JSON from {url}")
+    agent_api.request_sync(
+        method="POST",
+        endpoint=f"/{endpoint}/",
+        data=decision,
+    )
+
+
+
+def save_reflection_to_db(user_id: int, reflection: dict):
+    reflection["characterId"] = user_id
+    agent_api.request_sync(
+        method="PATCH",
+        endpoint="/reflection/",
+        data=reflection,
+    )
 
 
 def save_token_consumption_to_db(token_consumption: dict):
-    """
-    Save the token consumption to the game database.
-
-    Args:
-        token_consumption (dict): The token consumption data to save.
-    """
-    url = f"{GAME_BACKEND_URL}/modelToken/add/"
     for model_type, usage in token_consumption.items():
         data = {
             "modelType": model_type,
@@ -331,19 +191,7 @@ def save_token_consumption_to_db(token_consumption: dict):
             "completion": usage.get("completion", 0),
             "total": usage.get("total", 0),
         }
-        try:
-            response = requests.post(
-                url,
-                json=data,
-                timeout=GAME_BACKEND_TIMEOUT,
-            )
-            response.raise_for_status()
-        except requests.Timeout:
-            logger.error(f"Timeout while saving token consumption to {url}")
-        except requests.HTTPError as e:
-            logger.error(f"HTTP error while saving token consumption to {url}: {e}")
-        except JSONDecodeError:
-            logger.error(f"Failed to decode JSON from {url}")
+        game_api.request_sync(method="POST", endpoint="/modelToken/add/", data=data)
 
 
 def get_occupation(job_id: int) -> str:
@@ -419,15 +267,17 @@ async def get_initial_state_from_db(userid, websocket):
             "action_description": [],
             "action_result": [],
             "new_plan": [],
-            "daily_objective": [],
+            "daily_objective": deque(maxlen=10),
             "meta_seq": [],
             "reflection": [],
+            "expanded_meta_seq": deque(),
         },
         "meta": {
             "tool_functions": tool_functions_live,
-            "day": "",
+            "day": 0,
             "available_locations": available_locations,
         },
+        "past_stats": {},
         "prompts": prompt_data,
         "message_queue": asyncio.Queue(),
         "event_queue": asyncio.Queue(),
@@ -438,64 +288,9 @@ async def get_initial_state_from_db(userid, websocket):
     return state
 
 
-def generate_initial_state_hardcoded(userid, websocket):
-    initial_state = {
-        "userid": userid,
-        "character_stats": {
-            "name": "Alice",
-            "gender": "Female",
-            "slogan": "Need to be rich!Need to be educated!",
-            "description": "A risk lover. Always looking for the next big thing.",
-            "role": "Investor",
-            "inventory": get_inventory(userid),
-            "health": 100,
-            "energy": 100,
-        },
-        "decision": {
-            "need_replan": False,
-            "action_description": [],
-            "action_result": [],
-            "new_plan": [],
-            "daily_objective": [],
-            "meta_seq": [],
-            "reflection": [],
-        },
-        "meta": {
-            "tool_functions": tool_functions_live,
-            "day": "",
-            "available_locations": available_locations,
-        },
-        "prompts": {
-            "daily_goal": "",
-            "refer_to_previous": False,
-            "life_style": "Casual",
-            "daily_objective_ar": "",
-            "task_priority": [],
-            "max_actions": 10,
-            "meta_seq_ar": "",
-            "replan_time_limit": 3,
-            "meta_seq_adjuster_ar": "",
-            "focus_topic": [],
-            "depth_of_reflection": "Moderate",
-            "reflection_ar": "",
-            "level_of_detail": "Moderate",
-            "tone_and_style": "",
-        },
-        "public_data": {
-            "market_data": get_market_data_from_db(),
-        },
-        "message_queue": asyncio.Queue(),
-        "event_queue": asyncio.Queue(),
-        "false_action_queue": asyncio.Queue(),
-        "websocket": websocket,
-        "current_pointer": "Sensing_Route",
-    }
-    return initial_state
-
-
 tool_functions_live = """
 1. goto [placeName:string]: Go to a specified location.
-Constraints: Must in (school,workshop,home,farm,mall,square,councilHall,hospital,fruit,harvest,fishing,mine,orchard,foodfactory,factory,garden,policestation,library,supermarket,canteen).
+Constraints: Must in (school,workshop,home,farm,mall,square,councilhall,hospital,fruit,harvest,fishing,mine,orchard,foodfactory,factory,garden,policestation,library,supermarket,canteen).
 2. sleep [hours:int]: Sleep to recover energy (10 per hour).
 Constraints: Must be at home.
 3. study [hours:int]: Study to achieve a higher degree, cost money (100 per hour) and energy (10 per hour), gain education experience (10 per hour).
@@ -528,7 +323,7 @@ available_locations = [
     "farm",
     "mall",
     "square",
-    "councilHall",
+    "councilhall",
     "hospital",
     "fruit",
     "harvest",
@@ -573,27 +368,427 @@ def format_role_actions(roles, data):
     return "\n".join(action_strings)
 
 
-def format_character_data(character_data: dict) -> str:
-    return (
-        f"Health: {character_data.get('health', 'N/A')} - Represents the character's physical well-being.\n"
-        f"Energy: {character_data.get('energy', 'N/A')} - Indicates how much energy the character has left.\n"
-        f"Hungry: {character_data.get('hungry', 'N/A')} - Indicates the character's level of satiety; the higher, the fuller.\n"
-        f"Education: {character_data.get('education', 'N/A')} - The level of education attained.\n"
-        f"Education Experience: {character_data.get('education_experience', 'N/A')} - Experience points in education.\n"
-        f"Money: {character_data.get('money', 'N/A')} - Current financial status.\n"
-        f"Occupation: {character_data.get('occupation', 'N/A')} - Current job or role work at {character_data.get('work_place')}\n"
-        f"Efficiency: {character_data.get('efficiency', 'N/A'):.2f} - Calculated efficiency based on various factors: "
-        f"Efficiency = (Hungry Factor) * (Energy Factor) * (Health Factor) * (Wisdom Factor), where:\n"
-        f"  - Hungry Factor = hungry / 100 if hungry < 50 else 1\n"
-        f"  - Energy Factor = energy / 100\n"
-        f"  - Health Factor = health / 100\n"
-        f"  - Wisdom Factor = log(education_experience + 10, 10)\n"
-        f"  Efficiency affects the crafting efficiency of items. If the efficiency is too low (lower than 0.2), "
-        f"  it is advisable to improve the basic attributes first.\n"
-        f"Inventory: {character_data.get('inventory', {})} - Items currently held by the character.\n"
-        f"Personality: {character_data.get('personality', 'N/A')} - Describes the character's personality traits.\n"
-        f"Long-term Goal: {character_data.get('long_term_goal', 'N/A')} - The character's long-term aspirations.\n"
-        f"Short-term Goal: {character_data.get('short_term_goal', 'N/A')} - Immediate objectives.\n"
-        f"Language Style: {character_data.get('language_style', 'N/A')} - Preferred communication style.\n"
-        f"Biography: {character_data.get('biography', 'N/A')} - A brief background story.\n"
-    )
+def format_character_data(character_data: dict, fields: list = None) -> str:
+    if fields is None:
+        fields = character_data.keys()
+
+    formatted_data = []
+
+    if "health" in fields and "health" in character_data:
+        formatted_data.append(
+            f"Health: {character_data.get('health', 'N/A')} - Represents the character's physical well-being. The range is 0 to 100"
+        )
+    if "energy" in fields and "energy" in character_data:
+        formatted_data.append(
+            f"Energy: {character_data.get('energy', 'N/A')} - Indicates how much energy the character has left. The range is 0 to 100"
+        )
+    if "hungry" in fields and "hungry" in character_data:
+        formatted_data.append(
+            f"Hungry: {character_data.get('hungry', 'N/A')} - Indicates the character's level of satiety; the higher, the fuller. The range is 0 to 100"
+        )
+    if "education" in fields and "education" in character_data:
+        formatted_data.append(f"Education: {character_data.get('education', 'N/A')}")
+    if "education_experience" in fields and "education_experience" in character_data:
+        formatted_data.append(
+            f"Education Experience: {character_data.get('education_experience', 'N/A')}"
+        )
+    if "money" in fields and "money" in character_data:
+        formatted_data.append(f"Money: {character_data.get('money', 'N/A')}")
+    if "occupation" in fields and "occupation" in character_data:
+        formatted_data.append(
+            f"Occupation: {character_data.get('occupation', 'N/A')} - Current job or role work at {character_data.get('work_place', 'N/A')}"
+        )
+    if "efficiency" in fields and "efficiency" in character_data:
+        formatted_data.append(
+            f"Efficiency: {character_data.get('efficiency', 'N/A'):.2f} - Calculated efficiency based on various factors: "
+            f"Efficiency = (Hungry Factor) * (Energy Factor) * (Health Factor) * (Wisdom Factor), where:\n"
+            f"  - Hungry Factor = hungry / 100 if hungry < 50 else 1\n"
+            f"  - Energy Factor = energy / 100\n"
+            f"  - Health Factor = health / 100\n"
+            f"  - Wisdom Factor = log(education_experience + 10, 10)\n"
+            f"  Efficiency affects the crafting efficiency of items. If the efficiency is too low (lower than 0.2), "
+            f"  it is advisable to improve the basic attributes first."
+        )
+    if "inventory" in fields and "inventory" in character_data:
+        formatted_data.append(f"Inventory: {character_data.get('inventory', {})}")
+    if "personality" in fields and "personality" in character_data:
+        formatted_data.append(
+            f"Personality: {character_data.get('personality', 'N/A')}"
+        )
+    if "long_term_goal" in fields and "long_term_goal" in character_data:
+        formatted_data.append(
+            f"Long-term Goal: {character_data.get('long_term_goal', 'N/A')}"
+        )
+    if "short_term_goal" in fields and "short_term_goal" in character_data:
+        formatted_data.append(
+            f"Short-term Goal: {character_data.get('short_term_goal', 'N/A')}"
+        )
+    if "language_style" in fields and "language_style" in character_data:
+        formatted_data.append(
+            f"Language Style: {character_data.get('language_style', 'N/A')}"
+        )
+    if "biography" in fields and "biography" in character_data:
+        formatted_data.append(f"Biography: {character_data.get('biography', 'N/A')}")
+
+    return "\n".join(formatted_data)
+
+
+def format_conversation_data(user_id, conversation_data: list) -> str:
+    if not conversation_data or len(conversation_data) == 0:
+        return "No conversation data available."
+
+    formatted_conversations = []
+    for conversation in conversation_data:
+        if conversation["from_id"] == user_id:
+            formatted_conversations.append(
+                f"Said to {conversation['to_id']}: {conversation['message']}"
+            )
+        elif conversation["to_id"] == user_id:
+            formatted_conversations.append(
+                f"{conversation['from_id']} said to me: {conversation['message']}"
+            )
+        else:
+            formatted_conversations.append(
+                f"{conversation['from_id']} -> {conversation['to_id']}: {conversation['message']}"
+            )
+
+    return "\n".join(formatted_conversations)
+
+
+async def format_queue_data(queue_data: asyncio.Queue) -> str:
+    if not queue_data or queue_data.empty():
+        return "No data available."
+    items = []
+    while queue_data.empty() is False:
+        item = await queue_data.get()
+        items.append(str(item))
+    return ", ".join(items)
+
+
+def format_level_graph(
+    level_graph_data: dict, inventory_info: dict, current_energy: int
+) -> str:
+    formatted_str = f"Current Energy: {current_energy}\n"
+    inventory_copy = inventory_info.copy()
+    inventory_copy = {key.lower(): value for key, value in inventory_copy.items()}
+
+    def get_cost(skill2actions, item):
+        # print(item)
+        for _, details in skill2actions.items():
+            if item in details["materials"].keys():
+                return details["cost"]
+        return 20
+
+    formatted_str += "Final Product: " + level_graph_data["final_product"] + "\n"
+    level_graph_data_list = level_graph_data["goals"]
+    for goal in level_graph_data_list:
+        formatted_str += f"Level {goal['goal_number']}:\n"
+        for obj in goal["objectives"]:
+            formatted_str += f"  - {obj['item']} *{obj['quantity']}\n"
+            formatted_str += f"     | Inventory: {inventory_copy.get(obj['item'], 0)}, Lack {obj['quantity'] - inventory_copy.get(obj['item'], 0)}\n"
+            energy_cost = get_cost(skill2actions, obj["item"])
+            formatted_str += f"     | Energy Cost: {energy_cost} per item, max craft num {current_energy / energy_cost} \n"
+        formatted_str += "\n"
+    return formatted_str
+
+
+def format_trade_and_craft_sequence(trade_and_craft_sequence: list):
+    formatted_str = ""
+    for action in trade_and_craft_sequence:
+        formatted_str += f"Action: {action['action']}\n"
+        formatted_str += f" | Reason: {action['reason']}\n"
+        if action.get("cost"):
+            formatted_str += f" | Cost: {action['cost']}\n"
+        if action.get("expected_revenue"):
+            formatted_str += f" | Expected Revenue: {action['expected_revenue']}\n"
+        formatted_str += "---\n"
+    return formatted_str.strip()
+
+
+def format_dict(data: dict) -> str:
+    return "\n".join([f"{key}: {value}" for key, value in data.items()])
+
+
+def format_market(market_data: dict) -> str:
+    formatted_str = "{\n"
+    items = list(market_data.items())
+    for i in range(0, len(items), 4):
+        chunk = items[i : i + 4]
+        line = ", ".join([f"{item.lower()}: {price}" for item, price in chunk])
+        formatted_str += f" {line}\n"
+    formatted_str += "}"
+    return formatted_str
+
+
+def format_daily_obj(daily_objectives: deque) -> str:
+    formatted_str = ""
+    if not daily_objectives:
+        return formatted_str
+    for i, obj in enumerate(daily_objectives, start=1):
+        formatted_str += f"Objective {i}: {obj}\n"
+    return formatted_str
+
+
+def update_state_daily(state: dict, day: int):
+    state["meta"]["day"] = day
+    state["past_stats"] = copy.deepcopy(state["character_stats"])
+
+
+def clear_decision(state: dict):
+    state["decision"]["action_description"].clear()
+    state["decision"]["action_result"].clear()
+    state["decision"]["new_plan"].clear()
+    state["decision"]["meta_seq"].clear()
+    state["decision"]["reflection"].clear()
+
+    if "daily_objective" in state["decision"]:
+        state["decision"]["daily_objective"].clear()
+    else:
+        state["decision"]["daily_objective"] = deque(maxlen=10)
+
+
+def format_status_changes(past_status: dict, status: dict, fields: list = None) -> str:
+    if fields is None:
+        fields = status.keys()
+
+    formatted_data = []
+
+    if "health" in fields and "health" in past_status and "health" in status:
+        formatted_data.append(
+            f"Health: {past_status.get('health', 'N/A')} -> {status.get('health', 'N/A')}"
+        )
+    if "energy" in fields and "energy" in past_status and "energy" in status:
+        formatted_data.append(
+            f"Energy: {past_status.get('energy', 'N/A')} -> {status.get('energy', 'N/A')}"
+        )
+    if "hungry" in fields and "hungry" in past_status and "hungry" in status:
+        formatted_data.append(
+            f"Hungry: {past_status.get('hungry', 'N/A')} -> {status.get('hungry', 'N/A')}"
+        )
+    if "education" in fields and "education" in past_status and "education" in status:
+        formatted_data.append(
+            f"Education: {past_status.get('education', 'N/A')} -> {status.get('education', 'N/A')}"
+        )
+    if (
+        "education_experience" in fields
+        and "education_experience" in past_status
+        and "education_experience" in status
+    ):
+        formatted_data.append(
+            f"Education Experience: {past_status.get('education_experience', 'N/A')} -> {status.get('education_experience', 'N/A')}"
+        )
+    if "money" in fields and "money" in past_status and "money" in status:
+        formatted_data.append(
+            f"Money: {past_status.get('money', 'N/A')} -> {status.get('money', 'N/A')}"
+        )
+    if (
+        "occupation" in fields
+        and "occupation" in past_status
+        and "occupation" in status
+    ):
+        formatted_data.append(
+            f"Occupation: {past_status.get('occupation', 'N/A')} -> {status.get('occupation', 'N/A')}"
+        )
+    if (
+        "efficiency" in fields
+        and "efficiency" in past_status
+        and "efficiency" in status
+    ):
+        formatted_data.append(
+            f"Efficiency: {past_status.get('efficiency', 'N/A')} -> {status.get('efficiency', 'N/A')}"
+        )
+    if "inventory" in fields and "inventory" in past_status and "inventory" in status:
+        formatted_data.append(
+            f"Inventory: {past_status.get('inventory', 'N/A')} -> {status.get('inventory', 'N/A')}"
+        )
+
+    return "\n".join(formatted_data)
+
+
+def format_false_action_info(false_action_info: dict) -> str:
+    formatted_str = "Failed Action: " + false_action_info["actionName"] + "\n"
+    formatted_str += "| Result: " + false_action_info["msg"] + "\n"
+    formatted_str += "------\n"
+    return formatted_str
+
+
+def format_meta_seq(meta_seq: list, false_action_name: str) -> str:
+    formatted_str = ""
+    # find the location of the false action
+    false_action_index = 0
+    for i, action in enumerate(meta_seq):
+        if action == false_action_name:
+            false_action_index = i
+            break
+    meta_seq = meta_seq[false_action_index:]
+    for i, action in enumerate(meta_seq, start=1):
+        formatted_str += f"Action {i}: {action}\n"
+    return formatted_str
+
+
+def format_detailed_meta_seq(detailed_seq: list, false_action_name: str) -> str:
+    formatted_str = ""
+    # find the location of the false action
+    false_action_index = 0
+    for i, action in enumerate(detailed_seq):
+        if action["action"] == false_action_name:
+            false_action_index = i
+            break
+    detailed_seq = detailed_seq[false_action_index:]
+    for i, action in enumerate(detailed_seq, start=1):
+        formatted_str += f"Action {i}: {action['action']}\n"
+        if action.get("cost"):
+            formatted_str += f" | Cost: {action['cost']}\n"
+        if action.get("status_before"):
+            formatted_str += f" | Status Before: {action['status_before']}\n"
+        if action.get("status_after"):
+            formatted_str += f" | Status After: {action['status_after']}\n"
+        if action.get("inventory_before"):
+            formatted_str += f" | Inventory Before: {action['inventory_before']}\n"
+        if action.get("inventory_after"):
+            formatted_str += f" | Inventory After: {action['inventory_after']}\n"
+        formatted_str += f" | Reason: {action['reason']}\n"
+        formatted_str += "------\n"
+    return formatted_str
+
+
+def format_meta_seq(meta_seq: list) -> str:
+    formatted_str = ""
+    for i, action in enumerate(meta_seq, start=1):
+        formatted_str += f"Action {i}: {action}\n"
+    return formatted_str
+
+
+def refine_craft_action(craft_action: str) -> str:
+    args = craft_action.split()
+    craft_item = args[1]
+    craft_num = args[2]
+    item_templates = {
+        "apple": "Pick {0} apple(s)",
+        "wheat": "Harvest {0} wheat(s)",
+        "pear": "Pick {0} pear(s)",
+        "rice": "Harvest {0} rice(s)",
+        "chicken": "Raise {0} chicken(s)",
+        "beef": "Raise {0} beef(s)",
+        "fish": "Catch {0} fish(es)",
+        "feed": "Make {0} feed(s)",
+        "flour": "Mill {0} flour(s)",
+        "bread": "Bake {0} bread(s)",
+        "apple_pie": "Bake {0} apple pie(s)",
+        "fruit_salad": "Make {0} fruit salad(s)",
+        "chicken_salad": "Make {0} chicken salad(s)",
+        "beef_rice": "Cook {0} beef rice(s)",
+        "sushi": "Make {0} sushi(es)",
+        "iron_ore": "Mine {0} iron ore(s)",
+        "wood": "Chop {0} wood(s)",
+        "copper_ore": "Mine {0} copper ore(s)",
+        "silicon_ore": "Mine {0} silicon ore(s)",
+        "iron_ingot": "Smelt {0} iron ingot(s)",
+        "wooden_board": "Craft {0} wooden board(s)",
+        "copper_ingot": "Smelt {0} copper ingot(s)",
+        "pure_silicon": "Refine {0} pure silicon(s)",
+        "tools": "Craft {0} tool(s)",
+        "iron_plate": "Forge {0} iron plate(s)",
+        "pulp": "Make {0} pulp(s)",
+        "books": "Print {0} book(s)",
+        "copper_wire": "Craft {0} copper wire(s)",
+        "transistor": "Make {0} transistor(s)",
+        "circuit_board": "Assemble {0} circuit board(s)",
+        "a100": "Manufacture {0} A100(s)",
+        "h100": "Manufacture {0} H100(s)",
+        "h200": "Manufacture {0} H200(s)",
+        "b200": "Manufacture {0} B200(s)",
+    }
+
+    return item_templates[craft_item].replace("{0}", craft_num)
+
+
+def refine_list(action_list: list) -> list:
+    new_list = []
+    for action in action_list:
+        if action.startswith("craft"):
+            new_list.append(refine_craft_action(action))
+        else:
+            new_list.append(action)
+    return new_list
+
+
+def filter_jobs(all_public_jobs, education, experience):
+    # 学历排序（从低到高）
+    education_order = [
+        "None",
+        "PrimarySchool",
+        "SecondarySchool",
+        "University",
+        "Master",
+        "Doctorate",
+    ]
+
+    try:
+        role_edu_index = education_order.index(education)
+    except ValueError:
+        return {}
+
+    # 将 eligible_jobs 初始化为一个字典
+    eligible_jobs = {}
+    for job in all_public_jobs:
+        # 条件验证
+        job_edu_index = education_order.index(job["education"])
+        if role_edu_index >= job_edu_index and experience >= job["experience"]:
+
+            # 按需过滤字段
+            filtered_job = {
+                "id": job["id"],
+                "jobType": job["jobType"],
+                "jobPlace": job["jobPlace"],
+                "dailyWages": job["dailyWages"],
+                "education": job["education"],
+                "wagePerHour": job["wagePerHour"],
+                # "populationRatioCap": job["populationRatioCap"],
+            }
+            # 使用 jobName 作为键，将 filtered_job 添加到字典中
+            eligible_jobs[job["jobName"]] = filtered_job
+
+    return eligible_jobs
+
+
+def convert_to_table_string(dict_data):
+    """
+    将给定的字典数据转换为表格形式的字符串
+    参数:
+    sellable_items (dict): 包含商品信息的字典，结构为 {商品名: {属性: 值}}
+    返回:
+    str: 转换后的表格字符串
+    """
+    if not dict_data:
+        return None
+    df = pd.DataFrame.from_dict(dict_data, orient="index")
+    return df.to_string()
+
+
+def get_industry_and_goal(character_industry: str):
+    industry = {"Manufacture": "industry", "Study": "academia", "Food": "business"}
+
+    industry_goal_for_daily_obj = {
+        "Manufacture": "Acquire materials to build an A100",
+        "Study": "Acquire materials to create books, increase experience, and earn money to fund your studies",
+        "Food": "Acquire materials to make items and engage in buying and selling to earn more money",
+    }
+    return industry[character_industry], industry_goal_for_daily_obj[character_industry]
+
+if __name__ == "__main__":
+    # print(refine_craft_action("craft rice 2"))
+    list_1 = [
+        "goto farm",
+        "craft rice 7",
+        "craft rice 3",
+        "goto home",
+        "sleep 3",
+        "goto farm",
+        "craft rice 2",
+        "goto home",
+        "sleep 3",
+        "goto foodfactory",
+        "craft feed 6",
+    ]
+    print(refine_list(list_1))

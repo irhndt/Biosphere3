@@ -1,0 +1,105 @@
+{
+    "apple": [
+        "farm",
+        "orchard"
+    ],
+    "pear": [
+        "farm",
+        "orchard"
+    ],
+    "wheat": [
+        "farm"
+    ],
+    "rice": [
+        "farm"
+    ],
+    "chicken": [
+        "farm"
+    ],
+    "beef": [
+        "farm"
+    ],
+    "fish": [
+        "farm",
+        "fishing"
+    ],
+    "wood": [
+        "farm",
+        "orchard"
+    ],
+    "feed": [
+        "foodfactory"
+    ],
+    "flour": [
+        "foodfactory"
+    ],
+    "bread": [
+        "foodfactory"
+    ],
+    "apple_pie": [
+        "foodfactory"
+    ],
+    "fruit_salad": [
+        "foodfactory"
+    ],
+    "chicken_salad": [
+        "foodfactory"
+    ],
+    "beef_rice": [
+        "foodfactory"
+    ],
+    "sushi": [
+        "foodfactory"
+    ],
+    "iron_ore": [
+        "mine"
+    ],
+    "copper_ore": [
+        "mine"
+    ],
+    "silicon_ore": [
+        "mine"
+    ],
+    "iron_ingot": [
+        "factory"
+    ],
+    "wooden_board": [
+        "factory"
+    ],
+    "copper_ingot": [
+        "factory"
+    ],
+    "pure_silicon": [
+        "factory"
+    ],
+    "iron_plate": [
+        "factory"
+    ],
+    "pulp": [
+        "factory"
+    ],
+    "books": [
+        "factory"
+    ],
+    "copper_wire": [
+        "factory"
+    ],
+    "transistor": [
+        "factory"
+    ],
+    "circuit_board": [
+        "factory"
+    ],
+    "a100": [
+        "factory"
+    ],
+    "h100": [
+        "factory"
+    ],
+    "h200": [
+        "factory"
+    ],
+    "b200": [
+        "factory"
+    ]
+}
