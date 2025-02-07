@@ -69,8 +69,7 @@ class EndConversation(TypedDict):
 
 # Update the impressions after the conversation is completed, generating two impressions simultaneously
 class ImpressionUpdate(BaseModel):
-    impression1: str = Field(description="new impression from player1 to player2")
-    impression2: str = Field(description="new impression from player2 to player1")
+    impression: str = Field(description="The new impression.")
 
 
 class DailyConversationPlan(BaseModel):
