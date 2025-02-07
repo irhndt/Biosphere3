@@ -8,6 +8,7 @@ development:
   monitor_trigger: False
   dashboard_trigger: False
   ssl_trigger: False
+  save_trigger: False
 
 production:
   http_monitor_host: "0.0.0.0"
@@ -19,6 +20,7 @@ production:
   monitor_trigger: True
   dashboard_trigger: True
   ssl_trigger: True
+  save_trigger: True
 
 test:
   http_monitor_host: "0.0.0.0"
@@ -30,3 +32,4 @@ test:
   monitor_trigger: False
   dashboard_trigger: True
   ssl_trigger: True
+  save_trigger: False

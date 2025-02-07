@@ -71,6 +71,9 @@ class LLMSelector:
         cls, model_name: str, model_type: ModelType = "PLAN", temperature: float = 0.7
     ):
         callbacks = [TokenUsageHandler(model_name)]
+        # !!!Temporary change deepseek to gpt-4o-mini!!!
+        if model_name.startswith("deepseek"):
+            model_name = "gpt-4o-mini"
         api_key = get_api_key(model_name)
         if model_name.startswith("gpt"):
             return ChatOpenAI(
