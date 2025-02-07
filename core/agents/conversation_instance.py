@@ -7,6 +7,7 @@ class ConversationInstance:
         self.user_id = user_id
         self.websocket = websocket
         self.plan_signal = False
+        self.end_signal = False
         self.is_initial = True
         self.state = initialize_conversation_state(self.user_id, self.websocket)
         self.graph = start_conversation_workflow()
@@ -37,31 +38,50 @@ class ConversationInstance:
     # plan-and-start workflow
     async def run_workflow(self):
         while True:
+            if self.end_signal:
+                self.is_initial = True
+                self.logger.warning(f"🛑 User {self.user_id}: WORKFLOW TERMINATE!")
+                break
             if self.plan_signal:
                 try:
                     self.logger.info(
                         f"🏃 User {self.user_id}: Begin planning for today's conversations..."
                     )
+
+                    # run conversation workflow
                     await self.graph.ainvoke(self.state, config=self.graph_config)
                     self.plan_signal = False
+
+                    # calculate time gap for next workflow
                     day, hour, minute = calculate_game_time(real_time=datetime.now())
                     time_gap = ((24-hour)*60*60+(0-minute)*60)//7+(self.user_id//1000)
                     self.logger.info(
                         f"Next planning workflow will start in {time_gap} seconds."
                     )
-                    await asyncio.sleep(time_gap)
-                    self.logger.info(f"🏃 User {self.user_id}: LET'S HAVE A NEW PLAN!")
-                    self.plan_signal = True
+
+                    # sleep while checking connection status
+                    sleep_connected = await sleep_with_connection(time_gap, self.state)
+                    if sleep_connected:
+                        self.logger.info(f"🏃 User {self.user_id}: LET'S HAVE A NEW PLAN!")
+                        self.plan_signal = True
+                    else:
+                        self.end_signal = True
                 except Exception as e:
                     self.logger.error(
                         f"User {self.user_id} Error in conversation planning and starting workflow: {e}"
                     )
+
+                    # pause for some time and restart the workflow
                     time_gap = 300
                     self.logger.info(
                         f"Next planning workflow will start in {time_gap} seconds."
                     )
-                    await asyncio.sleep(time_gap)
-                    self.plan_signal = True
+                    sleep_connected = await sleep_with_connection(time_gap, self.state)
+                    if sleep_connected:
+                        self.logger.info(f"🏃 User {self.user_id}: RESTART THE WORKFLOW!")
+                        self.plan_signal = True
+                    else:
+                        self.end_signal = True
             else:
                 await asyncio.sleep(10)
 

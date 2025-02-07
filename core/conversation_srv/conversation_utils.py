@@ -1,3 +1,4 @@
+import asyncio
 from core.conversation_srv.conversation_prompts import *
 from core.utils.llm_factory import LLMSelector
 from core.conversation_srv.conversation_model import *
@@ -166,6 +167,7 @@ def strip_relation(impression: str):
         logger.warning(f"Using default relation: {relation_info}")
     return relation_info
 
+
 def reformat_conversation(raw_conversation: str):
     lines = raw_conversation.strip().split('\n')
     content = []
@@ -174,3 +176,51 @@ def reformat_conversation(raw_conversation: str):
             key, value = line.split(':')
             content.append({key.strip(): value.strip()})
     return content
+
+
+async def sleep_with_connection(seconds: int, state:ConversationState):
+    start_time = datetime.now()
+    while True:
+        current_time = datetime.now()
+        time_difference = current_time - start_time
+        seconds_difference = int(time_difference.total_seconds())
+        if seconds_difference + 30 > seconds:
+            seconds = seconds - seconds_difference
+            await asyncio.sleep(seconds)
+            return check_connection_state(state)
+        else:
+            connected = check_connection_state(state)
+            if connected:
+                await asyncio.sleep(30)
+            else:
+                return connected
+
+
+def check_connection_state(state: ConversationState):
+    if state["websocket"] is None or state["websocket"].closed:
+        logger.error(f"⛔ User {state['userid']} websocket connection closed.")
+        if state["daily_task"]:
+            state["daily_task"] = []
+            logger.warning(f"🧹 CLEAN UP RUNNING CONVERSATION TASKS FOR USER {state['userid']}.")
+        return False
+    else:
+        return True
+
+
+def check_daily_conversation_volume(id: int):
+    day, hour, minute = calculate_game_time(datetime.now())
+    volume_data = {
+        "to_id": id,
+        "start_day": day
+    }
+    volume_response = make_api_request_sync(
+        "GET", "/conversation/", params=volume_data
+    )
+    if isinstance(volume_response["data"], list):
+        start_time_collection = []
+        for talk in volume_response["data"]:
+            if talk["start_time"] not in start_time_collection:
+                start_time_collection.append(talk["start_time"])
+        return len(start_time_collection)
+    else:
+        return 0
