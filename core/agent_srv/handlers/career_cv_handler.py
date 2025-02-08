@@ -93,9 +93,9 @@ class CareerCVHandler(BaseHandler):
         }
         agent_api.request_sync("POST", "/cv/", data=cv_request)
         mayor_decision = await self.generate_mayor_decision(
-            cv, instance.state, userid, experience, education, week
+            cv, userid, experience, education, week
         )
-        if instance:
+        if instance and instance.websocket:
             response = await instance.send_message(
                 {
                     "characterId": userid,
@@ -113,7 +113,6 @@ class CareerCVHandler(BaseHandler):
 
     async def generate_mayor_decision(
         self,
-        state,
         cv,
         user_id,
         experience,

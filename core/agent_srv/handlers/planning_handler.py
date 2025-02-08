@@ -240,6 +240,11 @@ class PlanningHandler(BaseHandler):
             emojis.extend([desc.emoji for desc in emoji_sequence_sep.response])
             descriptions.extend([desc.content for desc in emoji_sequence_sep.response])
 
+        logger.info(f"📜 User {state['userid']}: EMOJI_SEQUENCE INVOKED with {emojis}")
+        logger.info(
+            f"📜 User {state['userid']}: EMOJI_SEQUENCE INVOKED with {descriptions}"
+        )
+
         response = await self.send_message(
             state,
             "actionList",
@@ -250,4 +255,5 @@ class PlanningHandler(BaseHandler):
                 "description": descriptions,
             },
         )
-        state["instance"].log_message("received", response)
+        if state.get("instance"):
+            state["instance"].log_message("received", response)

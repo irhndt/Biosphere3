@@ -7,8 +7,6 @@ from loguru import logger
 
 
 class AccommodationHandler(BaseHandler):
-    """住宿决策处理"""
-
     async def generate_accommodation_decision(self, state):
         accommodation_decision_generator = self.create_planner(
             accommodation_decision_prompt,
@@ -163,6 +161,7 @@ class AccommodationHandler(BaseHandler):
                 "comments": accommodation_decision.comments,
             },
         )
-        state["instance"].log_message("received", response)
+        if state.get("instance"):
+            state["instance"].log_message("received", response)
 
         return {"current_pointer": "Accommodation_Decision"}

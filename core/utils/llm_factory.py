@@ -80,7 +80,7 @@ class LLMSelector:
     ):
         callbacks = [TokenUsageHandler(model_name)]
         api_key = get_api_key(model_name)
-        print(model_name)
+        # print(model_name)
         if model_name.startswith("gpt"):
             return ChatOpenAI(
                 base_url="https://api.aiproxy.io/v1",

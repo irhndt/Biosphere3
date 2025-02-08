@@ -1,5 +1,6 @@
 from loguru import logger
 from json import JSONDecodeError
+from pydantic import ValidationError
 from core.utils.llm_factory import llm_selector
 from core.agent_srv.prompts import correct_format_prompt
 from core.db.api_client import game_api, agent_api
@@ -49,6 +50,17 @@ class BaseHandler:
                 retry_count += 1
                 time.sleep(2**retry_count)
                 continue
+            except ValidationError as e:
+                logger.error(
+                    f"⛔ ValidationError in validate {node_model.__name__}: {e}"
+                )
+                retry_count += 1
+                if retry_count == BaseHandler.MAX_RETRIES and e.errors() is not None:
+                    return BaseHandler.correct_format_error(
+                        state, e.errors(), node_model
+                    )
+                continue
+
             except Exception as e:
                 logger.error(f"⛔ Error in api_retry: {e}")
                 print(traceback.format_exc())

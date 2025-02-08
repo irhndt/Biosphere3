@@ -73,7 +73,8 @@ class ReflectionHandler(BaseHandler):
                 "reflection": daily_reflection.reflection,
             },
         )
-        state["instance"].log_message("received", response)
+        if state.get("instance"):
+            state["instance"].log_message("received", response)
 
         logger.info(f"🔍 DAILY_REFLECTION INVOKED with {daily_reflection.reflection}")
 
@@ -111,7 +112,8 @@ class ReflectionHandler(BaseHandler):
             12,
             {"character_arc": character_arc_data},
         )
-        state["instance"].log_message("received", response)
+        if state.get("instance"):
+            state["instance"].log_message("received", response)
         logger.info(f"📜 Character Arc: {character_arc_data}")
         agent_api.request_sync(
             method="POST", endpoint="/character_arc/", data=character_arc_data
