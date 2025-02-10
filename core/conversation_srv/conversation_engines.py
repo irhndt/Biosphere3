@@ -127,7 +127,7 @@ async def start_conversation(state: ConversationState):
     logger.info(f"User {state['userid']} current state is: {state['character_stats']}")
 
     # generate dialogue
-    state, all_content = a_talk(state, current_talk)
+    state, all_content = await a_talk(state, current_talk)
 
     # update the daily_task list
     if len(state["daily_task"]) > 1:
@@ -148,7 +148,7 @@ async def start_conversation(state: ConversationState):
 # handling the finished conversations
 async def handling_finished_conversation(state, conversation):
     logger.info(
-        f"Conversation between Users {conversation['characterIds']} started at {conversation['start_time']} is finished."
+        f"Conversation {conversation['current_talk']} is finished."
     )
 
     stored_impression = await update_impression(
