@@ -99,6 +99,6 @@ class DialogueInformation(BaseModel):
     current_impression_to: str
     relation_from: str
     relation_to: str
-    arc_data_from: str
-    arc_data_to: str
+    arc_data_from: dict
+    arc_data_to: dict
 
