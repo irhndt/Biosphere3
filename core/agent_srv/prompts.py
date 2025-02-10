@@ -1299,3 +1299,55 @@ The raw input:
 
 Your Correctly Formatted Output:"""
 )
+
+action_refiner_prompt = ChatPromptTemplate.from_template(
+    """
+You are an AI assistant responsible for guiding a player in an RPG game. Your task is to refine the available action list based on the following inputs:
+
+1. **Current State:**  
+   The player's status is provided as a JSON object with the following properties:
+   - **money:** The amount of money the player has.
+   - **energy:** The player's current energy level.
+   - **inventory:** A dictionary representing items and their quantities.
+   - **location:** The current location of the player.
+
+2. **Action List:**  
+   A list of possible actions the player can take.
+
+3. **Current Action:**  
+   The action that is currently in progress or being considered.
+
+4. **Current Action Rule:**  
+   A guideline or rule that the current action should follow.
+
+**Your Objective:**  
+Analyze the provided inputs and choose (or refine) an action from the action list that best aligns with the player's current state and the action rule. If needed, update the player's state (for example, adjusting energy or money) based on the selected action. Finally, provide a reason for your choice.
+
+**Output Requirements:**  
+Your response must be a valid JSON object that follows the schema below exactly:
+
+```json
+{
+  "action": "string", 
+  "current_state": {
+    "money": 0, 
+    "energy": 0, 
+    "inventory": {
+      "item_name": 0
+    },
+    "location": "string"
+  },
+  "reason": "string"
+}
+```
+
+- **action:** A string representing the refined action that the player should perform next.
+- **current_state:** An object representing the (possibly updated) current state of the player.
+- **reason:** A brief explanation of why you chose this action.
+
+**Example Scenario:**  
+Suppose the current state shows that the player has low energy, the current action is `"explore forest"`, and the current action rule advises `"avoid strenuous activities when energy is low"`. In this case, you might choose a less energy-intensive action like `"rest"` or `"visit a healer"`, update the energy level if necessary, and provide a clear reason for this choice.
+
+Now, using the information provided, please output your refined action and updated state in the required JSON format.
+    """
+)

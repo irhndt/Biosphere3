@@ -229,6 +229,21 @@ class RefinedMetaActionSequence(BaseModel):
     meta_action_sequence: List[MetaAction] = Field(description="meta action sequence")
 
 
+class StateInfo(BaseModel):
+    money: int = Field(description="money")
+    energy: int = Field(description="energy")
+    inventory: Dict[str, int] = Field(description="inventory")
+    location: str = Field(description="location")
+
+
+class RefinedActionsAndState(BaseModel):
+    """Refined action and state to follow in future"""
+
+    actions: str = Field(description="refined action")
+    current_state: StateInfo = Field(description="current state")
+    reason: str = Field(description="reason", default="None")
+
+
 if __name__ == "__main__":
     import pprint
 
