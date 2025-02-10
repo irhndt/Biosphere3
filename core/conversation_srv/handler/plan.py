@@ -47,7 +47,7 @@ def generate_talk_time(k: int):
         )
 
     # only for test, set the first conversation to happen after 5 minutes in game time
-    sorted_numbers[0] = 1
+    # sorted_numbers[0] = 1
 
     for t in sorted_numbers:
         add_hour, add_minute = divmod(minute + t, 60)
