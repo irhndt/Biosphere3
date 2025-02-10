@@ -56,6 +56,10 @@ class CareerCVHandler(BaseHandler):
             )
         else:
             current_job_str = "# Current Job\nCurrently, you don't have a job.\n"
+        if eligible_jobs:
+            eligible_jobs_str=f"# Eligible Jobs\nThe following jobs are available for you to choose from, as you meet the requirements:\n{convert_to_table_string(eligible_jobs)}\n"
+        else:
+            eligible_jobs_str=f"# Eligible Jobs\nCurrently, there are no eligible jobs to choose from.\n"
         industry, industry_goal_for_cv = get_industry_and_goal(character_industry)
         payload = {
             "industry": industry,
@@ -66,7 +70,7 @@ class CareerCVHandler(BaseHandler):
             "past_work_experience": past_work_experience,
             "biography": biography,
             "current_job_str": current_job_str,
-            "eligible_jobs_str": eligible_jobs,
+            "eligible_jobs_str": eligible_jobs_str,
         }
         cv = await self.api_retry(
             cv_generator.ainvoke,
