@@ -10,6 +10,7 @@ from core.agent_srv.node_model import (
     DailyObjective,
     MetaActionSequence,
     CV,
+    NewCV,
     MayorDecision,
     RunningState,
     CharacterArc,
@@ -77,6 +78,7 @@ async def generate_daily_objective(state: RunningState):
             logger.error(
                 f"⛔ User {state['userid']} Error in generate_daily_objective: {e}"
             )
+            print(traceback.format_exc())
             retry_count += 1
             if retry_count == 3:
                 raise Exception("Too many retries on generate_daily_objective")
@@ -319,7 +321,7 @@ async def generate_change_job_cv(instance, msg: dict):
 
 
 async def generate_change_job_cv_new(instance, msg: dict):
-    cv_generator = create_planner(prompt_for_cv_new, "gpt-4o-mini", CV, 0.5)
+    cv_generator = create_planner(prompt_for_cv_new, "gpt-4o-mini", NewCV, 0.5)
     userid = msg.get("characterId")
     msg_data = msg.get("data", {})
     health = msg_data.get("health", 0)
@@ -386,6 +388,11 @@ async def generate_change_job_cv_new(instance, msg: dict):
                 raise Exception("Too many retries on generate_change_job_cv_new")
             continue
     logger.info(f"📃 CV: {cv}")
+    if cv.job_id == 0:
+        logger.info("📃 CV: No job selected. Agent want to keep the original job. ")
+        return
+
+    decision_job_name = get_job_name(cv.job_id, all_public_jobs)
     cv_request = {
         "jobid": cv.job_id,
         "characterId": userid,
@@ -394,12 +401,12 @@ async def generate_change_job_cv_new(instance, msg: dict):
         "health": health,
         "studyxp": experience,
         "date": date,
-        "jobName": cv.job_name,
+        "jobName": decision_job_name,
         "election_status": "not_yet",
     }
     agent_api.request_sync("POST", "/cv/", data=cv_request)
     mayor_decision = await generate_mayor_decision(
-        cv, userid, experience, education, date
+        cv, userid, experience, education, week
     )
     if instance:
         response = await instance.send_message(
@@ -409,7 +416,7 @@ async def generate_change_job_cv_new(instance, msg: dict):
                 "messageCode": 10,
                 "data": {
                     "jobId": cv.job_id,
-                    "jobName": cv.job_name,
+                    "jobName": decision_job_name,
                     "cv": cv.cv,
                     **mayor_decision,
                 },

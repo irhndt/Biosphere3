@@ -173,7 +173,6 @@ def save_decision_to_db(userid: int, decision: dict, endpoint: str):
     )
 
 
-
 def save_reflection_to_db(user_id: int, reflection: dict):
     reflection["characterId"] = user_id
     agent_api.request_sync(
@@ -268,6 +267,7 @@ async def get_initial_state_from_db(userid, websocket):
             "action_result": [],
             "new_plan": [],
             "daily_objective": deque(maxlen=10),
+            "trade_objective": [],
             "meta_seq": [],
             "reflection": [],
             "expanded_meta_seq": deque(),
@@ -647,7 +647,8 @@ def format_detailed_meta_seq(detailed_seq: list, false_action_name: str) -> str:
             formatted_str += f" | Inventory Before: {action['inventory_before']}\n"
         if action.get("inventory_after"):
             formatted_str += f" | Inventory After: {action['inventory_after']}\n"
-        formatted_str += f" | Reason: {action['reason']}\n"
+        if action.get("reason"):
+            formatted_str += f" | Reason: {action['reason']}\n"
         formatted_str += "------\n"
     return formatted_str
 
@@ -775,6 +776,14 @@ def get_industry_and_goal(character_industry: str):
         "Food": "Acquire materials to make items and engage in buying and selling to earn more money",
     }
     return industry[character_industry], industry_goal_for_daily_obj[character_industry]
+
+
+def get_job_name(job_id: int, all_public_jobs: list):
+    for job in all_public_jobs:
+        if job["id"] == job_id:
+            return job["jobName"]
+    return "Unemployed"
+
 
 if __name__ == "__main__":
     # print(refine_craft_action("craft rice 2"))

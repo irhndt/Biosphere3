@@ -1143,8 +1143,89 @@ meta_seq_example_out = """
         ]
 }"""
 
-trade_planner_prompt = """
+trade_planner_prompt = ChatPromptTemplate.from_template(
+    """
+You are the **Daily Trade Objectives Planner** in an RPG game. Your sole focus is on generating a daily plan **centered on trading**. If you determine that trading is not beneficial at this time, you may propose **no objectives**.
+
+Below is the information you have at your disposal:
+
+1. **User Profile**  
+   {character_stats}  
+   *(Contains the user’s status, including inventory, finances, etc.)*
+
+2. **Past Daily Objectives** (can be empty)  
+   {past_objectives}
+
+3. **Past Reflection**  
+   {past_reflection}
+   *(Any notes or lessons learned from previous actions.)*
+
+4. **Graph of Production**  
+   {production_graph}  
+   *(A chart outlining item relationships—useful for understanding which items might be in demand or surplus, but do not propose production tasks.)*
+
+---
+
+### Key Points to Consider
+1. **Trading Focus Only**: Propose trading actions (buying, selling, bartering) based on the user’s inventory, resources, and needs. **Do not include any production targets.**  
+2. **Inventory & Requirements**: Determine which items the user has in surplus (potentially sell) or needs more of (potentially buy).  
+3. **When to Trade**: Skip trading if it’s not advantageous, or if the user’s resources (finances or key materials) are insufficient.  
+4. **Valid Locations for Trading**:  
+   - *school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen.*  
+5. **Available Items**:  
+   - Basic crops & livestock: *apple, wheat, pear, rice, chicken, beef, fish.*  
+   - Raw materials: *iron_ore, timber, copper_ore, silicon_ore.*  
+   - Intermediate goods: *feed, flour, bread, apple_pie, fruit_salad, chicken_salad, beef_rice, sushi.*  
+   - Processed materials: *iron_ingots, wooden_boards, copper_ingots, pure_silicon, pickaxes, iron_plates, pulp, books, copper_wire, transistors.*  
+   - Advanced items: *circuit_board, a100, h100, h200, b200.*  
+
+---
+
+### Instructions for Output
+1. The **final output** must contain two parts in **JSON-like** format.  
+2. **First Part: `decision`**  
+   - State whether you want to trade (“Yes”) or not (“No”), with a brief explanation.  
+   - Examples:  
+     - `"decision": "Yes. I want to trade to acquire more wheat."`  
+     - `"decision": "No. Because I don't have enough money to buy anything useful today."`  
+3. **Second Part: `objectives`**  
+   - Provide a list of `"objectives"` focused **only on trading** tasks (buying, selling, or bartering).  
+   - You may leave the `"objectives"` list **empty** if no trading actions are recommended.  
+4. **Constraints**:  
+   - Do **not** include production steps of any kind.  
+   - Avoid buying overly expensive items that exceed the user’s budget.  
+   - Avoid selling items that are crucial for immediate or near-future needs.  
+   - There is **no strict limit** to the number of objectives; list as many (or as few) as needed.  
+
+---
+
+### Example Output 1
+```
+{{
+  "decision": "Yes. I want to trade to restock essential grains.",
+  "objectives": [
+    "Buy 10 units of wheat at the mall",
+    "Sell 5 extra apples at the square"
+  ]
+}}
+```
+
+### Example Output 2
+```
+{{
+  "decision": "No. Because I don't have enough funds to buy anything useful today.",
+  "objectives": []
+}}
+```
+
+---
+
+**Your task**: Use the information from the user’s profile, past objectives, past reflections, and production graph to generate the **best daily plan with a focus on trading only**. If no profitable or useful trades are possible, opt out and provide an empty objectives list.
+```
+
+Please generate the **daily trade objectives** based on the information above.
 """
+)
 
 prompt_for_cv_new = ChatPromptTemplate.from_template(
     """{characterName} focuses on {industry}. The ultimate goal: {industry_goal_for_cv}.
@@ -1168,8 +1249,105 @@ The cv should be written in a lively, conversational first-person narrative (one
 The output format is in JSON format:
 {{
     "jobId": id,
-    "jobName": job_name,
     "cv": content
 }}
 """
+)
+
+merger_prompt = ChatPromptTemplate.from_template(
+    """
+You are a daily objective merger in an RPG game. Your goal is to merge the daily objectives of the user to create a concise, organized, and achievable list. Here is the information you need to know:
+
+1. **Past Daily Objectives** (If any):
+{past_daily_objectives}
+
+2. **Current Daily Objectives**:
+{current_daily_objectives}
+
+3. **Current Trading Objectives**:
+{current_trading_objectives}
+
+{additional_info}
+---
+**Your Task**:
+1. Review all the objectives above.
+2. Identify any overlaps, redundancies, or dependencies.
+3. According to additional information (if provided), add study or work objectives to the list.
+4. Generate a concise merged list that preserves essential crafting and trading goals while removing unnecessary duplications.
+5. Output your final plan in **JSON format** containing two keys:
+   - **"progress"**: a brief summary of the combined objectives and their relevance to the user’s current situation.
+   - **"objectives"**: an ordered list of tasks (from highest to lowest priority) that the user should follow.
+6. Do not include any other commentary, formatting, or text aside from what is explicitly requested above.
+
+Please merge the daily objectives to create a coherent and efficient plan for the user.
+    """
+)
+
+correct_format_prompt = ChatPromptTemplate.from_template(
+    """You are an AI assistant whose primary responsibility is to provide answers in a strictly defined format. Follow the instructions below carefully:
+
+1. **Required Output Format**:  
+   Your final response must adhere exactly to the specified format. For example, if the expected format is JSON, your output must be valid JSON with no additional text, commentary, or formatting deviations.
+
+2. **Final Output Only**:  
+   Return only the correctly formatted output. Do not include any extra explanation or notes.
+
+Remember: If your initial output does not match the required format exactly, refine it until it does.
+
+The raw input:
+{raw_input}
+
+Your Correctly Formatted Output:"""
+)
+
+action_refiner_prompt = ChatPromptTemplate.from_template(
+    """
+You are an AI assistant responsible for guiding a player in an RPG game. Your task is to refine the available action list based on the following inputs:
+
+1. **Current State:**  
+   The player's status is provided as a JSON object with the following properties:
+   - **money:** The amount of money the player has.
+   - **energy:** The player's current energy level.
+   - **inventory:** A dictionary representing items and their quantities.
+   - **location:** The current location of the player.
+
+2. **Action List:**  
+   A list of possible actions the player can take.
+
+3. **Current Action:**  
+   The action that is currently in progress or being considered.
+
+4. **Current Action Rule:**  
+   A guideline or rule that the current action should follow.
+
+**Your Objective:**  
+Analyze the provided inputs and choose (or refine) an action from the action list that best aligns with the player's current state and the action rule. If needed, update the player's state (for example, adjusting energy or money) based on the selected action. Finally, provide a reason for your choice.
+
+**Output Requirements:**  
+Your response must be a valid JSON object that follows the schema below exactly:
+
+```json
+{
+  "action": "string", 
+  "current_state": {
+    "money": 0, 
+    "energy": 0, 
+    "inventory": {
+      "item_name": 0
+    },
+    "location": "string"
+  },
+  "reason": "string"
+}
+```
+
+- **action:** A string representing the refined action that the player should perform next.
+- **current_state:** An object representing the (possibly updated) current state of the player.
+- **reason:** A brief explanation of why you chose this action.
+
+**Example Scenario:**  
+Suppose the current state shows that the player has low energy, the current action is `"explore forest"`, and the current action rule advises `"avoid strenuous activities when energy is low"`. In this case, you might choose a less energy-intensive action like `"rest"` or `"visit a healer"`, update the energy level if necessary, and provide a clear reason for this choice.
+
+Now, using the information provided, please output your refined action and updated state in the required JSON format.
+    """
 )
