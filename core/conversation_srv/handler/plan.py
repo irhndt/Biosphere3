@@ -3,7 +3,7 @@ from core.conversation_srv.conversation_model import ConversationState, DailyCon
 from loguru import logger
 import random
 from datetime import datetime
-from clock import calculate_game_time
+from core.conversation_srv.handler.clock import calculate_game_time
 
 
 # Randomly return k players, excluding the user.

@@ -1,5 +1,6 @@
 from core.conversation_srv.api_utils import make_api_request_sync, conversation_intimacy_mark
 from loguru import logger
+from core.conversation_srv.conversation_model import ConversationState, ConversationTask
 from core.conversation_srv.conversation_prompts import intimacy_mark_prompt
 
 
@@ -16,9 +17,13 @@ def mark_map(x: int):
 
 
 # update intimacy marks
-async def update_intimacy(id1: int, id2: int, conversation):
+async def update_intimacy(state: ConversationState, current_talk: ConversationTask, conversation):
     logger.info(f"🧠 MARKING THE CONVERSATION...")
     logger.info(f"The conversation is {conversation}.")
+
+    # load ids
+    id1 = current_talk["from_id"]
+    id2 = current_talk["to_id"]
 
     # Get profiles
     character_data = {"characterId": id1}

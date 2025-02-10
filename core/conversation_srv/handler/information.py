@@ -12,8 +12,8 @@ def load_all_information(state: ConversationState, current_talk: ConversationTas
         topic = ''
         memory_from = {}
         memory_to = {}
-        arc_data_from = ''
-        arc_data_to = ''
+        arc_data_from = {}
+        arc_data_to = {}
     else:
         target_name, my_name = load_names(state, current_talk)
         content_type, topic = load_topic(state, current_talk, my_name, target_name)
@@ -192,7 +192,7 @@ def load_arc(state: ConversationState, current_talk: ConversationTask):
         "GET", "/character_arc/", params={"characterId": state["userid"], "k": 1}
     )
     if not arc_response["data"]:
-        arc_data_from = []
+        arc_data_from = {}
     else:
         arc_data_from = arc_response["data"][0]
         arc_data_from.pop("created_at", None)
@@ -204,7 +204,7 @@ def load_arc(state: ConversationState, current_talk: ConversationTask):
         "GET", "/character_arc/", params={"characterId": current_talk['to_id'], "k": 1}
     )
     if not arc_response["data"]:
-        arc_data_to = []
+        arc_data_to = {}
     else:
         arc_data_to = arc_response["data"][0]
         arc_data_to.pop("created_at", None)
