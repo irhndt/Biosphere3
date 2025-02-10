@@ -270,7 +270,7 @@ class PlanningHandler(BaseHandler):
         obj_planner = self.create_planner(
             trade_planner_prompt,
             state.get("character_stats", {}).get("model_type"),
-            DailyObjective,
+            TradeObjective,
             0.7,
         )
         dev_dict = agent_api.request_sync(
@@ -301,17 +301,19 @@ class PlanningHandler(BaseHandler):
             ),
             "production_graph": state["meta"]["production_graph"],
         }
-        planner_response = self.api_retry(
+        planner_response = await self.api_retry(
             obj_planner.ainvoke,
             payload,
             state,
-            DailyObjective,
+            TradeObjective,
         )
         full_prompt = trade_planner_prompt.format(**payload)
         logger.info("======generate_daily_objective======\n" + full_prompt)
-        state["decision"]["trade_objective"].append(planner_response.objectives)
+        state["decision"]["trade_objective"].clear()
+        for objective in planner_response.objectives:
+            state["decision"]["trade_objective"].append(objective)
 
-        logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response.progress}")
+        logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response.decision}")
         logger.info(f"🌞 OBJ_PLANNER INVOKED with {planner_response.objectives}")
 
         return {"current_pointer": "objectives_planner"}

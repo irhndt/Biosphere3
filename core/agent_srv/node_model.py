@@ -91,6 +91,13 @@ class DailyObjective(BaseModel):
     objectives: List[str] = Field(description="daily objectives list")
 
 
+class TradeObjective(BaseModel):
+    """Trade objective to follow in future"""
+
+    decision: str = Field(description="do some trade or not")
+    objectives: List[str] = Field(description="trade objectives list")
+
+
 class DetailedPlan(BaseModel):
     """Detailed plan to follow in future"""
 

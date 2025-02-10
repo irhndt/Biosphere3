@@ -647,7 +647,8 @@ def format_detailed_meta_seq(detailed_seq: list, false_action_name: str) -> str:
             formatted_str += f" | Inventory Before: {action['inventory_before']}\n"
         if action.get("inventory_after"):
             formatted_str += f" | Inventory After: {action['inventory_after']}\n"
-        formatted_str += f" | Reason: {action['reason']}\n"
+        if action.get("reason"):
+            formatted_str += f" | Reason: {action['reason']}\n"
         formatted_str += "------\n"
     return formatted_str
 

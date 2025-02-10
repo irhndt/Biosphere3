@@ -1144,49 +1144,83 @@ meta_seq_example_out = """
 }"""
 
 trade_planner_prompt = ChatPromptTemplate.from_template(
-    """You are the daily trade objectives planner in an RPG game. Focus on the trading aspects while still considering overall progression and manufacturing needs. Here is the information you need to know:
+    """
+You are the **Daily Trade Objectives Planner** in an RPG game. Your sole focus is on generating a daily plan **centered on trading**. If you determine that trading is not beneficial at this time, you may propose **no objectives**.
 
-1. User Profile: 
-   It includes the status info of the user.
-   {character_stats}
+Below is the information you have at your disposal:
 
-2. Past Daily Objectives (can be empty):
+1. **User Profile**  
+   {character_stats}  
+   *(Contains the user’s status, including inventory, finances, etc.)*
+
+2. **Past Daily Objectives** (can be empty)  
    {past_objectives}
 
-3. Past Reflection:
+3. **Past Reflection**  
    {past_reflection}
+   *(Any notes or lessons learned from previous actions.)*
 
-4. Graph of production:
-   This is the target production graph showing the relationships between different items and the requirements to produce them.
-   {production_graph}
+4. **Graph of Production**  
+   {production_graph}  
+   *(A chart outlining item relationships—useful for understanding which items might be in demand or surplus, but do not propose production tasks.)*
+
 ---
 
-Key Points to Consider:
-- Your main goal is to propose a daily plan centered on **trading**. 
-- Ensure you understand the user’s current inventory, the items needed for higher-level production, and how trading could help achieve that.
-- Only when the required items are sufficiently available (as per the user’s inventory) do we move on to producing higher-level items.
-- Valid places in this game world:
-  school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen.
-- Items that exist in this world:
-  - apple, wheat, pear, rice, chicken, beef, fish
-  - iron_ore, timber, copper_ore, silicon_ore
-  - feed, flour, bread, apple_pie, fruit_salad, chicken_salad, beef_rice, sushi
-  - iron_ingots, wooden_boards, copper_ingots, pure_silicon, pickaxes, iron_plates, pulp, books, copper_wire, transistors
-  - circuit_board, a100, h100, h200, b200
+### Key Points to Consider
+1. **Trading Focus Only**: Propose trading actions (buying, selling, bartering) based on the user’s inventory, resources, and needs. **Do not include any production targets.**  
+2. **Inventory & Requirements**: Determine which items the user has in surplus (potentially sell) or needs more of (potentially buy).  
+3. **When to Trade**: Skip trading if it’s not advantageous, or if the user’s resources (finances or key materials) are insufficient.  
+4. **Valid Locations for Trading**:  
+   - *school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen.*  
+5. **Available Items**:  
+   - Basic crops & livestock: *apple, wheat, pear, rice, chicken, beef, fish.*  
+   - Raw materials: *iron_ore, timber, copper_ore, silicon_ore.*  
+   - Intermediate goods: *feed, flour, bread, apple_pie, fruit_salad, chicken_salad, beef_rice, sushi.*  
+   - Processed materials: *iron_ingots, wooden_boards, copper_ingots, pure_silicon, pickaxes, iron_plates, pulp, books, copper_wire, transistors.*  
+   - Advanced items: *circuit_board, a100, h100, h200, b200.*  
 
-Output Specifications:
-1. The final output consists of two parts.
-2. **First part**: A concise summary (`"progress"`) describing the current trading and production situation, as well as any short-term goals or higher-level products targeted.
-3. **Second part**: A list of `"objectives"` for the day (trading tasks are your priority). Order them by importance, starting with the most critical trading tasks.
-4. **Do not** include any extra format or descriptive text beyond these two parts.
-5. There is no strict limit to the number of objectives; list as many as needed to fulfill your trading goals.
+---
 
-Example Output:
+### Instructions for Output
+1. The **final output** must contain two parts in **JSON-like** format.  
+2. **First Part: `decision`**  
+   - State whether you want to trade (“Yes”) or not (“No”), with a brief explanation.  
+   - Examples:  
+     - `"decision": "Yes. I want to trade to acquire more wheat."`  
+     - `"decision": "No. Because I don't have enough money to buy anything useful today."`  
+3. **Second Part: `objectives`**  
+   - Provide a list of `"objectives"` focused **only on trading** tasks (buying, selling, or bartering).  
+   - You may leave the `"objectives"` list **empty** if no trading actions are recommended.  
+4. **Constraints**:  
+   - Do **not** include production steps of any kind.  
+   - Avoid buying overly expensive items that exceed the user’s budget.  
+   - Avoid selling items that are crucial for immediate or near-future needs.  
+   - There is **no strict limit** to the number of objectives; list as many (or as few) as needed.  
+
+---
+
+### Example Output 1
 ```
-{{ 
-    "progress": "Based on my current item requirements and the market situation, I need to trade...", 
-    "objectives": [ "Trading: Sell excess wheat at the mall to fund copper_ore purchases" ] 
+{{
+  "decision": "Yes. I want to trade to restock essential grains.",
+  "objectives": [
+    "Buy 10 units of wheat at the mall",
+    "Sell 5 extra apples at the square"
+  ]
 }}
+```
+
+### Example Output 2
+```
+{{
+  "decision": "No. Because I don't have enough funds to buy anything useful today.",
+  "objectives": []
+}}
+```
+
+---
+
+**Your task**: Use the information from the user’s profile, past objectives, past reflections, and production graph to generate the **best daily plan with a focus on trading only**. If no profitable or useful trades are possible, opt out and provide an empty objectives list.
 ```
 
 Please generate the **daily trade objectives** based on the information above.
