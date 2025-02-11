@@ -236,7 +236,7 @@ class LangGraphInstance:
             self.logger.error(traceback.format_exc())
             self.logger.error("⛔ Task a_run terminated due to termination signal.")
             self.task.cancel()
-            self.routine_tasks.cancel()
+            # self.routine_tasks.cancel()
 
     async def send_message(self, message):
         async with self.websocket_lock:

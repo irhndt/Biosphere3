@@ -770,12 +770,12 @@ def convert_to_table_string(dict_data):
 def get_industry_and_goal(character_industry: str):
     industry = {"Manufacture": "industry", "Study": "academia", "Food": "business"}
 
-    industry_goal_for_daily_obj = {
-        "Manufacture": "Acquire materials to build an A100",
-        "Study": "Acquire materials to create books, increase experience, and earn money to fund your studies",
-        "Food": "Acquire materials to make items and engage in buying and selling to earn more money",
-    }
-    return industry[character_industry], industry_goal_for_daily_obj[character_industry]
+    industry_goal_for_cv = {
+    "Manufacture": "Working to make money to produce A100",
+    "Study": "Working to make money to fund studies",
+    "Food": "Working to make money",
+}
+    return industry[character_industry], industry_goal_for_cv[character_industry]
 
 
 def get_job_name(job_id: int, all_public_jobs: list):

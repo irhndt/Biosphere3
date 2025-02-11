@@ -100,44 +100,33 @@ conversation_check_prompt = ChatPromptTemplate.from_template(
 
 impression_update_prompt = ChatPromptTemplate.from_template(
     """
-    You are required to update the impressions between two players in a RPG game based on their conversation.
+    You are required to update the impressions from {from_name} to {to_name} based on the conversation.
+    
+    The conversation content is {conversation}.
     
     The impression must include the following four parts.
-    1.relation: the positive, negative or neutral relationship between the two players. Also include a brief desription and reason.
+    1.relation: the positive, negative or neutral relationship between the two players. Also include a brief description and reason.
     You can choose the relation from the relation list or randomly generate one.
     The relation list is: {relation_list}.
-    2.emotion: a positive or negative emotion of the one you are talking with and the cause of such emotion
+    2.emotion: a positive or negative emotion of {to_name}
     eg: Alice is exhausted due to her bad study habit. / Jack is angry because we don't agree with each other.
-    3.personality: The person you are talking to is extroverted or introverted.
+    3.personality: {to_name} is extroverted or introverted.
     eg: Ivy is open and likes to talk with others./ Amy is a lonely person. She likes to stay alone.
-    4.habits and preferences: the other player's habit and taste. Also include things he dislike.
-    eg: David really likes travelling. He prefers to traveling everyday./ Alice do not have a good relaxation schedule and she is too devoted to studing.  
+    4.habits and preferences: habits and tastes of {to_name}. Also include things he dislike.
+    eg: David really likes travelling. He prefers to traveling everyday.
     
-    Base on the given conversation content:{conversation}, update the impressions respectively.
     Also consider the old relation between {from_name} and {to_name}.
     {from_name} thinks their old relation is {relation_from}.
-    {to_name} thinks their old relation is {relation_to}.
     Generate the new relations based on the old ones.
     
-    Impression1 is the impression from {from_name} to {to_name}.
-    Impression2 is the impression from {to_name} to {from_name}.
-    You should carefully check their names and the order of impression.
-    
     Here is an example of impressions format. Each impression item should be in a new line.
-    1.impression1: 
     relation: 
     emotion: 
     personality: 
-    habits and preferences: 
-    2.impression2: 
-    relation: 
-    emotion: 
-    personality: 
-    habits and preferences: 
+    habits and preferences:  
     
     Now generate the two impressions in English.
-    impression1:
-    impression2:
+    impression:
     """
 )
 
