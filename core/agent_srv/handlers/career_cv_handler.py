@@ -68,6 +68,7 @@ class CareerCVHandler(BaseHandler):
             "current_job_str": current_job_str,
             "eligible_jobs_str": eligible_jobs,
         }
+        logger.info(prompt_for_cv_new.format(**payload))
         cv = await self.api_retry(
             cv_generator.ainvoke,
             payload,
@@ -143,6 +144,9 @@ class CareerCVHandler(BaseHandler):
             "public_work_info": public_work_info,
             "meet_requirements": {"meet": code == 1, "message": message},
         }
+        logger.info(
+            f"🧔 Mayor decision prompt: {mayor_decision_prompt.format(**payload)}"
+        )
         mayor_decision = await self.api_retry(
             mayor_decision_generator.ainvoke,
             payload,
