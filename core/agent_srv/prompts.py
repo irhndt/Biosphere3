@@ -1242,7 +1242,7 @@ Biography: {biography}
 # require
 Think from the perspective of the celebrity {characterName} whether {characterName} would choose to have a new job, and if so, generate a CV for applying to the new job that suits their personal situation.
 If {characterName} wants a new job, the 'jobId' should be the id of the new job, which needs to be of type int, and the 'cv' should be a string representing the CV.
-If {characterName} does not want the new job, the "jobId" should be 0 and the "cv" should be a string representing the reason.
+If {characterName} does not want the new job or there are no eligible jobs available, the "jobId" should be 0 and the "cv" should be a string representing the reason.
 If {characterName} is currently unemployed and there are eligible jobs available, they must choose one from the available options.
 The cv should be written in a lively, conversational first-person narrative (one paragraph), mimicking {characterName}'s tone. It should be natural storytelling rather than a formal structure. Avoid bullet points and headings, and make it sound like {characterName} is casually explaining why they're the perfect fit for the job. The writing should be explosive, intense, and create a huge buzz among the public.
 
