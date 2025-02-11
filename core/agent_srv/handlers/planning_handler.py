@@ -56,7 +56,7 @@ class PlanningHandler(BaseHandler):
 
         print(obj_planner_prompt.format(**payload))
         planner_response = await self.api_retry(
-            obj_planner.ainvoke,
+            obj_planner,
             payload,
             state,
             DailyObjective,
@@ -111,7 +111,7 @@ class PlanningHandler(BaseHandler):
         }
         print(crafting_and_trading_prompt.format(**payload))
         crafting_and_trading_sequence = await self.api_retry(
-            crafting_and_trading_planner.ainvoke,
+            crafting_and_trading_planner,
             payload,
             state,
             DetailedMetaActionSequence,
@@ -184,7 +184,7 @@ class PlanningHandler(BaseHandler):
             "fail_action_info": format_false_action_info(false_action_info),
         }
         meta_action_sequence = await self.api_retry(
-            meta_action_replanner.ainvoke,
+            meta_action_replanner,
             payload,
             state,
             DetailedMetaActionSequence,
@@ -240,7 +240,7 @@ class PlanningHandler(BaseHandler):
                 "sequence_format": squence_format,
             }
             emoji_sequence_sep = await self.api_retry(
-                emoji_seq_generator.ainvoke,
+                emoji_seq_generator,
                 pay_load,
                 state,
                 EmojiSequence,
@@ -302,7 +302,7 @@ class PlanningHandler(BaseHandler):
             "production_graph": state["meta"]["production_graph"],
         }
         planner_response = await self.api_retry(
-            obj_planner.ainvoke,
+            obj_planner,
             payload,
             state,
             TradeObjective,
@@ -342,7 +342,7 @@ class PlanningHandler(BaseHandler):
 
         print(merger_prompt.format(**payload))
         merger_response = await self.api_retry(
-            merger.ainvoke,
+            merger,
             payload,
             state,
             DailyObjective,

@@ -57,9 +57,9 @@ class CareerCVHandler(BaseHandler):
         else:
             current_job_str = "# Current Job\nCurrently, you don't have a job.\n"
         if eligible_jobs:
-            eligible_jobs_str=f"# Eligible Jobs\nThe following jobs are available for you to choose from, as you meet the requirements:\n{convert_to_table_string(eligible_jobs)}\n"
+            eligible_jobs_str = f"# Eligible Jobs\nThe following jobs are available for you to choose from, as you meet the requirements:\n{convert_to_table_string(eligible_jobs)}\n"
         else:
-            eligible_jobs_str=f"# Eligible Jobs\nCurrently, there are no eligible jobs to choose from.\n"
+            eligible_jobs_str = f"# Eligible Jobs\nCurrently, there are no eligible jobs to choose from.\n"
         industry, industry_goal_for_cv = get_industry_and_goal(character_industry)
         payload = {
             "industry": industry,
@@ -74,7 +74,7 @@ class CareerCVHandler(BaseHandler):
         }
         logger.info(prompt_for_cv_new.format(**payload))
         cv = await self.api_retry(
-            cv_generator.ainvoke,
+            cv_generator,
             payload,
             state=instance.state,
             node_model=NewCV,
@@ -152,7 +152,7 @@ class CareerCVHandler(BaseHandler):
             f"🧔 Mayor decision prompt: {mayor_decision_prompt.format(**payload)}"
         )
         mayor_decision = await self.api_retry(
-            mayor_decision_generator.ainvoke,
+            mayor_decision_generator,
             payload,
             state={},
             node_model=MayorDecision,

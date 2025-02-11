@@ -22,15 +22,13 @@ from core.agent_srv.node_model import (
 )
 from core.agent_srv.prompts import *
 from core.agent_srv.action_simulator import ActionSimulator
-from core.utils.llm_factory import llm_selector
+from core.utils.llm_factory import llm_selector, LLM
 from core.db.api_client import game_api, agent_api
 from core.agent_srv.utils import *
 
 
 def create_planner(prompt_template, model_name, output_type, temperature=0.5):
-    return prompt_template | llm_selector.get_llm(
-        model_name=model_name, temperature=temperature
-    ).with_structured_output(output_type)
+    return LLM(prompt_template, model_name, output_type, temperature)
 
 
 async def generate_daily_objective(state: RunningState):

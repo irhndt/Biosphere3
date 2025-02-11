@@ -129,7 +129,11 @@ async def get_character_data_async(userid: int) -> dict:
             "health": game_db_character_response.get("health"),
             "energy": game_db_character_response.get("energy"),
             "hungry": game_db_character_response.get("hungry"),
-            "education": game_db_character_response.get("education"),
+            "education": (
+                game_db_character_response.get("education")
+                if game_db_character_response.get("education") != "None"
+                else "PrimarySchool"
+            ),
             "education_experience": game_db_character_response.get("experience"),
             "money": game_db_character_response.get("money"),
             "jobId": game_db_character_response.get("jobId"),
@@ -771,10 +775,10 @@ def get_industry_and_goal(character_industry: str):
     industry = {"Manufacture": "industry", "Study": "academia", "Food": "business"}
 
     industry_goal_for_cv = {
-    "Manufacture": "Working to make money to produce A100",
-    "Study": "Working to make money to fund studies",
-    "Food": "Working to make money",
-}
+        "Manufacture": "Working to make money to produce A100",
+        "Study": "Working to make money to fund studies",
+        "Food": "Working to make money",
+    }
     return industry[character_industry], industry_goal_for_cv[character_industry]
 
 

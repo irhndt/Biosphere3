@@ -68,7 +68,7 @@ class AccommodationHandler(BaseHandler):
                 "failure_reasons": failure_reasons,
             }
             accommodation_decision = await self.api_retry(
-                accommodation_decision_generator.ainvoke,
+                accommodation_decision_generator,
                 payload,
                 state,
                 AccommodationDecision,

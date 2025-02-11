@@ -63,7 +63,7 @@ class AnticipationHandler(BaseHandler):
             "action_rule": action_rule,
         }
         refined_action_and_state = self.api_retry(
-            self.action_refiner.ai_invoke,
+            self.action_refiner,
             payload,
             current_state,
             RefinedActionsAndState,

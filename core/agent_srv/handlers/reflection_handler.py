@@ -53,7 +53,7 @@ class ReflectionHandler(BaseHandler):
             ),
         }
         daily_reflection = await self.api_retry(
-            daily_reflection_generator.ainvoke,
+            daily_reflection_generator,
             payload,
             state,
             Reflection,
