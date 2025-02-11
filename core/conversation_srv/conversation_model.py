@@ -87,3 +87,18 @@ class IntimacyMark(BaseModel):
     mark2: int = Field(
         description="The intimacy mark of player 2 towards the given conversation."
     )
+
+class DialogueInformation(BaseModel):
+    content_type: str
+    topic: str
+    target_name: str
+    my_name: str
+    memory_from: dict
+    memory_to: dict
+    current_impression_from: str
+    current_impression_to: str
+    relation_from: str
+    relation_to: str
+    arc_data_from: dict
+    arc_data_to: dict
+
