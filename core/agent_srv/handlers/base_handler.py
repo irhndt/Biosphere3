@@ -6,6 +6,7 @@ from core.agent_srv.prompts import correct_format_prompt
 from core.db.api_client import game_api, agent_api
 from core.agent_srv.node_model import BaseModel, RunningState
 from azure.core.exceptions import HttpResponseError
+from langchain_core.exceptions import OutputParserException
 import traceback
 import time
 
