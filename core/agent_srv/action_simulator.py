@@ -37,10 +37,6 @@ class ActionSimulator:
         state["location"] = ""
         for action in action_list:
             actions = self.simulate_single_action(action, state, market_data)
-            # print("action: ", action)
-            # print("actions: ", actions)
-            # if not actions:
-            #     break
             self.final_action_list.extend(actions)
         self.final_check_location()
 
@@ -176,6 +172,7 @@ class ActionRunner:
             return self.actions
 
         state["location"] = action_args[0]
+        state["hungry"] -= 2
         return self.actions
 
     def sleep(self, action_args: List[str], state: Dict):
@@ -195,6 +192,7 @@ class ActionRunner:
             self.actions.insert(0, "goto home")
             state["location"] = "home"
         state["energy"] += hours * 10
+        state["hungry"] -= hours * 2
         return self.actions
 
     def study(self, action_args: List[str], state: Dict):
@@ -228,6 +226,7 @@ class ActionRunner:
 
         state["money"] -= hours * 100
         state["energy"] -= hours * 10
+        state["hungry"] -= hours * 2
         state["education_experience"] += hours * 10
         return self.actions
 
@@ -255,6 +254,7 @@ class ActionRunner:
 
         state["money"] -= hours * 100
         state["health"] += hours * 10
+        state["hungry"] -= hours * 2
         return self.actions
 
     def work(self, action_args: List[str], state: Dict):
@@ -281,6 +281,7 @@ class ActionRunner:
 
         state["money"] += hours
         state["energy"] -= hours * 10
+        state["hungry"] -= hours * 2
         return self.actions
 
     def use(self, action_args: List[str], state: Dict, market_data: Dict):
@@ -588,6 +589,18 @@ class ActionRunner:
             raise ValueError("Invalid trade type")
 
         return trade_money
+
+    def craft_or_buy_eating_stuff(self):
+        """
+        Craft or buy eating stuff
+        """
+        # Given the initial hungry value, craft or buy eating stuff
+        # TODO: current add craft action:
+        # 1. select a random eating stuff
+        # 2. craft the eating stuff! (if the character has the materials or it doesn't need materials)
+        # 3. add the energy recover action and goto home action if needed
+        self.actions = []
+        return self.actions
 
 
 if __name__ == "__main__":
