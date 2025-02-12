@@ -5,6 +5,7 @@ from core.utils.llm_factory import llm_selector, LLM
 from core.agent_srv.prompts import correct_format_prompt
 from core.db.api_client import game_api, agent_api
 from core.agent_srv.node_model import BaseModel, RunningState
+from azure.core.exceptions import HttpResponseError
 import traceback
 import time
 
@@ -30,13 +31,17 @@ class BaseHandler:
             try:
                 response = await llm.ai_invoke(payload)
                 break
-            except JSONDecodeError as e:
-                logger.error(f"⛔ JSONDecodeError in api_retry: {e}")
-                print(traceback.format_exc())
-                retry_count += 1
-                if retry_count == self.MAX_RETRIES and e.doc is not None:
-                    return self.correct_format_error(state, e.doc, node_model)
-                continue
+            except OutputParserException as e:
+                logger.error(f"⛔ OutputParserException in api_retry: {e}")
+                if "JSONDecodeError" in str(e):
+                    logger.error(f"⛔ JSON parsing related error in api_retry: {e}")
+                    print(traceback.format_exc())
+                    retry_count += 1
+                    if retry_count == self.MAX_RETRIES and hasattr(e, "doc"):
+                        return self.correct_format_error(state, e.doc, node_model)
+                    continue
+                else:
+                    raise e
             except ConnectionError as e:
                 logger.error(f"⛔ ConnectionError in api_retry: {e}")
                 llm.set_retry()
@@ -59,7 +64,12 @@ class BaseHandler:
                 if retry_count == self.MAX_RETRIES and e.errors() is not None:
                     return self.correct_format_error(state, e.errors(), node_model)
                 continue
-
+            except HttpResponseError as e:
+                logger.error(f"⛔ HttpResponseError in api_retry: {e}")
+                print(traceback.format_exc())
+                llm.set_retry()
+                retry_count += 1
+                continue
             except Exception as e:
                 logger.error(f"⛔ Error in api_retry: {e}")
                 print(traceback.format_exc())

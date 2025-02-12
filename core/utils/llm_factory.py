@@ -131,6 +131,14 @@ class LLM:
             temperature=self.temperature,
             retry=self.retry,
         ).with_structured_output(self.output_type)
+        
+    def temperature_down(self):
+        self.temperature = max(0.1, self.temperature - 0.1)
+        self.llm = self.prompt_template | LLMSelector.get_llm(
+            model_name=self.model_name,
+            temperature=self.temperature,
+            retry=self.retry,
+        ).with_structured_output(self.output_type)
 
 
 class TokenUsageHandler(BaseCallbackHandler):
