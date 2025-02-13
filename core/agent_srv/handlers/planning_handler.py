@@ -205,7 +205,7 @@ class PlanningHandler(BaseHandler):
             logger.warning("ActionSimulator Failed, use the original sequence")
             print(traceback.format_exc())
             simulate_list = state["decision"]["meta_seq"]
-
+        state["decision"]["expanded_meta_seq"].clear()
         for item in simulate_list:
             state["decision"]["expanded_meta_seq"].append(item)
         detailed_meta_seq = []

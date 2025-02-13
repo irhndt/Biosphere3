@@ -106,39 +106,45 @@ class ActionRunner:
         Run the action on the state, return the next state and reward
         """
         self.actions = [f"{action_name} {' '.join(action_args)}"]
+
         if action_name == "goto":
-            return self.goto(action_args, state)
+            self.goto(action_args, state)
 
         if action_name == "sleep":
-            return self.sleep(action_args, state)
+            self.sleep(action_args, state)
 
         if action_name == "study":
-            return self.study(action_args, state)
+            self.study(action_args, state)
 
         if action_name == "seedoctor":
-            return self.seedoctor(action_args, state)
+            self.seedoctor(action_args, state)
 
         if action_name == "work":
-            return self.work(action_args, state)
+            self.work(action_args, state)
 
         if action_name == "use":
-            return self.use(action_args, state, market_data)
+            self.use(action_args, state, market_data)
 
         if action_name == "buy":
-            return self.buy(action_args, state, market_data)
+            self.buy(action_args, state, market_data)
 
         if action_name == "sell":
-            return self.sell(action_args, state, market_data)
+            self.sell(action_args, state, market_data)
 
         if action_name == "craft":
-            # print("before inventory:", state["inventory"])
-            # print("before energy:", state["energy"])
-            actions = self.craft(action_args, state, market_data)
-            # print("after inventory:", state["inventory"])
-            # print("after energy:", state["energy"])
-            return actions
+            self.actions = self.craft(action_args, state, market_data)
 
-        return []
+        if state["hungry"] <= 30:
+            if state["hungry"] < 0:
+                state["hungry"] = 0
+            self.actions = (
+                self.craft_or_buy_eating_stuff(
+                    state, random.randint(40, 80) - state["hungry"]
+                )
+                + self.actions
+            )
+
+        return self.actions
 
     def goto(self, action_args: List[str], state: Dict):
         """
@@ -590,17 +596,61 @@ class ActionRunner:
 
         return trade_money
 
-    def craft_or_buy_eating_stuff(self):
+    def craft_or_buy_eating_stuff(self, state, recover_hungry):
         """
         Craft or buy eating stuff
         """
         # Given the initial hungry value, craft or buy eating stuff
-        # TODO: current add craft action:
         # 1. select a random eating stuff
         # 2. craft the eating stuff! (if the character has the materials or it doesn't need materials)
         # 3. add the energy recover action and goto home action if needed
-        self.actions = []
-        return self.actions
+        actions = []
+        foods = [
+            "apple",
+            "pear",
+            "bread",
+            "apple_pie",
+            "fruit_salad",
+            "chicken_salad",
+            "beef_rice",
+            "sushi",
+        ]
+        hungry_dict = {
+            "apple": 10,
+            "pear": 15,
+            "bread": 25,
+            "apple_pie": 20,
+            "fruit_salad": 35,
+            "chicken_salad": 35,
+            "beef_rice": 50,
+            "sushi": 30,
+        }
+        choices = ["craft", "buy"]
+        choose_to = random.choice(choices)
+        food = random.choice(foods)
+
+        num = recover_hungry // hungry_dict[food] + 1
+        if choose_to == "craft":
+            actions = self.generate_craft_sequence_and_check(
+                state,
+                item_type=food,
+                item_num=num,
+            )
+        else:
+            money = self.compute_amm_cost("buy", [food, num], self.market_data)
+            if state["money"] < money:
+                actions = self.generate_craft_sequence_and_check(
+                    state,
+                    item_type=food,
+                    item_num=num,
+                )
+            else:
+                actions = [f"buy {food} {num}"]
+                state["money"] -= money
+
+        actions.append(f"use {food} {num}")
+        state["hungry"] = min(100, state["hungry"] + num * hungry_dict[food])
+        return actions
 
 
 if __name__ == "__main__":

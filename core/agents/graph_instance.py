@@ -91,6 +91,7 @@ class LangGraphInstance:
                     if message_data.get("actionName").startswith("goto"):
                         save_action_to_db(self.user_id, message_data)
                     # If the action result is False, put REPLAN into event_queue
+                    self.state["decision"]["expanded_meta_seq"].popleft()
                     if msg["data"]["result"] is False:
                         try:
                             self.logger.info(
@@ -103,10 +104,6 @@ class LangGraphInstance:
                                 f"User {self.user_id}: Error putting REPLAN into event_queue: {e}"
                             )
                     else:
-                        self.logger.info(
-                            f"User {self.user_id} current meta action list: {list(self.state['decision']['expanded_meta_seq'])}"
-                        )
-                        self.state["decision"]["expanded_meta_seq"].popleft()
                         self.logger.info(
                             f"User {self.user_id} current meta action list: {list(self.state['decision']['expanded_meta_seq'])}"
                         )
