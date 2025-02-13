@@ -59,8 +59,8 @@ def load_generator(state: ConversationState, current_talk: ConversationTask):
         payload = {
             "type": info.content_type,
             "topic": info.topic,
-            "from_name": info.my_name,
-            "to_name": info.target_name,
+            "my_name": info.my_name,
+            "target_name": info.target_name,
             "relation_from": info.relation_from,
             "relation_to": info.relation_to
         }
@@ -69,13 +69,28 @@ def load_generator(state: ConversationState, current_talk: ConversationTask):
     return generator, generator_prompt, payload
 
 
-def reformat_conversation(raw_conversation: str):
+def reformat_conversation(raw_conversation: str, my_name: str, target_name: str):
     lines = raw_conversation.strip().split('\n')
     content = []
     for line in lines:
         if line:
-            key, value = line.split(':')
-            content.append({key.strip(): value.strip()})
+            items = line.split(':')
+            if len(items) == 2:
+                content.append({items[0].strip(): items[1].strip()})
+            else:
+                current_name = my_name
+                other_name = target_name
+                for item in items:
+                    if item == current_name:
+                        continue
+                    elif current_name in item or item == other_name:
+                        exchange_name = current_name
+                        current_name = other_name
+                        other_name = exchange_name
+                    content.append({current_name: item.split(other_name)[0]})
+                    exchange_name = current_name
+                    current_name = other_name
+                    other_name = exchange_name
     return content
 
 
@@ -141,7 +156,7 @@ async def a_talk(state:ConversationState, current_talk: ConversationTask):
             logger.info("======conversation_generator======\n" + full_prompt)
 
             # Reconstruct the format
-            all_content = reformat_conversation(conversation_content["content"])
+            all_content = reformat_conversation(conversation_content["content"], payload["my_name"], payload["target_name"])
             break
         except Exception as e:
             logger.error(

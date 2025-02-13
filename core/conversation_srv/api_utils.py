@@ -13,13 +13,6 @@ def conversation_llm(prompt_template, model_name, output_type, temperature):
     ).with_structured_output(output_type)
 
 
-conversation_topic_planner = conversation_llm(
-    prompt_template=conversation_topic_planner_prompt,
-    model_name="gpt-4o-mini",
-    output_type=ConversationTopics,
-    temperature=1
-)
-
 conversation_generator = conversation_llm(
     prompt_template=conversation_generator_prompt,
     model_name="gpt-4o",
@@ -34,12 +27,6 @@ simple_content_generator = conversation_llm(
     temperature=0.5
 )
 
-conversation_check = conversation_llm(
-    prompt_template=conversation_check_prompt,
-    model_name="gpt-4o-mini",
-    output_type=CheckResult,
-    temperature=0
-)
 
 impression_update = conversation_llm(
     prompt_template=impression_update_prompt,
