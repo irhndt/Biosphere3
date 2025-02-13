@@ -2,6 +2,7 @@ from core.agent_srv.node_model import RunningState
 from core.agents.graph_instance import LangGraphInstance
 from core.agent_srv.handlers import *
 from loguru import logger
+from collections import deque
 
 
 class MainTest:
@@ -26,6 +27,15 @@ class MainTest:
             "msg": "No location named 'forest'.",
         }
         self.state["false_action_queue"].put_nowait(false_action_info)
+        self.state["decision"]["expanded_meta_seq"] = deque(
+            [
+                "craft wood 10",
+                "goto workshop",
+                "craft wooden_board 3",
+                "goto home",
+                "sleep 8",
+            ]
+        )
         self.state["decision"]["detailed_meta_seq"] = [
             {
                 "action": "goto forest",
@@ -121,13 +131,13 @@ if __name__ == "__main__":
     # print(state)
     mainTest = MainTest()
     # TEST REPLAN ROUTINES
-    # asyncio.run(mainTest.test_replan(state))
+    asyncio.run(mainTest.test_replan())
 
     # # TEST PLANNING ROUTINES
     # asyncio.run(mainTest.test_plan())
 
     ## TEST CV ROUTINES
-    asyncio.run(mainTest.test_cv())
+    # asyncio.run(mainTest.test_cv())
 
     ## TEST ACCOMMODATION ROUTINES
     # asyncio.run(mainTest.test_accommodation())
