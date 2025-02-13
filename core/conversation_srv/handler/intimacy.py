@@ -4,16 +4,45 @@ from core.conversation_srv.conversation_model import ConversationState, Conversa
 from core.conversation_srv.conversation_prompts import intimacy_mark_prompt
 
 
+# intimacy weight map
+def weight_map(mark: float):
+    if 40 < mark < 60:
+        return 1.0
+    elif mark <= 40:
+        mark = 100- mark
+
+    if 60 <= mark < 70:
+        return -0.001*mark**2+0.11*mark-2
+    elif 70 <= mark < 80:
+        return -0.03*mark+2.9
+    elif 80<= mark < 90:
+        return 0.001*mark**2-0.19*mark+9.3
+    elif 90<= mark <=100:
+        return 1/10*3**(10-mark/10)
+
 # map the raw marks
-def mark_map(x: int):
+def mark_map(level: int, last_mark: float):
+    # initial mark level
     mapping = {
-        5: 8,
-        4: 4,
+        5: 2,
+        4: 1,
         3: 0,
-        2: -3,
-        1: -5
+        2: -1,
+        1: -2
     }
-    return mapping.get(x, 0)
+    increment = mapping.get(level, 0)
+    # when last_mark > 50 and the mark is still increasing,
+    # add weight to the increment. Same to the negative case.
+    if (last_mark-50)*increment > 0:
+        weight = weight_map(last_mark)
+        return weight*increment
+    # for extreme marks, even neutral talk will lead to opposite increment
+    elif last_mark >= 90 and increment == 0:
+        return -0.5
+    elif last_mark <= 10 and increment == 0:
+        return 0.5
+    else:
+        return increment
 
 
 # update intimacy marks
@@ -90,8 +119,8 @@ async def update_intimacy(state: ConversationState, current_talk: ConversationTa
             continue
 
     if intimacy_mark != "":
-        mark1 = mark_map(intimacy_mark.mark1)
-        mark2 = mark_map(intimacy_mark.mark2)
+        mark1 = mark_map(intimacy_mark.mark1, current_intimacy_1)
+        mark2 = mark_map(intimacy_mark.mark2, current_intimacy_2)
     else:
         mark1 = 0
         mark2 = 0
@@ -104,9 +133,11 @@ async def update_intimacy(state: ConversationState, current_talk: ConversationTa
     )
 
     current_intimacy_1 += mark1
+    current_intimacy_1 = round(current_intimacy_1, 2)
     current_intimacy_1 = min(current_intimacy_1, 100)
     current_intimacy_1 = max(current_intimacy_1, 0)
     current_intimacy_2 += mark2
+    current_intimacy_2 = round(current_intimacy_2, 2)
     current_intimacy_2 = min(current_intimacy_2, 100)
     current_intimacy_2 = max(current_intimacy_2, 0)
 
