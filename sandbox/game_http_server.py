@@ -774,25 +774,25 @@ class HTTPServer:
                         {
                             "id": 380,
                             "modelType": "gpt-4o-mini",
-                            "prompt": 6272573,
-                            "completion": 407850,
-                            "total": 6680423,
+                            "prompt": 0,
+                            "completion": 0,
+                            "total": 0,
                             "createTime": "2025-02-14 08:34:56"
                         },
                         {
                             "id": 379,
                             "modelType": "gpt-4o",
-                            "prompt": 4920481,
-                            "completion": 2456987,
-                            "total": 7377468,
+                            "prompt": 0,
+                            "completion": 0,
+                            "total": 0,
                             "createTime": "2025-02-14 08:34:55"
                         },
                         {
                             "id": 381,
                             "modelType": "deepseek-chat",
-                            "prompt": 13072376,
-                            "completion": 413007,
-                            "total": 13485383,
+                            "prompt": 0,
+                            "completion": 0,
+                            "total": 0,
                             "createTime": "2025-02-14 08:34:56"
                         }
                     ]
