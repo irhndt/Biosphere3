@@ -82,6 +82,10 @@ class CareerCVHandler(BaseHandler):
         logger.info(f"📃 CV: {cv}")
         if cv.job_id == 0:
             logger.info("📃 CV: No job selected. Agent want to keep the original job. ")
+            instance.state["cv"] = {
+                "job_id": 0,
+                "content": "",
+            }
             return
 
         decision_job_name = get_job_name(cv.job_id, all_public_jobs)
@@ -97,24 +101,28 @@ class CareerCVHandler(BaseHandler):
             "election_status": "not_yet",
         }
         agent_api.request_sync("POST", "/cv/", data=cv_request)
-        mayor_decision = await self.generate_mayor_decision(
-            cv, userid, experience, education, week
-        )
-        if instance and instance.websocket:
-            response = await instance.send_message(
-                {
-                    "characterId": userid,
-                    "messageName": "mayor_decision",
-                    "messageCode": 10,
-                    "data": {
-                        "jobId": cv.job_id,
-                        "jobName": decision_job_name,
-                        "cv": cv.cv,
-                        **mayor_decision,
-                    },
-                }
-            )
-            instance.log_message("received", json.dumps(response))
+        instance.state["decision"]["cv"] = {
+            "job_id": cv.job_id,
+            "content": cv.content,
+        }
+        # mayor_decision = await self.generate_mayor_decision(
+        #     cv, userid, experience, education, week
+        # )
+        # if instance and instance.websocket:
+        #     response = await instance.send_message(
+        #         {
+        #             "characterId": userid,
+        #             "messageName": "mayor_decision",
+        #             "messageCode": 10,
+        #             "data": {
+        #                 "jobId": cv.job_id,
+        #                 "jobName": decision_job_name,
+        #                 "cv": cv.cv,
+        #                 **mayor_decision,
+        #             },
+        #         }
+        #     )
+        #     instance.log_message("received", json.dumps(response))
 
     async def generate_mayor_decision(
         self,
@@ -177,3 +185,90 @@ class CareerCVHandler(BaseHandler):
             "mayor_decision": mayor_decision.decision,
             "mayor_comments": mayor_decision.comments,
         }
+
+    ## Renew Mechanism:
+    # Now, we need to check job every day. So there are some changes:
+    # 1. Add a daily message for game end to trigger the cv submission
+    # 2. Change the cv generate function to be a daily check function
+    # 3. Change the mayor decision into a mechanism that can check the daily cvs of each occupation and make decisions
+
+
+class MayorDecisionHandler(BaseHandler):
+    async def generate_mayor_decision(self, week, character_manager):
+        mayer_decision_planner = self.create_planner(
+            mayor_decision_prompt,
+            "gpt-4o-mini",
+            MayorDecisionBatchly,
+            0.5,
+        )
+        cvs = character_manager.get_cvs()
+        job_ids = list({cv["jobid"] for cv in cvs})
+        # print(job_ids)
+        public_works = game_api.request_sync(
+            method="GET", endpoint="/publicWork/getAll"
+        )
+        # 过滤并只保留指定字段和 id 在 job_ids 中的项
+        filtered_public_works = [
+            {
+                "job_id": work["id"],
+                "jobType": work["jobType"],
+                "jobName": work["jobName"],
+                "jobPlace": work["jobPlace"],
+                "minimum_education": work["education"],  # 修改字段名
+                "studyxp": work["experience"],  # 修改字段名
+                "number_of_positions": work["jobAvailable"],  # 更清晰的字段名
+            }
+            for work in public_works
+            if work["id"] in job_ids
+        ]
+
+        # print(filtered_public_works)
+        for public_work in filtered_public_works:
+            public_work_str = f"""# Job Requirements for Public Work\n{convert_to_table_string({'public_work_info':public_work})}\n"""
+            candidates = [
+                {
+                    "characterId": cv["characterId"],
+                    "studyxp": cv["studyxp"],
+                    "pastExperience": (
+                        None if not cv["experience"] else cv["experience"]
+                    ),
+                    "CV": cv["CV_content"],
+                }
+                for cv in cvs
+                if cv["jobid"] == public_work["job_id"]
+            ]
+            candidates_str = f"""# Candidate Profiles\n{pd.DataFrame(candidates).set_index("characterId").to_string()}\n"""
+            # print(candidates_str)
+            # print(mayor_decision_prompt)
+            # mayor_decision = parse_json(get_answer_from_api(mayor_decision_prompt))
+            # print(mayor_decision)
+            payload = {
+                "public_work_str": public_work_str,
+                "candidates_str": candidates_str,
+                "number_of_positions": public_work["number_of_positions"],
+            }
+            mayer_decision_batchly = self.api_retry(
+                mayer_decision_planner,
+                payload,
+                None,
+            )
+            # 遍历每个候选人，更新他们的 election_status
+            for candidate in candidates:
+                characterId = candidate["characterId"]
+                election_status = (
+                    "succeeded"
+                    if characterId in mayor_decision["decision"]
+                    else "failed"
+                )
+
+                # 发送请求来更新每个候选人的 election_status
+                agent_api.request_sync(
+                    method="PUT",
+                    endpoint="/cv/election_status",
+                    data={
+                        "characterId": characterId,
+                        "jobid": public_work["job_id"],
+                        "week": week,
+                        "election_status": election_status,
+                    },
+                )

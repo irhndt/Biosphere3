@@ -1,4 +1,5 @@
 import sys
+import traceback
 
 sys.path.append(".")
 import yaml
@@ -14,6 +15,7 @@ from utils.web_monitor.routes import WebMonitor
 from core.agent_srv.utils import save_token_consumption_to_db
 from core.agents.graph_instance import LangGraphInstance
 from core.agents.conversation_instance import ConversationInstance
+from core.agent_srv.handlers import MayorDecisionHandler
 
 
 class ConfigLoader:
@@ -31,6 +33,7 @@ class AI_WS_Server:
         self.character_manager = CharacterManager(timeout=60)
         self.web_monitor = WebMonitor(self.character_manager)
         self.config = config
+        self.current_day = 0
 
     async def handler(self, websocket, path):
         character_id = None
@@ -66,7 +69,9 @@ class AI_WS_Server:
                             character_id, "heartbeat", 0, **{"status": "ok"}
                         )
                         await websocket.send(heartbeat_response)
-                        agent_instance.log_message("received", json.loads(heartbeat_response))
+                        agent_instance.log_message(
+                            "received", json.loads(heartbeat_response)
+                        )
                     else:
                         message_queue = agent_instance.state["message_queue"]
                         await asyncio.gather(
@@ -74,8 +79,19 @@ class AI_WS_Server:
                             conversation_instance.listener(data),
                         )
 
+                    if data.get("messageName") == "new_day":
+                        new_day = data.get("data").get("date", 0)
+                        if self.current_day != new_day:
+                            self.current_day = new_day
+                        # At the end of the week, we will allocate cv submission
+                        if self.current_day % 7 == 1:
+                            asyncio.create_task(self.cv_submission(agent_instance))
+                        elif self.current_day % 7 == 2:
+                            asyncio.create_task(self.mayer_decision())
+
                 except websockets.ConnectionClosed as e:
                     logger.warning(f"🔗 Connection closed from {character_id}: {e}")
+                    print(traceback.format_exc())
                     break
                 except json.JSONDecodeError as e:
                     logger.error(f"❌ JSON decode error: {e}")
@@ -160,6 +176,15 @@ class AI_WS_Server:
             token_usage = llm_selector.get_token_usage()
             save_token_consumption_to_db(token_usage)
             await asyncio.sleep(1800)
+
+    async def cv_submission(self, agent_instance, data):
+        message_queue = agent_instance.state["message_queue"]
+        data["messageName"] = "cv_submission"
+        await message_queue.put(data)
+
+    async def mayer_decision(self):
+        mayor = MayorDecisionHandler()
+        await mayor.generate_mayor_decision(week, self.character_manager)
 
     async def run(self):
         # Periodic Saving Task

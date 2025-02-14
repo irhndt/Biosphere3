@@ -275,6 +275,10 @@ async def get_initial_state_from_db(userid, websocket):
             "meta_seq": [],
             "reflection": [],
             "expanded_meta_seq": deque(),
+            "cv": {
+                "job_id": 0,
+                "content": "",
+            },
         },
         "meta": {
             "tool_functions": tool_functions_live,
@@ -543,12 +547,14 @@ def clear_decision(state: dict):
     state["decision"]["action_result"].clear()
     state["decision"]["new_plan"].clear()
     state["decision"]["meta_seq"].clear()
+    # state["decision"]["expanded_meta_seq"].clear()
+    # state["decision"]["trade_objective"].clear()
     state["decision"]["reflection"].clear()
 
-    if "daily_objective" in state["decision"]:
-        state["decision"]["daily_objective"].clear()
-    else:
-        state["decision"]["daily_objective"] = deque(maxlen=10)
+    # if "daily_objective" in state["decision"]:
+    #     state["decision"]["daily_objective"].clear()
+    # else:
+    #     state["decision"]["daily_objective"] = deque(maxlen=10)
 
 
 def format_status_changes(past_status: dict, status: dict, fields: list = None) -> str:

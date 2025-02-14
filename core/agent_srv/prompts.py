@@ -1351,3 +1351,22 @@ Suppose the current state shows that the player has low energy, the current acti
 Now, using the information provided, please output your refined action and updated state in the required JSON format.
     """
 )
+
+mayor_decision_prompt = ChatPromptTemplate.from_template(
+    """As the mayor of the town, your task is to select up to {number_of_positions} suitable candidates for the "{public_work['jobName']}" position from the list of applicants.
+
+{public_work_str}
+{candidates_str}
+
+# Requirements
+The "decision" field should contain a list of the selected candidates' characterIds.
+The "comments" field should provide a justification for choosing these candidates.
+The number of selected candidates must not exceed {number_of_positions}.
+
+The output format is in JSON format:
+{{
+    "decision": [characterId, ], 
+    "comments": content
+}}
+"""
+)

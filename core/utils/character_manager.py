@@ -131,3 +131,14 @@ class CharacterManager:
                 "hosted_characters": hosted_characters,
             },
         }
+
+    def get_cvs(self):
+        # return [
+        #     character.instance.state["decision"]["cv"]
+        #     for character in list(self._characters.values())
+        # ]
+        cvs = []
+        for _, character in self._characters.items():
+            if character.agent_instance:
+                cvs.append(character.agent_instance.state["decision"]["cv"])
+        return cvs
