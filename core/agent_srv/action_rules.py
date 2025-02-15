@@ -30,7 +30,7 @@ rules = {
      - chicken_salad: +35 hungry, +10 energy  
      - beef_rice: +50 hungry, +5 energy  
      - sushi: +30 hungry  
-     - books: +10 education experience
+     - books: +20 education experience
 """,
     "buy": """**buy [itemType:string] [amount:int]**
    - Purchases items from market, costs money according to market price.
