@@ -207,11 +207,14 @@ class MayorDecisionHandler(BaseHandler):
             endpoint="/cv/",
             params={"week": week, "election_status": "not_yet"},
         )
+        cvs = [
+            cv for cv in cvs if cv["CV_content"] and cv["studyxp"]
+        ]
         job_ids = list({cv["jobid"] for cv in cvs})
         if not job_ids:
             logger.info("🧔 No new CVs to process.")
             return
-        print(job_ids)
+        logger.info(f"🧔 Processing CVs for jobs: {job_ids}")
         public_works = game_api.request_sync(
             method="GET", endpoint="/publicWork/getAll"
         )
@@ -247,24 +250,22 @@ class MayorDecisionHandler(BaseHandler):
                 }
                 for cv in cvs
                 if cv["jobid"] == public_work["job_id"]
-                and cv["CV_content"]
-                and cv["studyxp"]
             ]
             logger.info(f"🧔 Candidates: {[candidate["characterId"] for candidate in candidates]}")
-            candidates_str = (
-                f"""# Candidate Profiles\n{pd.DataFrame(candidates).to_string()}\n"""
+            formatted_candidates = "\n\n".join(
+                f'characterId: {candidate["characterId"]}\nstudyxp: {candidate["studyxp"]}\npastExperience: {candidate["pastExperience"]}\nCV: {candidate["CV"]}'
+                for candidate in candidates
             )
-            print(candidates_str)
-            # print(mayor_decision_prompt)
-            # mayor_decision = parse_json(get_answer_from_api(mayor_decision_prompt))
-            # print(mayor_decision)
+            candidates_str = f"""# Candidate Profiles\n{formatted_candidates}\n"""
+            # print(candidates_str)
+
             payload = {
                 "public_work_str": public_work_str,
                 "candidates_str": candidates_str,
                 "job_name": public_work["jobName"],
                 "number_of_positions": public_work["number_of_positions"],
             }
-            logger.info(mayor_decision_prompt.format(**payload))
+            # logger.info(mayor_decision_prompt.format(**payload))
             mayer_decision_batchly = await self.api_retry(
                 mayer_decision_planner,
                 payload,
@@ -272,12 +273,13 @@ class MayorDecisionHandler(BaseHandler):
                 MayorDecisionBatchly,
             )
             logger.success(f"🧔 Mayor decision: {mayer_decision_batchly}")
-            # update the election status for each candidate
+            # avoid the case that the number of positions is less than the number of candidates
+            decisions = mayer_decision_batchly.decision[:public_work["number_of_positions"]]
             for candidate in candidates:
                 characterId = candidate["characterId"]
                 election_status = (
                     "succeeded"
-                    if characterId in mayer_decision_batchly.decision
+                    if characterId in decisions
                     else "failed"
                 )
 
@@ -304,6 +306,7 @@ class MayorDecisionHandler(BaseHandler):
                     },
                 }
                 if character_manager.has_character(characterId):
-                    character_manager.get_character(
-                        characterId
-                    ).agent_instance.send_message(back_msg)
+                    await character_manager.get_character(
+                            characterId
+                        ).agent_instance.send_message(back_msg)
+                    
