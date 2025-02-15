@@ -31,6 +31,7 @@ class BaseHandler:
         while retry_count < self.MAX_RETRIES:
             try:
                 response = await llm.ai_invoke(payload)
+                logger.info("Raw output: " + str(response))
                 break
             except OutputParserException as e:
                 logger.error(f"⛔ OutputParserException in api_retry: {e}")

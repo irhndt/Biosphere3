@@ -103,7 +103,7 @@ class CareerCVHandler(BaseHandler):
         agent_api.request_sync("POST", "/cv/", data=cv_request)
         instance.state["decision"]["cv"] = {
             "job_id": cv.job_id,
-            "content": cv.content,
+            "content": cv.cv,
             "studyxp": experience,
         }
         # mayor_decision = await self.generate_mayor_decision(
@@ -205,10 +205,13 @@ class MayorDecisionHandler(BaseHandler):
         cvs = agent_api.request_sync(
             method="GET",
             endpoint="/cv/",
-            params={"week": week},
+            params={"week": week, "election_status": "not_yet"},
         )
         job_ids = list({cv["jobid"] for cv in cvs})
-        # print(job_ids)
+        if not job_ids:
+            logger.info("🧔 No new CVs to process.")
+            return
+        print(job_ids)
         public_works = game_api.request_sync(
             method="GET", endpoint="/publicWork/getAll"
         )
@@ -229,35 +232,46 @@ class MayorDecisionHandler(BaseHandler):
 
         # print(filtered_public_works)
         for public_work in filtered_public_works:
+            logger.info(f"🧔 Processing public work: {public_work['jobName']}")
             public_work_str = f"""# Job Requirements for Public Work\n{convert_to_table_string({'public_work_info':public_work})}\n"""
             candidates = [
                 {
-                    "characterId": cv["character_id"],
+                    "characterId": cv["characterId"],
                     "studyxp": cv["studyxp"],
                     "pastExperience": (
-                        None if not cv["experience"] else cv["experience"]
+                        "No work Experience"
+                        if not cv["experience"]
+                        else cv["experience"]
                     ),
-                    "CV": cv["content"],
+                    "CV": cv["CV_content"],
                 }
                 for cv in cvs
                 if cv["jobid"] == public_work["job_id"]
+                and cv["CV_content"]
+                and cv["studyxp"]
             ]
-
-            candidates_str = f"""# Candidate Profiles\n{pd.DataFrame(candidates).set_index("characterId").to_string()}\n"""
-            # print(candidates_str)
+            logger.info(f"🧔 Candidates: {[candidate["characterId"] for candidate in candidates]}")
+            candidates_str = (
+                f"""# Candidate Profiles\n{pd.DataFrame(candidates).to_string()}\n"""
+            )
+            print(candidates_str)
             # print(mayor_decision_prompt)
             # mayor_decision = parse_json(get_answer_from_api(mayor_decision_prompt))
             # print(mayor_decision)
             payload = {
                 "public_work_str": public_work_str,
                 "candidates_str": candidates_str,
+                "job_name": public_work["jobName"],
                 "number_of_positions": public_work["number_of_positions"],
             }
-            mayer_decision_batchly = self.api_retry(
+            logger.info(mayor_decision_prompt.format(**payload))
+            mayer_decision_batchly = await self.api_retry(
                 mayer_decision_planner,
                 payload,
                 None,
+                MayorDecisionBatchly,
             )
+            logger.success(f"🧔 Mayor decision: {mayer_decision_batchly}")
             # 遍历每个候选人，更新他们的 election_status
             for candidate in candidates:
                 characterId = candidate["characterId"]
@@ -286,10 +300,11 @@ class MayorDecisionHandler(BaseHandler):
                     "data": {
                         "decision": "yes" if election_status == "succeeded" else "no",
                         "jobId": public_work["job_id"],
-                        "cv": "Not use",
-                        "comments": "Not use",
+                        # "cv": "Not use now",
+                        # "comments": "Not use now",
                     },
                 }
-                character_manager.get_character(
-                    characterId
-                ).agent_instance.send_message(back_msg)
+                if character_manager.has_character(characterId):
+                    character_manager.get_character(
+                        characterId
+                    ).agent_instance.send_message(back_msg)

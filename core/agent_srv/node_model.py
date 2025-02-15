@@ -244,10 +244,10 @@ class RefinedActionsAndState(BaseModel):
     reason: str = Field(description="reason", default="None")
 
 
-class MayorDecisionBatchly:
+class MayorDecisionBatchly(BaseModel):
     """Batchly decision"""
 
-    decision: List[int] = Field(description="decision list of mayor")
+    decision: List[str] = Field(description="decision list of mayor")
     comments: str = Field(description="comments for the decision")
 
 

@@ -10,8 +10,8 @@ import json
 import os
 from loguru import logger
 from core.utils.llm_factory import llm_selector
-from utils.character_manager import CharacterManager
-from utils.web_monitor.routes import WebMonitor
+from core.utils.character_manager import CharacterManager
+from core.utils.web_monitor.routes import WebMonitor
 from core.agent_srv.utils import save_token_consumption_to_db
 from core.agents.graph_instance import LangGraphInstance
 from core.agents.conversation_instance import ConversationInstance

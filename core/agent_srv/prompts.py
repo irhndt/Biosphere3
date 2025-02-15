@@ -1353,7 +1353,7 @@ Now, using the information provided, please output your refined action and updat
 )
 
 mayor_decision_prompt = ChatPromptTemplate.from_template(
-    """As the mayor of the town, your task is to select up to {number_of_positions} suitable candidates for the "{public_work['jobName']}" position from the list of applicants.
+    """As the mayor of the town, your task is to select up to {number_of_positions} suitable candidates for the "{job_name}" position from the list of applicants.
 
 {public_work_str}
 {candidates_str}
@@ -1365,8 +1365,11 @@ The number of selected candidates must not exceed {number_of_positions}.
 
 The output format is in JSON format:
 {{
-    "decision": [characterId, ], 
-    "comments": content
+    "decision": [1, 2, 3],   
+    "comments": "(The comments that justify the selection.)"
 }}
+
+Now, please select the most suitable candidates for the "{job_name}" position and provide your reasoning for the decision.
+Your output:
 """
 )
