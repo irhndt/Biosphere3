@@ -215,16 +215,16 @@ class MayorDecisionHandler(BaseHandler):
         public_works = game_api.request_sync(
             method="GET", endpoint="/publicWork/getAll"
         )
-        # 过滤并只保留指定字段和 id 在 job_ids 中的项
+        # filter the public works that have new CVs
         filtered_public_works = [
             {
                 "job_id": work["id"],
                 "jobType": work["jobType"],
                 "jobName": work["jobName"],
                 "jobPlace": work["jobPlace"],
-                "minimum_education": work["education"],  # 修改字段名
-                "studyxp": work["experience"],  # 修改字段名
-                "number_of_positions": work["jobAvailable"],  # 更清晰的字段名
+                "minimum_education": work["education"],  
+                "studyxp": work["experience"],  
+                "number_of_positions": work["jobAvailable"],  
             }
             for work in public_works
             if work["id"] in job_ids
@@ -272,7 +272,7 @@ class MayorDecisionHandler(BaseHandler):
                 MayorDecisionBatchly,
             )
             logger.success(f"🧔 Mayor decision: {mayer_decision_batchly}")
-            # 遍历每个候选人，更新他们的 election_status
+            # update the election status for each candidate
             for candidate in candidates:
                 characterId = candidate["characterId"]
                 election_status = (
@@ -281,7 +281,6 @@ class MayorDecisionHandler(BaseHandler):
                     else "failed"
                 )
 
-                # 发送请求来更新每个候选人的 election_status
                 agent_api.request_sync(
                     method="PUT",
                     endpoint="/cv/election_status",
