@@ -1,6 +1,6 @@
 from .base_handler import BaseHandler
 from core.agent_srv.prompts import *
-from core.agent_srv.node_model import NewCV, MayorDecision
+from core.agent_srv.node_model import NewCV, MayorDecision, MayorDecisionBatchly
 from core.agent_srv.utils import *
 from core.db.api_client import agent_api, game_api
 from loguru import logger
@@ -104,6 +104,7 @@ class CareerCVHandler(BaseHandler):
         instance.state["decision"]["cv"] = {
             "job_id": cv.job_id,
             "content": cv.content,
+            "studyxp": experience,
         }
         # mayor_decision = await self.generate_mayor_decision(
         #     cv, userid, experience, education, week
@@ -201,7 +202,11 @@ class MayorDecisionHandler(BaseHandler):
             MayorDecisionBatchly,
             0.5,
         )
-        cvs = character_manager.get_cvs()
+        cvs = agent_api.request_sync(
+            method="GET",
+            endpoint="/cv/",
+            params={"week": week},
+        )
         job_ids = list({cv["jobid"] for cv in cvs})
         # print(job_ids)
         public_works = game_api.request_sync(
@@ -227,16 +232,17 @@ class MayorDecisionHandler(BaseHandler):
             public_work_str = f"""# Job Requirements for Public Work\n{convert_to_table_string({'public_work_info':public_work})}\n"""
             candidates = [
                 {
-                    "characterId": cv["characterId"],
+                    "characterId": cv["character_id"],
                     "studyxp": cv["studyxp"],
                     "pastExperience": (
                         None if not cv["experience"] else cv["experience"]
                     ),
-                    "CV": cv["CV_content"],
+                    "CV": cv["content"],
                 }
                 for cv in cvs
                 if cv["jobid"] == public_work["job_id"]
             ]
+
             candidates_str = f"""# Candidate Profiles\n{pd.DataFrame(candidates).set_index("characterId").to_string()}\n"""
             # print(candidates_str)
             # print(mayor_decision_prompt)
@@ -257,7 +263,7 @@ class MayorDecisionHandler(BaseHandler):
                 characterId = candidate["characterId"]
                 election_status = (
                     "succeeded"
-                    if characterId in mayor_decision["decision"]
+                    if characterId in mayer_decision_batchly.decision
                     else "failed"
                 )
 
@@ -272,3 +278,18 @@ class MayorDecisionHandler(BaseHandler):
                         "election_status": election_status,
                     },
                 )
+
+                back_msg = {
+                    "characterId": characterId,
+                    "messageName": "mayor_decision",
+                    "messageCode": 10,
+                    "data": {
+                        "decision": "yes" if election_status == "succeeded" else "no",
+                        "jobId": public_work["job_id"],
+                        "cv": "Not use",
+                        "comments": "Not use",
+                    },
+                }
+                character_manager.get_character(
+                    characterId
+                ).agent_instance.send_message(back_msg)

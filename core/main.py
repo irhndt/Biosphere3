@@ -87,7 +87,9 @@ class AI_WS_Server:
                         if self.current_day % 7 == 1:
                             asyncio.create_task(self.cv_submission(agent_instance))
                         elif self.current_day % 7 == 2:
-                            asyncio.create_task(self.mayer_decision())
+                            asyncio.create_task(
+                                self.mayer_decision(self.current_day / 7 + 1)
+                            )
 
                 except websockets.ConnectionClosed as e:
                     logger.warning(f"🔗 Connection closed from {character_id}: {e}")
@@ -182,7 +184,7 @@ class AI_WS_Server:
         data["messageName"] = "cv_submission"
         await message_queue.put(data)
 
-    async def mayer_decision(self):
+    async def mayer_decision(self, week):
         mayor = MayorDecisionHandler()
         await mayor.generate_mayor_decision(week, self.character_manager)
 
