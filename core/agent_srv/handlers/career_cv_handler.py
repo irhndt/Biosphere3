@@ -207,9 +207,7 @@ class MayorDecisionHandler(BaseHandler):
             endpoint="/cv/",
             params={"week": week, "election_status": "not_yet"},
         )
-        cvs = [
-            cv for cv in cvs if cv["CV_content"] and cv["studyxp"]
-        ]
+        cvs = self.filter_cvs(cvs)
         job_ids = list({cv["jobid"] for cv in cvs})
         if not job_ids:
             logger.info("🧔 No new CVs to process.")
@@ -310,3 +308,14 @@ class MayorDecisionHandler(BaseHandler):
                             characterId
                         ).agent_instance.send_message(back_msg)
                     
+
+    def filter_cvs(self, cvs):
+        cvs = [
+            cv for cv in cvs if cv["CV_content"] and cv["studyxp"]
+        ]
+        cv_dict = {}
+        for cv in cvs:
+            # filter redundant cv of the same character
+            cv_dict[cv["characterId"]] = cv
+        return list(cv_dict.values())
+        
