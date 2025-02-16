@@ -98,7 +98,9 @@ def load_action(state: ConversationState, current_talk: ConversationTask):
     action_response = make_api_request_sync(
         "GET", "/action_log/", params=get_action_log_params
     )
-    if action_response["data"]["log"] is not None:
+    if not action_response["data"]:
+        memory_from = {}
+    elif action_response["data"]["log"]:
         action_data = action_response["data"]["log"]
         memory_from = {}
         for act in action_data:
@@ -115,7 +117,9 @@ def load_action(state: ConversationState, current_talk: ConversationTask):
     action_response = make_api_request_sync(
         "GET", "/action_log/", params=get_action_log_params
     )
-    if action_response["data"]["log"] is not None:
+    if not action_response["data"]:
+        memory_to = {}
+    elif action_response["data"]["log"]:
         action_data = action_response["data"]["log"]
         memory_to = {}
         for act in action_data:

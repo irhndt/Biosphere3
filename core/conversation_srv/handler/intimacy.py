@@ -72,7 +72,7 @@ async def update_intimacy(state: ConversationState, current_talk: ConversationTa
     # Get old intimacy marks
     intimacy_query_data = {"from_id": id1, "to_id": id2}
     response = make_api_request_sync("GET", "/intimacy/", params=intimacy_query_data)
-    if response["data"] is None:
+    if not response["data"]:
         current_intimacy_1 = 50
         type_1 = "POST"
     else:
@@ -81,7 +81,7 @@ async def update_intimacy(state: ConversationState, current_talk: ConversationTa
 
     intimacy_query_data = {"from_id": id2, "to_id": id1}
     response = make_api_request_sync("GET", "/intimacy/", params=intimacy_query_data)
-    if response["data"] is None:
+    if not response["data"]:
         current_intimacy_2 = 50
         type_2 = "POST"
     else:
