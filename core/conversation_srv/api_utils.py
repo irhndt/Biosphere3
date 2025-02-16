@@ -9,7 +9,7 @@ llm_selector = LLMSelector()
 
 def conversation_llm(prompt_template, model_name, output_type, temperature):
     return prompt_template | llm_selector.get_llm(
-        model_type="CHAT", model_name=model_name, temperature=temperature
+        model_name=model_name, temperature=temperature
     ).with_structured_output(output_type)
 
 

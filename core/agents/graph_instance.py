@@ -19,6 +19,7 @@ from core.agent_srv.utils import (
     update_state_daily,
     clear_decision,
 )
+from core.agent_srv.handlers import *
 
 
 class LangGraphInstance:
@@ -43,6 +44,12 @@ class LangGraphInstance:
         self.event_scheduler_task = None
         self.task = None
         self.routine_tasks = None
+
+        # Handlers setup
+        self.planner = PlanningHandler()
+        self.career_cv = CareerCVHandler()
+        self.accommodation = AccommodationHandler()
+        self.reflection = ReflectionHandler()
 
     @classmethod
     async def create(cls, user_id, websocket=None):
@@ -84,6 +91,7 @@ class LangGraphInstance:
                     if message_data.get("actionName").startswith("goto"):
                         save_action_to_db(self.user_id, message_data)
                     # If the action result is False, put REPLAN into event_queue
+                    self.state["decision"]["expanded_meta_seq"].popleft()
                     if msg["data"]["result"] is False:
                         try:
                             self.logger.info(
@@ -96,9 +104,9 @@ class LangGraphInstance:
                                 f"User {self.user_id}: Error putting REPLAN into event_queue: {e}"
                             )
                     else:
-                        self.logger.info(f"User {self.user_id} current meta action list: {list(self.state['decision']['expanded_meta_seq'])}")
-                        self.state["decision"]["expanded_meta_seq"].popleft()
-                        self.logger.info(f"User {self.user_id} current meta action list: {list(self.state['decision']['expanded_meta_seq'])}")
+                        self.logger.info(
+                            f"User {self.user_id} current meta action list: {list(self.state['decision']['expanded_meta_seq'])}"
+                        )
                 elif message_name == "onestep":
                     self.schedule_event("PLAN")
                 elif message_name == "check":
@@ -127,7 +135,7 @@ class LangGraphInstance:
                     )
                     self.schedule_event("CHARACTER_ARC")
                     self.schedule_event("DAILY_REFLECTION")
-                    await generate_change_job_cv_new(self.state["instance"], msg)
+                    await self.career_cv.generate_cv(self.state["instance"], msg)
                     await asyncio.sleep(60)
                     clear_decision(self.state)
                 else:
@@ -192,14 +200,16 @@ class LangGraphInstance:
     def _get_workflow(self):
         workflow = StateGraph(RunningState)
         workflow.add_node("Sensing_Route", sensing_environment)
-        workflow.add_node("Objectives_planner", generate_daily_objective)
+        workflow.add_node("Objectives_planner", self.planner.generate_daily_objective)
         workflow.add_node(
-            "meta_action_sequence", generate_crafting_and_trading_sequence
+            "meta_action_sequence", self.planner.generate_crafting_and_trading_sequence
         )
-        workflow.add_node("Character_Arc", generate_character_arc)
-        workflow.add_node("Daily_Reflection", generate_daily_reflection)
-        workflow.add_node("Replan_Action", replan_meta_action_seq_new)
-        workflow.add_node("Accommodation_Decision", generate_accommodation_decision)
+        workflow.add_node("Character_Arc", self.reflection.generate_arc)
+        workflow.add_node("Daily_Reflection", self.reflection.generate_reflection)
+        workflow.add_node("Replan_Action", self.planner.replan_meta_action)
+        workflow.add_node(
+            "Accommodation_Decision", self.accommodation.generate_accommodation_decision
+        )
 
         workflow.set_entry_point("Sensing_Route")
 

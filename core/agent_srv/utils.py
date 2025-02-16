@@ -129,7 +129,11 @@ async def get_character_data_async(userid: int) -> dict:
             "health": game_db_character_response.get("health"),
             "energy": game_db_character_response.get("energy"),
             "hungry": game_db_character_response.get("hungry"),
-            "education": game_db_character_response.get("education"),
+            "education": (
+                game_db_character_response.get("education")
+                if game_db_character_response.get("education") != "None"
+                else "PrimarySchool"
+            ),
             "education_experience": game_db_character_response.get("experience"),
             "money": game_db_character_response.get("money"),
             "jobId": game_db_character_response.get("jobId"),
@@ -171,7 +175,6 @@ def save_decision_to_db(userid: int, decision: dict, endpoint: str):
         endpoint=f"/{endpoint}/",
         data=decision,
     )
-
 
 
 def save_reflection_to_db(user_id: int, reflection: dict):
@@ -268,6 +271,7 @@ async def get_initial_state_from_db(userid, websocket):
             "action_result": [],
             "new_plan": [],
             "daily_objective": deque(maxlen=10),
+            "trade_objective": [],
             "meta_seq": [],
             "reflection": [],
             "expanded_meta_seq": deque(),
@@ -647,7 +651,8 @@ def format_detailed_meta_seq(detailed_seq: list, false_action_name: str) -> str:
             formatted_str += f" | Inventory Before: {action['inventory_before']}\n"
         if action.get("inventory_after"):
             formatted_str += f" | Inventory After: {action['inventory_after']}\n"
-        formatted_str += f" | Reason: {action['reason']}\n"
+        if action.get("reason"):
+            formatted_str += f" | Reason: {action['reason']}\n"
         formatted_str += "------\n"
     return formatted_str
 
@@ -769,12 +774,20 @@ def convert_to_table_string(dict_data):
 def get_industry_and_goal(character_industry: str):
     industry = {"Manufacture": "industry", "Study": "academia", "Food": "business"}
 
-    industry_goal_for_daily_obj = {
-        "Manufacture": "Acquire materials to build an A100",
-        "Study": "Acquire materials to create books, increase experience, and earn money to fund your studies",
-        "Food": "Acquire materials to make items and engage in buying and selling to earn more money",
+    industry_goal_for_cv = {
+        "Manufacture": "Working to make money to produce A100",
+        "Study": "Working to make money to fund studies",
+        "Food": "Working to make money",
     }
-    return industry[character_industry], industry_goal_for_daily_obj[character_industry]
+    return industry[character_industry], industry_goal_for_cv[character_industry]
+
+
+def get_job_name(job_id: int, all_public_jobs: list):
+    for job in all_public_jobs:
+        if job["id"] == job_id:
+            return job["jobName"]
+    return "Unemployed"
+
 
 if __name__ == "__main__":
     # print(refine_craft_action("craft rice 2"))

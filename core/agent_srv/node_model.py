@@ -91,6 +91,13 @@ class DailyObjective(BaseModel):
     objectives: List[str] = Field(description="daily objectives list")
 
 
+class TradeObjective(BaseModel):
+    """Trade objective to follow in future"""
+
+    decision: str = Field(description="do some trade or not")
+    objectives: List[str] = Field(description="trade objectives list")
+
+
 class DetailedPlan(BaseModel):
     """Detailed plan to follow in future"""
 
@@ -133,7 +140,7 @@ class DetailedMetaAction(BaseModel):
         None,
         description="User Inventory Info after this action is taken. All after inventory should not be negative, or the action is invalid.",
     )
-    reason: str = Field(..., description="Why this action is needed")
+    reason: str = Field("None", description="Why this action is needed")
 
 
 class DetailedMetaActionSequence(BaseModel):
@@ -150,6 +157,13 @@ class CV(BaseModel):
     job_id: int = Field(description="job id")
     job_name: str = Field(description="job name")
     cv: str = Field(description="cv")
+
+
+class NewCV(BaseModel):
+    """New CV to follow in future"""
+
+    job_id: int = Field(description="job id")
+    cv: str = Field(description="The content of CV")
 
 
 class MayorDecision(BaseModel):
@@ -213,6 +227,21 @@ class RefinedMetaActionSequence(BaseModel):
     """Refined meta action sequence to follow in future"""
 
     meta_action_sequence: List[MetaAction] = Field(description="meta action sequence")
+
+
+class StateInfo(BaseModel):
+    money: int = Field(description="money")
+    energy: int = Field(description="energy")
+    inventory: Dict[str, int] = Field(description="inventory")
+    location: str = Field(description="location")
+
+
+class RefinedActionsAndState(BaseModel):
+    """Refined action and state to follow in future"""
+
+    actions: str = Field(description="refined action")
+    current_state: StateInfo = Field(description="current state")
+    reason: str = Field(description="reason", default="None")
 
 
 if __name__ == "__main__":

@@ -1,10 +1,11 @@
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, AzureChatOpenAI
 from collections import defaultdict
 from typing import Dict, DefaultDict, Literal
 from dotenv import load_dotenv
 import os
 from langchain.callbacks.base import BaseCallbackHandler
 from core.db.api_client import game_api
+from httpx import AsyncClient, Client
 
 load_dotenv()
 
@@ -12,6 +13,7 @@ ModelType = Literal["PLAN", "CHAT"]
 
 openai_api_keys = [os.getenv(f"OPENAI_API_KEY_{i}") for i in range(1, 11)]
 deepseek_api_keys = [os.getenv(f"DEEPSEEK_API_KEY_{i}") for i in range(1, 6)]
+azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
 openai_request_count = 0
 deepseek_request_count = 0
 
@@ -41,7 +43,9 @@ class LLMSelector:
 
     @classmethod
     def initialize_token_usage(cls):
-        modelToken = game_api.request_sync(method="GET", endpoint="/modelToken/getLatestModelToken")
+        modelToken = game_api.request_sync(
+            method="GET", endpoint="/modelToken/getLatestModelToken"
+        )
         for item in modelToken:
             if not item:
                 continue
@@ -67,19 +71,33 @@ class LLMSelector:
             cls.token_usage[model_name]["total"] += token_data.get("total_tokens", 0)
 
     @classmethod
-    def get_llm(
-        cls, model_name: str, model_type: ModelType = "PLAN", temperature: float = 0.7
-    ):
+    def get_llm(cls, model_name: str, temperature: float = 0.7, retry=False):
         callbacks = [TokenUsageHandler(model_name)]
+        # !!!Temporary change deepseek to gpt-4o-mini!!!
+        if model_name.startswith("deepseek"):
+            model_name = "gpt-4o-mini"
         api_key = get_api_key(model_name)
+        # print(model_name)
         if model_name.startswith("gpt"):
-            return ChatOpenAI(
-                base_url="https://api.aiproxy.io/v1",
-                api_key=api_key,
-                model=model_name,
-                temperature=temperature,
-                callbacks=callbacks,
-            )
+            if retry:
+                return ChatOpenAI(
+                    base_url="https://api.aiproxy.io/v1",
+                    api_key=api_key,
+                    model=model_name,
+                    temperature=temperature,
+                    callbacks=callbacks,
+                    streaming=False,
+                )
+            else:
+                return AzureChatOpenAI(
+                    azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
+                    api_key=azure_api_key,
+                    api_version=os.environ.get("AZURE_OPENAI_API_VERSION"),
+                    temperature=temperature,
+                    callbacks=callbacks,
+                    model="gpt-4o-mini",
+                    streaming=False,
+                )
         elif model_name.startswith("deepseek"):
             return ChatOpenAI(
                 base_url="https://api.deepseek.com/v1",
@@ -90,6 +108,37 @@ class LLMSelector:
             )
         else:
             raise ValueError(f"Unsupported model: {model_name}")
+
+
+class LLM:
+    def __init__(self, prompt_template, model_name, output_type, temperature=0.7):
+        self.model_name = model_name
+        self.temperature = temperature
+        self.prompt_template = prompt_template
+        self.output_type = output_type
+        self.retry = False
+        self.llm = self.prompt_template | LLMSelector.get_llm(
+            model_name=model_name, temperature=temperature
+        ).with_structured_output(output_type)
+
+    async def ai_invoke(self, payload: Dict[str, str]):
+        return await self.llm.ainvoke(payload)
+
+    def set_retry(self):
+        self.retry = not self.retry
+        self.llm = self.prompt_template | LLMSelector.get_llm(
+            model_name=self.model_name,
+            temperature=self.temperature,
+            retry=self.retry,
+        ).with_structured_output(self.output_type)
+        
+    def temperature_down(self):
+        self.temperature = max(0.1, self.temperature - 0.1)
+        self.llm = self.prompt_template | LLMSelector.get_llm(
+            model_name=self.model_name,
+            temperature=self.temperature,
+            retry=self.retry,
+        ).with_structured_output(self.output_type)
 
 
 class TokenUsageHandler(BaseCallbackHandler):
