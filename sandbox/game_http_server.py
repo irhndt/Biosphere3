@@ -764,6 +764,41 @@ class HTTPServer:
                 }
             )
 
+        @self.app.route("/modelToken/getLatestModelToken", methods=["GET"])
+        def get_modelToken():
+            return jsonify(
+                {
+                    "code": 1,
+                    "message": "Query successful.",
+                    "data": [
+                        {
+                            "id": 380,
+                            "modelType": "gpt-4o-mini",
+                            "prompt": 0,
+                            "completion": 0,
+                            "total": 0,
+                            "createTime": "2025-02-14 08:34:56"
+                        },
+                        {
+                            "id": 379,
+                            "modelType": "gpt-4o",
+                            "prompt": 0,
+                            "completion": 0,
+                            "total": 0,
+                            "createTime": "2025-02-14 08:34:55"
+                        },
+                        {
+                            "id": 381,
+                            "modelType": "deepseek-chat",
+                            "prompt": 0,
+                            "completion": 0,
+                            "total": 0,
+                            "createTime": "2025-02-14 08:34:56"
+                        }
+                    ]
+                }
+            )
+
     def start(self):
         self.app.run(port=self.port)
 

@@ -1,31 +1,5 @@
 from langchain_core.prompts import ChatPromptTemplate
 
-conversation_topic_planner_prompt = ChatPromptTemplate.from_template(
-    """
-    You are a conversation topic planner in a RPG game.
-    Your personal profile is: {character_stats}.
-    This is your memory of yesterday's actions: {memory}.
-    Your current personality is: {personality}.
-    
-    You are now talking with: {target_profile}.
-    
-    Now generate one topic for this conversation.
-    The topic style should be {style}.
-    The topic should only focus on your action descriptions and reflections.
-    Never talk about web3, blockchain, economy, finance, crypto-finance or other similar topics.
-    
-    These are your topics for yesterday {past_topics}.
-    These are your topics for today {topic_list}.
-    Your new topic should be different from these topics.
-    
-    There are some other requirements for the topic {topic_requirements}.
-    
-    You should generate one topic in English and add an style pattern before.
-    The style pattern must be the same as the style you received.
-    Here are some examples.
-    "Positive: Discuss food price in the market.", "Negative: Insult others on clothing.", "Positive: Share good learning habits."
-    """
-)
 
 conversation_generator_prompt = ChatPromptTemplate.from_template(
     """
@@ -57,13 +31,13 @@ conversation_generator_prompt = ChatPromptTemplate.from_template(
 
 simple_content_prompt = ChatPromptTemplate.from_template(
     """
-    Generate a conversation about {type} between two celebrities: from {from_name} to {to_name}.
+    Generate a conversation about {type} between two celebrities: from {my_name} to {target_name}.
      
     The conversation should be explosive, intense, and create a huge buzz among the public.
     The topic is {topic}.
     
-    {from_name} thinks their relation is {relation_from}.
-    {to_name} thinks their relation is {relation_to}.
+    {my_name} thinks their relation is {relation_from}.
+    {target_name} thinks their relation is {relation_to}.
     
     The conversation should not exceed 5 rounds, and each person should speak no more than 20 words.:
     
@@ -71,32 +45,13 @@ simple_content_prompt = ChatPromptTemplate.from_template(
     Each line start with the speaker's name, after that comes a colon, then his words.
     If one speaker finish his sentence, start a new line for the next speaker.
     Here is an example: 
-    {from_name}: sentence1
-    {to_name}: sentence2
-    {from_name}: sentence3
-    {to_name}: sentence4
+    {my_name}: sentence1
+    {target_name}: sentence2
+    {my_name}: sentence3
+    {target_name}: sentence4
    """
 )
 
-conversation_check_prompt = ChatPromptTemplate.from_template(
-    """
-    You are required to check whether it is needed to start this conversation.
-   
-    Your profile is: {profile}.
-    You have finished some conversations with this guy today {finished_talk}. 
-    Now you need to determine whether you need to start this conversation: {current_talk}.
-    
-    You need to go through the following two steps:
-    First summarize the topics of the finished conversations.
-    Then if you have talked about some similar topics, you should not start this conversation.
-    
-    Do not cancel the conversation unless you have talked about the same topic.
-    Do not cancel insulting or abuse topics.  
-     
-    After check, if your decision is this conversation is no longer needed, return FALSE.
-    Otherwise, return TRUE. 
-    """
-)
 
 impression_update_prompt = ChatPromptTemplate.from_template(
     """

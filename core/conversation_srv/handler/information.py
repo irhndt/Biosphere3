@@ -131,12 +131,14 @@ def load_action(state: ConversationState, current_talk: ConversationTask):
 
 
 def strip_relation(impression: str):
+    relation_info = ""
     try:
         relation_start = impression.find("relation:") + len("relation:")
         relation_end = impression.find("emotion:")
         relation_info = impression[relation_start:relation_end].strip()
     except Exception as e:
         logger.error(f"Error in stripping relation from impression: {e}")
+    if relation_info == "":
         relation_info = "Strangers."
         logger.warning(f"Using default relation: {relation_info}")
     return relation_info
@@ -156,7 +158,7 @@ def load_impression(state: ConversationState, current_talk: ConversationTask):
     if impression_response["data"]:
         current_impression_from = impression_response["data"][0]
     else:
-        current_impression_from = []
+        current_impression_from = ""
     logger.info(
         f"The current impression from User {state['userid']} to User {current_talk['to_id']} is {current_impression_from}"
     )
@@ -174,7 +176,7 @@ def load_impression(state: ConversationState, current_talk: ConversationTask):
     if impression_response["data"]:
         current_impression_to = impression_response["data"][0]
     else:
-        current_impression_to = []
+        current_impression_to = ""
     logger.info(
         f"The current impression from User {current_talk['to_id']} to User {state['userid']} is {current_impression_to}"
     )
