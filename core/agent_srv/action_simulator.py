@@ -7,6 +7,8 @@ import ast
 
 
 class ActionSimulator:
+    SIMULATE_LIMIT = 50
+
     def __init__(self):
         # action_rules = self.load_action_rules()
         self.action_runner = ActionRunner()
@@ -40,7 +42,7 @@ class ActionSimulator:
             self.final_action_list.extend(actions)
         self.final_check_location()
 
-        return self.final_action_list
+        return self.final_action_list[: ActionSimulator.SIMULATE_LIMIT]
 
     def load_action_rules(self):
         """
@@ -120,7 +122,7 @@ class ActionRunner:
             self.seedoctor(action_args, state)
 
         if action_name == "work":
-            self.work(action_args, state)
+            self.actions = self.work(action_args, state)
 
         if action_name == "use":
             self.use(action_args, state, market_data)
@@ -230,10 +232,10 @@ class ActionRunner:
             self.actions.insert(-1, "goto school")
             state["location"] = "school"
 
-        state["money"] -= hours * 100
-        state["energy"] -= hours * 10
+        state["money"] -= hours * 50
+        state["energy"] -= hours * 3
         state["hungry"] -= hours * 2
-        state["education_experience"] += hours * 10
+        state["education_experience"] += hours * 5
         return self.actions
 
     def seedoctor(self, action_args: List[str], state: Dict):
@@ -258,8 +260,8 @@ class ActionRunner:
             self.actions.insert(-1, "goto hospital")
             state["location"] = "hospital"
 
-        state["money"] -= hours * 100
-        state["health"] += hours * 10
+        state["money"] -= hours * 50
+        state["health"] += hours * 20
         state["hungry"] -= hours * 2
         return self.actions
 
@@ -267,28 +269,46 @@ class ActionRunner:
         """
         Work to earn money
         """
+        actions = []
         try:
             # test if the args[0] is a number
             hours = int(action_args[0])
         except ValueError:
             # Current: Give up work
-            self.actions = []
-            return self.actions
+            return []
 
         if state["occupation"] == "Unemployed":
             # Current: Give up work
-            self.actions = []
-            return self.actions
+            return []
+        if hours > 8:
+            # Decompose the work action into multiple small actions
+            work_actions = []
+            for i in range(hours // 8):
+                if i == hours // 8 - 1:
+                    work_actions.append(self.work([str(hours % 8)], state))
+                else:
+                    work_actions.append(self.work(["8"], state))
+
+            return work_actions
+
+        state["energy"] -= hours * 10
+        state["money"] += hours * self.get_hourly_salary(state["occupation"])
+        state["hungry"] -= hours * 2
+
+        if state["energy"] < 0:
+            lack_energy = -state["energy"] // 10 + 1
+            actions.insert(0, f"sleep {lack_energy}")
+            actions.insert(0, "goto home")
+            state["location"] = "home"
 
         if state["location"] != state["work_place"]:
             # add goto action
-            self.actions.insert(-1, f"goto {state['work_place']}")
+            actions.insert(len(actions), f"goto {state['work_place']}")
             state["location"] = state["work_place"]
 
-        state["money"] += hours
-        state["energy"] -= hours * 10
-        state["hungry"] -= hours * 2
-        return self.actions
+        actions.append(f"work {hours}")
+
+        return actions
 
     def use(self, action_args: List[str], state: Dict, market_data: Dict):
         """
@@ -360,8 +380,15 @@ class ActionRunner:
 
         cost = self.compute_amm_cost("buy", action_args, market_data)
         if state["money"] < cost:
-            # Current: Give up buy
-            self.actions = []
+            # Current: if have occupation, work to earn money
+            # Else, Give up buy
+            # self.actions = []
+            if state["occupation"] != "Unemployed":
+                lack_money = cost - state["money"]
+                work_hours = lack_money / self.get_hourly_salary(state["occupation"])
+                self.actions = self.work([str(work_hours)], state) + [
+                    "buy " + " ".join(action_args)
+                ]
             return self.actions
 
         for m_data in market_data:
@@ -437,9 +464,8 @@ class ActionRunner:
         self, state: Dict, item_type: str, item_num: int
     ):
         actions = self.generate_craft_sequence(state, item_type, item_num)
-        # print("before_check_actions: ", actions)
         actions = self.check_every_craft_action(actions, state)
-        # print("after_check_actions: ", actions)
+
         return actions
 
     def generate_craft_sequence(self, state: Dict, item_type: str, item_num: int):
@@ -541,8 +567,6 @@ class ActionRunner:
         for insert_index in insert_index_list[::-1]:
             actions.insert(insert_index["index"], insert_index["action"])
 
-        # TODO: add hungery and health check mechanism
-
         return actions
 
     def decompose_large_craft_actions(self, actions):
@@ -597,9 +621,6 @@ class ActionRunner:
         return trade_money
 
     def craft_or_buy_eating_stuff(self, state, recover_hungry):
-        """
-        Craft or buy eating stuff
-        """
         # Given the initial hungry value, craft or buy eating stuff
         # 1. select a random eating stuff
         # 2. craft the eating stuff! (if the character has the materials or it doesn't need materials)
@@ -652,6 +673,32 @@ class ActionRunner:
         state["hungry"] = min(100, state["hungry"] + num * hungry_dict[food])
         return actions
 
+    def get_hourly_salary(self, occupation):
+        """
+        Get the hourly salary of the occupation
+        """
+        salary_dict = {
+            "Unemployed": 0,
+            "Intern": 30,
+            "Trainee": 30,
+            "Assistant": 50,
+            "Programmer": 40,
+            "Researcher": 50,
+            "Manager": 80,
+            "Director": 100,
+            "Chief Officer": 150,
+            "President": 200,
+            "Chairman": 250,
+            "Guard": 15,
+            "Cleaner": 15,
+            "Gardener": 25,
+            "Police": 40,
+            "Cook": 25,
+            "Librarian": 40,
+            "Store Clerk": 25,
+        }
+        return salary_dict[occupation]
+
 
 if __name__ == "__main__":
     # from core.agent_srv.node_engines
@@ -669,11 +716,13 @@ if __name__ == "__main__":
         # "craft pear 5",
         # "goto home",
         # "sleep 10",
-        "sell a100 2",
+        # "sell a100 2",
+        "work 3",
     ]
     initial_state = asyncio.run(utils.get_initial_state_from_db(790456, "websocket"))[
         "character_stats"
     ]
+    initial_state["occupation"] = "Intern"
     print(initial_state)
     market_data = utils.get_amm_data_from_db()
     action_simulator.simulate(action_list, initial_state, market_data)
