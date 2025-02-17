@@ -85,7 +85,9 @@ class AI_WS_Server:
                             self.current_day = new_day
                         # At the end of the week, we will allocate cv submission
                         if self.current_day % 7 == 1:
-                            asyncio.create_task(self.cv_submission(agent_instance))
+                            asyncio.create_task(
+                                self.cv_submission(agent_instance, data)
+                            )
                         elif self.current_day % 7 == 2:
                             asyncio.create_task(
                                 self.mayer_decision(self.current_day / 7 + 1)
