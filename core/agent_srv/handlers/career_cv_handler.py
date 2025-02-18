@@ -249,9 +249,9 @@ class MayorDecisionHandler(BaseHandler):
                 for cv in cvs
                 if cv["jobid"] == public_work["job_id"]
             ]
-            logger.info(f"🧔 Candidates: {[candidate["characterId"] for candidate in candidates]}")
+            logger.info(f"🧔 Candidates: {[candidate['characterId'] for candidate in candidates]}")
             formatted_candidates = "\n\n".join(
-                f'characterId: {candidate["characterId"]}\nstudyxp: {candidate["studyxp"]}\npastExperience: {candidate["pastExperience"]}\nCV: {candidate["CV"]}'
+                f"characterId: {candidate['characterId']}\nstudyxp: {candidate['studyxp']}\npastExperience: {candidate['pastExperience']}\nCV: {candidate['CV']}"
                 for candidate in candidates
             )
             candidates_str = f"""# Candidate Profiles\n{formatted_candidates}\n"""
