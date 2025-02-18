@@ -116,7 +116,7 @@ class PlanningHandler(BaseHandler):
             state,
             DetailedMetaActionSequence,
         )
-        state["decision"]["detailed_meta_seq"] = []
+        state["decision"]["detailed_meta_seq"].clear()
         for craft_and_trade in crafting_and_trading_sequence.action_sequence:
             state["decision"]["detailed_meta_seq"].append(craft_and_trade.model_dump())
 
@@ -133,6 +133,8 @@ class PlanningHandler(BaseHandler):
             logger.warning("ActionSimulator Failed, use the original sequence")
             print(traceback.format_exc())
             simulate_list = state["decision"]["meta_seq"]
+
+        state["decision"]["expanded_meta_seq"].clear()
         for item in simulate_list:
             state["decision"]["expanded_meta_seq"].append(item)
         logger.info(
