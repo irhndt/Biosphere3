@@ -14,7 +14,7 @@ class ActionSimulator:
         self.action_runner = ActionRunner()
         self.final_action_list = []
 
-    def simulate_single_action(self, action: str, state, market_data):
+    def simulate_single_action(self, action: str, state):
         """
         Simulate the action on the state, return the next state and reward
         """
@@ -25,20 +25,20 @@ class ActionSimulator:
             action_name,
             action_args,
             state,
-            market_data,
         )
 
     def simulate(self, action_list, initial_state, market_data):
         """
         Simulate the action list on the initial state, return the final state and reward
         """
+        self.action_runner.market_data = market_data
         state = copy.deepcopy(initial_state)
         state["inventory"] = {
             item.lower(): num for item, num in state["inventory"].items()
         }
         state["location"] = ""
         for action in action_list:
-            actions = self.simulate_single_action(action, state, market_data)
+            actions = self.simulate_single_action(action, state)
             self.final_action_list.extend(actions)
         self.final_check_location()
 
@@ -101,9 +101,7 @@ class ActionRunner:
 
         return final_recipes, cost_dict, location_dict
 
-    def run_action(
-        self, action_name: str, action_args: List[str], state: Dict, market_data: Dict
-    ):
+    def run_action(self, action_name: str, action_args: List[str], state: Dict):
         """
         Run the action on the state, return the next state and reward
         """
@@ -125,16 +123,16 @@ class ActionRunner:
             self.actions = self.work(action_args, state)
 
         if action_name == "use":
-            self.use(action_args, state, market_data)
+            self.use(action_args, state, self.market_data)
 
         if action_name == "buy":
-            self.buy(action_args, state, market_data)
+            self.buy(action_args, state, self.market_data)
 
         if action_name == "sell":
-            self.sell(action_args, state, market_data)
+            self.sell(action_args, state, self.market_data)
 
         if action_name == "craft":
-            self.actions = self.craft(action_args, state, market_data)
+            self.actions = self.craft(action_args, state, self.market_data)
 
         if state["hungry"] <= 30:
             if state["hungry"] < 0:
@@ -603,6 +601,10 @@ class ActionRunner:
         """
         trade_item = action_args[0]
         trade_amount = int(action_args[1])
+
+        # print("trade_item: ", trade_item)
+        # print("trade_amount: ", trade_amount)
+        # print("market_data: ", market_data)
         item_market_data = next(
             item for item in market_data if item["itemName"].lower() == trade_item
         )
@@ -723,7 +725,9 @@ if __name__ == "__main__":
         "character_stats"
     ]
     initial_state["occupation"] = "Intern"
+    initial_state["hungry"] = 0
     print(initial_state)
     market_data = utils.get_amm_data_from_db()
+    print("initial_market_data: ", market_data)
     action_simulator.simulate(action_list, initial_state, market_data)
     pprint(action_simulator.final_action_list)
