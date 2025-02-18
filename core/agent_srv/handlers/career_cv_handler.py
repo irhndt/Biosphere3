@@ -1,6 +1,6 @@
 from .base_handler import BaseHandler
 from core.agent_srv.prompts import *
-from core.agent_srv.node_model import NewCV, MayorDecision
+from core.agent_srv.node_model import NewCV, MayorDecision, MayorDecisionBatchly
 from core.agent_srv.utils import *
 from core.db.api_client import agent_api, game_api
 from loguru import logger
@@ -82,6 +82,10 @@ class CareerCVHandler(BaseHandler):
         logger.info(f"📃 CV: {cv}")
         if cv.job_id == 0:
             logger.info("📃 CV: No job selected. Agent want to keep the original job. ")
+            instance.state["cv"] = {
+                "job_id": 0,
+                "content": "",
+            }
             return
 
         decision_job_name = get_job_name(cv.job_id, all_public_jobs)
@@ -97,24 +101,29 @@ class CareerCVHandler(BaseHandler):
             "election_status": "not_yet",
         }
         agent_api.request_sync("POST", "/cv/", data=cv_request)
-        mayor_decision = await self.generate_mayor_decision(
-            cv, userid, experience, education, week
-        )
-        if instance and instance.websocket:
-            response = await instance.send_message(
-                {
-                    "characterId": userid,
-                    "messageName": "mayor_decision",
-                    "messageCode": 10,
-                    "data": {
-                        "jobId": cv.job_id,
-                        "jobName": decision_job_name,
-                        "cv": cv.cv,
-                        **mayor_decision,
-                    },
-                }
-            )
-            instance.log_message("received", json.dumps(response))
+        instance.state["decision"]["cv"] = {
+            "job_id": cv.job_id,
+            "content": cv.cv,
+            "studyxp": experience,
+        }
+        # mayor_decision = await self.generate_mayor_decision(
+        #     cv, userid, experience, education, week
+        # )
+        # if instance and instance.websocket:
+        #     response = await instance.send_message(
+        #         {
+        #             "characterId": userid,
+        #             "messageName": "mayor_decision",
+        #             "messageCode": 10,
+        #             "data": {
+        #                 "jobId": cv.job_id,
+        #                 "jobName": decision_job_name,
+        #                 "cv": cv.cv,
+        #                 **mayor_decision,
+        #             },
+        #         }
+        #     )
+        #     instance.log_message("received", json.dumps(response))
 
     async def generate_mayor_decision(
         self,
@@ -177,3 +186,136 @@ class CareerCVHandler(BaseHandler):
             "mayor_decision": mayor_decision.decision,
             "mayor_comments": mayor_decision.comments,
         }
+
+    ## Renew Mechanism:
+    # Now, we need to check job every day. So there are some changes:
+    # 1. Add a daily message for game end to trigger the cv submission
+    # 2. Change the cv generate function to be a daily check function
+    # 3. Change the mayor decision into a mechanism that can check the daily cvs of each occupation and make decisions
+
+
+class MayorDecisionHandler(BaseHandler):
+    async def generate_mayor_decision(self, week, character_manager):
+        mayer_decision_planner = self.create_planner(
+            mayor_decision_prompt,
+            "gpt-4o-mini",
+            MayorDecisionBatchly,
+            0.5,
+        )
+        cvs = agent_api.request_sync(
+            method="GET",
+            endpoint="/cv/",
+            params={"week": week, "election_status": "not_yet"},
+        )
+        cvs = self.filter_cvs(cvs)
+        job_ids = list({cv["jobid"] for cv in cvs})
+        if not job_ids:
+            logger.info("🧔 No new CVs to process.")
+            return
+        logger.info(f"🧔 Processing CVs for jobs: {job_ids}")
+        public_works = game_api.request_sync(
+            method="GET", endpoint="/publicWork/getAll"
+        )
+        # filter the public works that have new CVs
+        filtered_public_works = [
+            {
+                "job_id": work["id"],
+                "jobType": work["jobType"],
+                "jobName": work["jobName"],
+                "jobPlace": work["jobPlace"],
+                "minimum_education": work["education"],  
+                "studyxp": work["experience"],  
+                "number_of_positions": work["jobAvailable"],  
+            }
+            for work in public_works
+            if work["id"] in job_ids
+        ]
+
+        # print(filtered_public_works)
+        for public_work in filtered_public_works:
+            logger.info(f"🧔 Processing public work: {public_work['jobName']}")
+            public_work_str = f"""# Job Requirements for Public Work\n{convert_to_table_string({'public_work_info':public_work})}\n"""
+            candidates = [
+                {
+                    "characterId": cv["characterId"],
+                    "studyxp": cv["studyxp"],
+                    "pastExperience": (
+                        "No work Experience"
+                        if not cv["experience"]
+                        else cv["experience"]
+                    ),
+                    "CV": cv["CV_content"],
+                }
+                for cv in cvs
+                if cv["jobid"] == public_work["job_id"]
+            ]
+            logger.info(f"🧔 Candidates: {[candidate['characterId'] for candidate in candidates]}")
+            formatted_candidates = "\n\n".join(
+                f"characterId: {candidate['characterId']}\nstudyxp: {candidate['studyxp']}\npastExperience: {candidate['pastExperience']}\nCV: {candidate['CV']}"
+                for candidate in candidates
+            )
+            candidates_str = f"""# Candidate Profiles\n{formatted_candidates}\n"""
+            # print(candidates_str)
+
+            payload = {
+                "public_work_str": public_work_str,
+                "candidates_str": candidates_str,
+                "job_name": public_work["jobName"],
+                "number_of_positions": public_work["number_of_positions"],
+            }
+            # logger.info(mayor_decision_prompt.format(**payload))
+            mayer_decision_batchly = await self.api_retry(
+                mayer_decision_planner,
+                payload,
+                None,
+                MayorDecisionBatchly,
+            )
+            logger.success(f"🧔 Mayor decision: {mayer_decision_batchly}")
+            # avoid the case that the number of positions is less than the number of candidates
+            decisions = mayer_decision_batchly.decision[:public_work["number_of_positions"]]
+            for candidate in candidates:
+                characterId = candidate["characterId"]
+                election_status = (
+                    "succeeded"
+                    if characterId in decisions
+                    else "failed"
+                )
+
+                agent_api.request_sync(
+                    method="PUT",
+                    endpoint="/cv/election_status",
+                    data={
+                        "characterId": characterId,
+                        "jobid": public_work["job_id"],
+                        "week": week,
+                        "election_status": election_status,
+                    },
+                )
+
+                back_msg = {
+                    "characterId": characterId,
+                    "messageName": "mayor_decision",
+                    "messageCode": 10,
+                    "data": {
+                        "decision": "yes" if election_status == "succeeded" else "no",
+                        "jobId": public_work["job_id"],
+                        # "cv": "Not use now",
+                        # "comments": "Not use now",
+                    },
+                }
+                if character_manager.has_character(characterId):
+                    await character_manager.get_character(
+                            characterId
+                        ).agent_instance.send_message(back_msg)
+                    
+
+    def filter_cvs(self, cvs):
+        cvs = [
+            cv for cv in cvs if cv["CV_content"] and cv["studyxp"]
+        ]
+        cv_dict = {}
+        for cv in cvs:
+            # filter redundant cv of the same character
+            cv_dict[cv["characterId"]] = cv
+        return list(cv_dict.values())
+        

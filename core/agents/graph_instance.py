@@ -135,9 +135,11 @@ class LangGraphInstance:
                     )
                     self.schedule_event("CHARACTER_ARC")
                     self.schedule_event("DAILY_REFLECTION")
-                    await self.career_cv.generate_cv(self.state["instance"], msg)
+                    # await self.career_cv.generate_cv(self.state["instance"], msg)
                     await asyncio.sleep(60)
                     clear_decision(self.state)
+                elif message_name == "cv_submission":
+                    await self.career_cv.generate_cv(self.state["instance"], msg)
                 else:
                     self.logger.error(
                         f"User {self.user_id}: Unknown message: {message_name}"
@@ -145,6 +147,7 @@ class LangGraphInstance:
             except Exception as e:
                 self.logger.error(f"User {self.user_id}: Error in msg_processor: {e}")
                 self.logger.error(traceback.format_exc())
+                raise e
 
     async def event_scheduler(self):
         try:
@@ -196,6 +199,7 @@ class LangGraphInstance:
                     self.schedule_event(event_name)
         except Exception as e:
             self.logger.error(f"User {self.user_id}: Error in run_event: {e}")
+            raise e
 
     def _get_workflow(self):
         workflow = StateGraph(RunningState)

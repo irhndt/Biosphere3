@@ -57,93 +57,6 @@ Based on the information above, please generate the daily objectives for the use
 """
 )
 
-meta_action_sequence_prompt = ChatPromptTemplate.from_template(
-    """
-You are the meta action sequence planner in a RPG game. Come up with a player action sequence based on the daily objectives.
-Here are some information you need to know:
-Daily Objective: {daily_objective}
-Tool Functions: {tool_functions}
-Available Locations: {locations}
-Market Data: {market_data}
-User's Inventory: {inventory}
-Task Priority: {task_priority}
-Some additional requirements: {additional_requirements}
-
-Remind:
-1. You should carefully check the tool functions and available locations mentioned above, and should not deviate from these contents.
-2. Be careful to the Constraints, you MUST check if the requirements are met before planning the action sequence.
-3. Try to finish the tasks with the highest priority first, the order of the priority is shown in the task_priority.
-4. The total number of the meta actions should not exceed {max_actions}.
-
-Output Specifications:
-You should output four lists: a meta action sequence, an action emoji sequence, a state emoji sequence and a description sequence.
-1. The first output should be a list of meta actions. you SHOULD NOT output other formats or other description words
-2. The second output is a list of action emoji that strictly corresponding to every meta action. 
-For each meta action, you must generate one emoji and list them in the same order as the meta action.
-3. The third output is a list of state emoji that show the agent state when conducting each meta action.
-This could be a more detailed objective of the action or the agents' emotion.
-For each meta action, you must generate one emoji and list them in the same order as the meta action.
-The emojis should be different.
-4. The fourth output is a list of simple description that describes the meta actions and agent's feeling.
-For each meta action, you must generate one interesting description and list them in the same order as the meta action.
-The description have two parts: one is exactly the action and the other is an interesting description about the feeling and emotion of the agent.
-For example: go to home, feel tired and want to have a rest; study for two hours, unwilling but still have to do so.
-
-Example Output:
-meta_action:[meta_action1 param1, meta_action2 param2, meta_action3 param3]
-action_emoji:[action_emoji1, action_emoji2, action_emoji3]
-state_emoji:[state_emoji1, state_emoji2, state_emoji3]
-description_emoji:[description1, description2, description3]
-"""
-)
-
-meta_seq_adjuster_prompt = ChatPromptTemplate.from_template(
-    """
-You are the meta action sequence adjuster in a RPG game. Adjust the given meta action sequence based on the execution results.
-Here are some information you need to know:
-Current Meta Action Sequence: {meta_seq}
-Tool Functions: {tool_functions}
-Available Locations: {locations}
-The following action has failed and needs to be replanned:
-Failed Action: {failed_action}
-Error Message: {error_message}
-Some additional requirements: {additional_requirements}
-
-Remind:
-1. You should carefully check the tool functions and available locations mentioned above, and should not deviate from these contents.
-2. You MUST carefully check and adjust the meta action sequence according to these constraints.
-3. If the action is failed and replan is needed, your alternative plan should be less than {replan_time_limit} actions.
-4. Here are some basic rules of adjustment:
-    - If the error is location-related, ensure proper navigation
-    - If the error is resource-related, add necessary resource gathering steps (eg. craft or buy)
-    - If the error is money-related, add necessary money-related actions (eg. sell or work), or just delete the action.
-    - If the error is energy-related, add necessary sleep action (eg. sleep)
-5. Still achieve the original objectives if possible
-6. Avoid the failed action or its problematic conditions
-7. Includes any necessary preparatory steps according to constraints
-
-Output Specifications:
-You should output four lists: a meta action sequence, an action emoji sequence, a state emoji sequence and a description sequence.
-1. The first output should be a list of meta actions. you SHOULD NOT output other formats or other description words
-2. The second output is a list of action emoji that strictly corresponding to every meta action. 
-For each meta action, you must generate one emoji and list them in the same order as the meta action.
-3. The third output is a list of state emoji that show the agent state when conducting each meta action.
-This could be a more detailed objective of the action or the agents' emotion.
-For each meta action, you must generate one emoji and list them in the same order as the meta action.
-The emojis should be different.
-4. The fourth output is a list of simple description that describes the meta actions and agent's feeling.
-For each meta action, you must generate one interesting description and list them in the same order as the meta action.
-The description have two parts: one is exactly the action and the other is an interesting description about the feeling and emotion of the agent.
-For example: go to home, feel tired and want to have a rest; study for two hours, unwilling but still have to do so.
-
-Example Output:
-meta_action:[meta_action1 param1, meta_action2 param2, meta_action3 param3]
-action_emoji:[action_emoji1, action_emoji2, action_emoji3]
-state_emoji:[state_emoji1, state_emoji2, state_emoji3]
-description_emoji:[description1, description2, description3]
-"""
-)
-
 generate_character_arc_prompt = ChatPromptTemplate.from_template(
     """
 You are a character arc generator in a RPG game. Your job is to generate a character arc for the user.
@@ -331,150 +244,6 @@ accommodation_decision_prompt = ChatPromptTemplate.from_template(
 )
 
 
-crafting_and_trading_prompt_old = ChatPromptTemplate.from_template(
-    """You are an advanced Crafting and Trading Planner in a RPG. Your objective is to help the user plan out optimal crafting and trading actions to achieve daily objectives and maximize profit. Below is the information you need to consider:
-
-1. **User State**  
-{character_stats}  
-This contains all current state information of the character, including energy, money, occupation (if any), health, hunger, education level, or any other relevant stats.
-
-2. **Inventory**  
-{inventory}  
-This details all items currently in the player's possession and their quantities.
-
-3. **Market Data**  
-{market_data}  
-This includes the current selling price and quantity availability of all items in the market. Use these prices to determine the cost of buying and the revenue from selling.
-
-4. **Daily Objectives**
-{daily_objectives}
-This is the primary list to achieve for the day.
----
-
-### Action and Crafting System Details
-
-Below are detailed explanations of each possible action, including constraints and requirements. **You must validate that all constraints (location, energy, money, item availability) are satisfied before recommending an action.**
-
-1. **study [hours:int]**  
-   - **Effect**:  
-     - Costs money (100 per hour).  
-     - Consumes energy (10 per hour).  
-     - Gains education experience (10 per hour).  
-   - **Constraints**:  
-     - Must be in school.  
-     - Must have enough money to afford the session.
-
-2. **work [hours:int]**  
-   - **Effect**:  
-     - Earns money (based on salary per hour).  
-     - Consumes energy (10 per hour).  
-   - **Constraints**:  
-     - Must have an occupation.  
-     - Must be in the corresponding workplace to that occupation.
-
-3. **buy [itemType:string] [amount:int]**  
-   - **Effect**: Purchases items from the market, costing money according to the market price.  
-   - **Constraints**:  
-     - Must have enough money.  
-     - The market must have sufficient stock (consult Market Data).
-
-4. **sell [itemType:string] [amount:int]**  
-   - **Effect**: Sells items to the market to earn money according to the market price.  
-   - **Constraints**:  
-     - Must have the items in the inventory.
----
-
-### Crafting System Details
-
-You can **craft** items if you have the required materials and enough energy. Each recipe has specific constraints on the required materials, how much energy it costs, and the resulting product.
-Action format: `craft [itemType:string] [amount:int]`
-
-- **Basic Energy Cost** for certain items (5 per item):
-1. apple (no materials required, be in farm)
-2. wheat (no materials required, be in farm)
-3. pear (no materials required, be in farm)
-4. rice (no materials required, be in farm)
-5. chicken (requires 1 feed, be in farm)
-6. beef (requires 3 feed, be in farm)
-7. fish (no materials required, be in farm)
-8. wood (no materials required, be in farm)
-
-9. iron_ore (no materials required, be in mine)
-10. copper_ore (no materials required, be in mine)
-11. silicon_ore (no materials required, be in mine)
-
-- **Moderate Energy Cost** for certain items (10 per item):
-1. feed (requires 1 rice, be in foodfactory)
-2. flour (requires 1 wheat, be in foodfactory)
-3. bread (requires 1 flour, be in foodfactory)
-4. apple_pie (requires 1 apple, 1 flour, be in foodfactory)
-5. fruit_salad (requires 1 apple, 1 pear, be in foodfactory)
-6. chicken_salad (requires 1 chicken, 1 fruit_salad, be in foodfactory)
-7. beef_rice (requires 1 beef, 1 rice, be in foodfactory)
-8. sushi (requires 1 fish, 1 rice, be in foodfactory)
-
-9. iron_ingot (requires 3 iron_ore, be in factory)
-10. wooden_board (requires 3 wood, be in factory)
-11. copper_ingot (requires 3 copper_ore, be in factory)
-12. pure_silicon (requires 3 silicon_ore, be in factory)
-13. pickaxes (requires 1 iron_ingot, 1 wood_boards, be in factory)
-14. iron_plate (requires 1 iron_ingot, be in factory)
-15. pulp (requires 1 wood_boards, be in factory)
-16. books (requires 3 pulp, be in factory)
-17. copper_wire (requires 1 copper_ingots, be in factory)
-18. transistor (requires 1 pure_silicon, be in factory)
-
-- **High Energy Cost** for advanced items (20 per item):
-1. circuit_board (requires 1 iron_plates, 2 copper_wire, be in factory)
-2. a100 (requires 2 circuit_board, 2 transistors, be in factory)
-3. h100 (requires 2 a100, be in factory)
-4. h200 (requires 2 h100, be in factory)
-5. b200 (requires 2 h200, be in factory)
-
----
-
-### Instructions
-
-1. **Consider the User's State and Goals**  
-   - Look at `User Stats` for energy, money, location, health, and any skill or stat that might limit crafting or working.  
-   - Verify items in `Inventory` and their quantities for crafting requirements.  
-   - Use `Market Data` to determine profitable buy/sell strategies.  
-   - Align the actions with `Daily Objectives` to meet or exceed the user's goals.
-
-2. **Validate Constraints**  
-   - Check that the user is at the correct location for an action (e.g., must be at “home” to sleep, must be at “school” to study, must be at “hospital” to seedoctor, etc.).  
-   - Make sure the user has enough money before recommending purchases or fee-based actions (study, seedoctor).  
-   - Ensure the user has enough energy and materials before recommending any crafting action.
-
-3. **Generate an Action Plan**  
-   - Create a list of recommended **action steps** in chronological order.  
-   - For each action, **explain briefly why** it is recommended (e.g., “sleep 5 hours to replenish energy before crafting”).  
-   - If relevant, factor in travel steps (`goto`) to move to the correct location.  
-   - Specify how many items to buy or sell, or how many hours to work/study/sleep, etc.  
-   - Include the **expected cost** in money or energy (where applicable) and the **expected profit** or benefit.
-
-4. **Build Crafting Chains**
-   - Notice that some items require other items as materials, you can craft only if you have the required materials.
-   - Notice that you can only start your crafting chain from the available crafting actions:
-        - Available Crafting Actions: {available_crafts}
-        - If you don't have the required materials, you can buy them from the market or craft them from the basic materials.
-   - The length of the actionlist is not limited, you can choose any number of actions to achieve the daily objectives.
-   - However, you should make sure that the user has enough energy and money to complete the actions.
----
-### Reference production graph:
-
-{production_graph}
-
-### Example of How to Structure the Output
-
-{example_output}
-
-
-
-Now, Your Output:
-"""
-)
-
 crafting_and_trading_prompt = ChatPromptTemplate.from_template(
     """You are an advanced Action List Planner in a RPG. Your objective is to help the user plan out a list of actions which fits the following constraints. Here is the information you need to consider below:
 
@@ -506,17 +275,17 @@ Below are detailed explanations of each possible action, including constraints a
 
 3. **study [hours:int]**  
    - **Action Effect**:  
-     - Costs money (100 per hour).  
-     - Consumes energy (10 per hour).  
-     - Gains education experience (10 per hour).  
+     - Costs money (50 per hour).  
+     - Consumes energy (3 per hour).  
+     - Gains education experience (5 per hour).  
    - **Constraints**:  
      - Must be in school.  
      - Must have enough money to afford the session.
 
 4. **seedoctor [hours:int]**  
    - **Action Effect**:  
-     - Costs money (100 per hour).  
-     - Gains health (10 per hour).  
+     - Costs money (50 per hour).  
+     - Gains health (20 per hour).  
    - **Constraints**:  
      - Must be in the hospital.  
      - Must have enough money to afford the session.
@@ -735,162 +504,6 @@ Your output:
 """
 )
 
-meta_action_general_part_refiner_prompt = ChatPromptTemplate.from_template(
-    """You are an advanced General Life Action Planner in a role-playing game (RPG). Your objective is to help the user plan out optimal daily actions, including crafting, trading, learning, and working, to achieve daily objectives and maximize overall efficiency and profit. Below is the information you need to consider:
-
-1. **User State**  
-   {character_stats}  
-   This contains all current state information of the character, including energy, money, occupation (if any), health, hunger, education level, location, and any other relevant stats.
-
-2. **Inventory**  
-   {inventory}  
-   This details all items currently in the player's possession and their quantities.
-
-3. **Market Data**  
-   {market_data}  
-   This includes the current selling price and quantity availability of all items in the market. Use these prices to determine the cost of buying and the revenue from selling.
-
-4. **Daily Objectives**  
-   {daily_objectives}  
-   This describes what the user wants to achieve for the day (e.g., earn a certain amount of money, craft specific items, increase certain stats, gain education experience).
-
----
-Below are detailed explanations of each possible action, including constraints and requirements. **You must validate that all constraints (location, energy, money, item availability) are satisfied before recommending an action.**
-
-1. **goto [placeName:string]**  
-   - **Effect**: Moves the character to a specific location.  
-   - **Constraints**: The placeName must be one of the following:  
-     (school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
-
-2. **sleep [hours:int]**  
-   - **Effect**: Recover energy (10 per hour).  
-   - **Constraints**: Must be at home.
-
-3. **study [hours:int]**  
-   - **Effect**:  
-     - Costs money (100 per hour).  
-     - Consumes energy (10 per hour).  
-     - Gains education experience (10 per hour).  
-   - **Constraints**:  
-     - Must be in school.  
-     - Must have enough money to afford the session.
-
-4. **seedoctor [hours:int]**  
-   - **Effect**:  
-     - Costs money (100 per hour).  
-     - Gains health (10 per hour).  
-   - **Constraints**:  
-     - Must be in the hospital.  
-     - Must have enough money to afford the session.
-
-5. **work [hours:int]**  
-   - **Effect**:  
-     - Earns money (based on salary per hour).  
-     - Consumes energy (10 per hour).  
-   - **Constraints**:  
-     - Must have an occupation.  
-     - Must be in the corresponding workplace to that occupation.
-
-6. **use [itemType:string] [amount:int]**  
-   - **Effect**: Consumes items from inventory to yield various benefits.  
-   - **Item Effects**:  
-     - apple: +10 hungry  
-     - pear: +15 hungry  
-     - bread: +25 hungry  
-     - applepie: +20 hungry  
-     - fruitsalad: +35 hungry  
-     - chickensalad: +35 hungry, +10 energy  
-     - beefrice: +50 hungry, +5 energy  
-     - sushi: +30 hungry  
-     - book: +10 education experience  
-   - **Constraints**:  
-     - Must have enough items in the inventory.
-
-7. **buy [itemType:string] [amount:int]**  
-   - **Effect**: Purchases items from the market, costing money according to the market price.  
-   - **Constraints**:  
-     - Must have enough money.  
-     - The market must have sufficient stock (consult Market Data).
-
-8. **sell [itemType:string] [amount:int]**  
-   - **Effect**: Sells items to the market to earn money according to the market price.  
-   - **Constraints**:  
-     - Must have the items in the inventory.
-  
-### Instructions for the Planner
-**Validate and Adjust Action Conditions**  
-   - **Location Constraints**:  
-     - Ensure each action is performed at the required location.  
-     - If not already at the necessary location, insert a `goto [placeName]` action before the required action.
-   - **Energy Constraints**:
-     - Check if there is sufficient energy to execute each action.  
-     - If energy is insufficient:  
-       - Reduce the number of executions of the current action. 
-       - Or break down the action into smaller steps and insert energy recovery actions (`goto home`, `sleep [hours]`) between them.
-   - **Money and Resource Constraints**:  
-     - Verify that the user has enough money for actions that require expenditure (e.g., `buy`, `study`, `seedoctor`).  
-     - Ensure there are enough materials in the inventory for crafting actions.
-
-### Current Craft and Trade Actions
-
-{current_trade_and_craft_sequence}
-
-
-### Example of How to Structure the Output
-
-{example_output}
-
-Now, Your Output:
-    """
-)
-
-
-# class MetaAction(BaseModel):
-#     """Meta action to follow in future"""
-
-#     action: str = Field(
-#         description="The action to take, e.g., 'goto workshop' or 'craft feed 5'"
-#     )
-#     cost: str = Field(description="Energy or resource cost")
-#     expected_effect: str = Field(
-#         description="Expected effect of the action, get from the model"
-#     )
-
-
-# class RefinedMetaActionSequence(BaseModel):
-#     """Refined meta action sequence to follow in future"""
-
-#     meta_action_sequence: List[MetaAction] = Field(description="meta action sequence")
-example_refine_action_sequence = """
-[
-    {
-        "action": "action1",
-        "cost": "25 energy total (5 energy per item * 5 items)",
-        "expected_effect": "Get X <item> from crafting"
-    },
-    {
-        "action": "action2",
-        "cost": "None",
-        "expected_effect": "Get X gold refund from selling"
-    },
-    {
-        "action": "sleep 3,
-        "cost": "None",
-        "expected_effect": "Recover energy 30 (3x10) from sleeping"
-    }
-    {
-        "action": "action3",
-        "cost": "X gold",
-        "expected_effect": ""
-    },
-    {
-        "action": "goto school",
-        "cost": "None",
-        "expected_effect": "Get to school, ready to study"
-    },
-    ...
-]
-"""
 
 replanner_prompt = ChatPromptTemplate.from_template(
     """You are an Action List Re-Planner for an RPG. You will receive the following data:
@@ -958,11 +571,11 @@ replanner_prompt = ChatPromptTemplate.from_template(
    - When you plan to sleep, you'd better sleep enough hours to reach full energy (100).
 
 3. **study [hours:int]**  
-   - Costs 100 money/hour, consumes 10 energy/hour, grants 10 education XP/hour.
+   - Costs 50 money/hour, consumes 3 energy/hour, grants 5 education XP/hour.
    - Must be in school and have enough money.
 
 4. **seedoctor [hours:int]**  
-   - Costs 100 money/hour, grants 10 health/hour.
+   - Costs 50 money/hour, grants 20 health/hour.
    - Must be in hospital and have enough money.
 
 5. **work [hours:int]**  
@@ -1350,4 +963,26 @@ Suppose the current state shows that the player has low energy, the current acti
 
 Now, using the information provided, please output your refined action and updated state in the required JSON format.
     """
+)
+
+mayor_decision_prompt = ChatPromptTemplate.from_template(
+    """As the mayor of the town, your task is to select up to {number_of_positions} suitable candidates for the "{job_name}" position from the list of applicants.
+
+{public_work_str}
+{candidates_str}
+
+# Requirements
+The "decision" field should contain a list of the selected candidates' characterIds.
+The "comments" field should provide a justification for choosing these candidates.
+The number of selected candidates must not exceed {number_of_positions}.
+
+The output format is in JSON format:
+{{
+    "decision": [1, 2, 3],   
+    "comments": "(The comments that justify the selection.)"
+}}
+
+Now, please select the most suitable candidates for the "{job_name}" position and provide your reasoning for the decision.
+Your output:
+"""
 )

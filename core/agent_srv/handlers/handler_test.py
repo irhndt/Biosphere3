@@ -3,6 +3,7 @@ from core.agents.graph_instance import LangGraphInstance
 from core.agent_srv.handlers import *
 from loguru import logger
 from collections import deque
+from core.main import CharacterManager
 
 
 class MainTest:
@@ -11,6 +12,7 @@ class MainTest:
         self.career_cv = CareerCVHandler()
         self.accommodation = AccommodationHandler()
         self.reflection = ReflectionHandler()
+        self.mayor_decision = MayorDecisionHandler()
         self.instance = LangGraphInstance(755928)
         self.instance.state = asyncio.run(
             utils.get_initial_state_from_db(755928, "websocket")
@@ -104,13 +106,18 @@ class MainTest:
                 "health": 100,
                 "studyXp": 10,
                 "education": "None",
-                "week": 1,
-                "date": 1,
+                "week": 3,
+                "date": 23,
                 "msg": "this is a message to sync new day",
             },
         }
 
         await self.career_cv.generate_cv(self.instance, msg)
+
+    async def test_decision(self):
+        character_manager = CharacterManager()
+        character_manager.add_character(755928, self.instance, None)
+        await self.mayor_decision.generate_mayor_decision(3, character_manager)
 
     async def test_accommodation(self):
         await self.accommodation.generate_accommodation_decision(self.state)
@@ -131,13 +138,16 @@ if __name__ == "__main__":
     # print(state)
     mainTest = MainTest()
     # TEST REPLAN ROUTINES
-    asyncio.run(mainTest.test_replan())
+    # asyncio.run(mainTest.test_replan())
 
     # # TEST PLANNING ROUTINES
     # asyncio.run(mainTest.test_plan())
 
     ## TEST CV ROUTINES
-    # asyncio.run(mainTest.test_cv())
+    asyncio.run(mainTest.test_cv())
+
+    ## TEST DECISION ROUTINES
+    asyncio.run(mainTest.test_decision())
 
     ## TEST ACCOMMODATION ROUTINES
     # asyncio.run(mainTest.test_accommodation())

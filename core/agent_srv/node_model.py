@@ -244,6 +244,13 @@ class RefinedActionsAndState(BaseModel):
     reason: str = Field(description="reason", default="None")
 
 
+class MayorDecisionBatchly(BaseModel):
+    """Batchly decision"""
+
+    decision: List[str] = Field(description="decision list of mayor")
+    comments: str = Field(description="comments for the decision")
+
+
 if __name__ == "__main__":
     import pprint
 
