@@ -5,7 +5,7 @@ from loguru import logger
 
 
 # a tool for transferring real_time to game_time
-def calculate_game_time(real_time=datetime.now(), day1_str="2024-7-1 3:00"):
+def calculate_game_time(real_time=datetime.now(), day1_str="2025-1-29 00:00"):
     day1 = datetime.strptime(day1_str, "%Y-%m-%d %H:%M")
     elapsed_time = real_time - day1
     game_elapsed_time = elapsed_time * 7
