@@ -602,9 +602,9 @@ class ActionRunner:
         trade_item = action_args[0]
         trade_amount = int(action_args[1])
 
-        print("trade_item: ", trade_item)
-        print("trade_amount: ", trade_amount)
-        print("market_data: ", market_data)
+        # print("trade_item: ", trade_item)
+        # print("trade_amount: ", trade_amount)
+        # print("market_data: ", market_data)
         item_market_data = next(
             item for item in market_data if item["itemName"].lower() == trade_item
         )
