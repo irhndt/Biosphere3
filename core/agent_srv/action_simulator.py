@@ -80,8 +80,9 @@ class ActionRunner:
     def __init__(self):
         self.actions = []
         self.market_data = {}
-        self.craft_recipes, self.cost_dict, self.location = self.load_craft_recipes()
-        # print(self.location)
+        self.craft_recipes, self.cost_dict, self.location, self.craft_location = (
+            self.load_craft_recipes()
+        )
 
     def load_craft_recipes(self):
         """
@@ -99,7 +100,9 @@ class ActionRunner:
 
         location_dict = json.load(open("core/files/location.json"))
 
-        return final_recipes, cost_dict, location_dict
+        craft_location = json.load(open("core/files/craft_location.json"))
+
+        return final_recipes, cost_dict, location_dict, craft_location
 
     def run_action(self, action_name: str, action_args: List[str], state: Dict):
         """
@@ -543,14 +546,14 @@ class ActionRunner:
 
             if action.startswith("craft"):
                 item_type = action.split(" ")[1]
-                if current_location != self.location[item_type][0]:
+                if current_location != self.craft_location[item_type]:
                     insert_index_list.append(
                         {
                             "index": index,
-                            "action": f"goto {self.location[item_type][0]}",
+                            "action": f"goto {self.craft_location[item_type]}",
                         }
                     )
-                    current_location = self.location[item_type][0]
+                    current_location = self.craft_location[item_type]
 
             if action.startswith("sleep"):
                 if current_location != "home":
