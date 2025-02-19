@@ -18,7 +18,7 @@ def change_conversation_target(state: ConversationState, current_talk: Conversat
     talking_response = make_api_request_sync(
         "GET", "/conversation/", params=talking_data
     )
-    if isinstance(talking_response["data"], list):
+    if isinstance(talking_response["data"], list) and talking_response["data"]:
         talking_conversation = talking_response["data"][0]
         talking_id = talking_conversation["from_id"]
         if talking_id == current_talk["to_id"]:
