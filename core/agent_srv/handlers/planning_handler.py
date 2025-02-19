@@ -116,7 +116,7 @@ class PlanningHandler(BaseHandler):
             state,
             DetailedMetaActionSequence,
         )
-        state["decision"]["detailed_meta_seq"].clear()
+        state["decision"]["detailed_meta_seq"] = []
         for craft_and_trade in crafting_and_trading_sequence.action_sequence:
             state["decision"]["detailed_meta_seq"].append(craft_and_trade.model_dump())
 

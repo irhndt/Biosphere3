@@ -565,6 +565,8 @@ class ActionRunner:
         for insert_index in insert_index_list[::-1]:
             actions.insert(insert_index["index"], insert_index["action"])
 
+        if actions[0].startswith("sleep"):
+            actions.insert(0, "goto home")
         return actions
 
     def decompose_large_craft_actions(self, actions):
@@ -709,17 +711,12 @@ if __name__ == "__main__":
 
     action_simulator = ActionSimulator()
     action_list = [
-        # "goto workshop",
-        # "craft wooden_board 1",
-        # "goto market",
-        # "sell rice 144",
-        # "goto orchard",
-        # "craft apple 5",
-        # "craft pear 5",
-        # "goto home",
-        # "sleep 10",
-        # "sell a100 2",
-        "work 3",
+        "goto home",
+        "sleep 10",
+        "goto farm",
+        "craft rice 6",
+        "craft feed 3",
+        "craft beef 1",
     ]
     initial_state = asyncio.run(utils.get_initial_state_from_db(790456, "websocket"))[
         "character_stats"

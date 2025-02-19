@@ -91,16 +91,18 @@ class ReflectionHandler(BaseHandler):
         character_info = game_api.request_sync(
             method="GET", endpoint=f"/characters/getById/{state['userid']}"
         )
-        character_arc = await character_arc_generator.ainvoke(
-            {
-                "character_stats": format_character_data(state["character_stats"]),
-                "character_info": character_info,
-                "daily_objectives": format_daily_obj(
-                    state["decision"]["daily_objective"]
-                ),
-                "daily_reflection": state["decision"]["reflection"],
-                "action_results": state["decision"]["action_result"],
-            }
+        payload = {
+            "character_stats": format_character_data(state["character_stats"]),
+            "character_info": character_info,
+            "daily_objectives": format_daily_obj(state["decision"]["daily_objective"]),
+            "daily_reflection": state["decision"]["reflection"],
+            "action_results": state["decision"]["action_result"],
+        }
+        character_arc = await self.api_retry(
+            character_arc_generator,
+            payload,
+            state,
+            CharacterArc,
         )
         character_arc_data = {
             "characterId": state["userid"],

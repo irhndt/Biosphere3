@@ -50,7 +50,7 @@ def get_market_data_from_db() -> dict:
 
 
 def get_amm_data_from_db() -> dict:
-    amm_response = game_api.request_sync(method="GET", endpoint="/ammPool/getAll1")
+    amm_response = game_api.request_sync(method="GET", endpoint="/ammPool/getAll")
     return amm_response
 
 
