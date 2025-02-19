@@ -138,10 +138,10 @@ if __name__ == "__main__":
     # print(state)
     mainTest = MainTest()
     # TEST REPLAN ROUTINES
-    # asyncio.run(mainTest.test_replan())
+    asyncio.run(mainTest.test_replan())
 
     # # TEST PLANNING ROUTINES
-    # asyncio.run(mainTest.test_plan())
+    asyncio.run(mainTest.test_plan())
 
     ## TEST CV ROUTINES
     asyncio.run(mainTest.test_cv())
@@ -150,4 +150,4 @@ if __name__ == "__main__":
     asyncio.run(mainTest.test_decision())
 
     ## TEST ACCOMMODATION ROUTINES
-    # asyncio.run(mainTest.test_accommodation())
+    asyncio.run(mainTest.test_accommodation())

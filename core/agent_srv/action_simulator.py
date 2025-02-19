@@ -80,8 +80,13 @@ class ActionRunner:
     def __init__(self):
         self.actions = []
         self.market_data = {}
-        self.craft_recipes, self.cost_dict, self.location = self.load_craft_recipes()
-        # print(self.location)
+        (
+            self.craft_recipes,
+            self.cost_dict,
+            self.location,
+            self.craft_location,
+            self.trade_location,
+        ) = self.load_craft_recipes()
 
     def load_craft_recipes(self):
         """
@@ -99,7 +104,11 @@ class ActionRunner:
 
         location_dict = json.load(open("core/files/location.json"))
 
-        return final_recipes, cost_dict, location_dict
+        craft_location = json.load(open("core/files/craft_location.json"))
+
+        trade_location = json.load(open("core/files/trade_location.json"))
+
+        return final_recipes, cost_dict, location_dict, craft_location, trade_location
 
     def run_action(self, action_name: str, action_args: List[str], state: Dict):
         """
@@ -172,6 +181,8 @@ class ActionRunner:
             "library",
             "supermarket",
             "canteen",
+            "ranch",
+            "forest",
         ]:
             # Current: Give up goto
             self.actions = []
@@ -400,6 +411,13 @@ class ActionRunner:
         if action_args[0] not in state["inventory"]:
             state["inventory"][action_args[0]] = 0
         state["inventory"][action_args[0]] += item_num
+        if state["location"] != self.trade_location[action_args[0]]:
+            buy_index = self.actions.index(f"buy {action_args[0]} {action_args[1]}")
+            self.actions.insert(
+                buy_index, f"goto {self.trade_location[action_args[0]]}"
+            )
+            state["location"] = self.trade_location[action_args[0]]
+            state["hungry"] -= 2
         return self.actions
 
     def sell(self, action_args: List[str], state: Dict, market_data):
@@ -432,6 +450,13 @@ class ActionRunner:
 
         state["money"] += reward
         state["inventory"][action_args[0]] -= item_num
+        if state["location"] != self.trade_location[action_args[0]]:
+            sell_index = self.actions.index(f"sell {action_args[0]} {action_args[1]}")
+            self.actions.insert(
+                sell_index, f"goto {self.trade_location[action_args[0]]}"
+            )
+            state["location"] = self.trade_location[action_args[0]]
+            state["hungry"] -= 2
         return self.actions
 
     def craft(self, action_args: List[str], state: Dict, market_data):
@@ -543,14 +568,14 @@ class ActionRunner:
 
             if action.startswith("craft"):
                 item_type = action.split(" ")[1]
-                if current_location != self.location[item_type][0]:
+                if current_location != self.craft_location[item_type]:
                     insert_index_list.append(
                         {
                             "index": index,
-                            "action": f"goto {self.location[item_type][0]}",
+                            "action": f"goto {self.craft_location[item_type]}",
                         }
                     )
-                    current_location = self.location[item_type][0]
+                    current_location = self.craft_location[item_type]
 
             if action.startswith("sleep"):
                 if current_location != "home":

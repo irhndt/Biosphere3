@@ -199,48 +199,49 @@ def save_token_consumption_to_db(token_consumption: dict):
 
 def get_occupation(job_id: int) -> str:
     occupation_mapping = {
-        "0": "Unemployed",
-        "1": "Intern",
-        "2": "Trainee",
-        "3": "Assistant",
-        "4": "Programmer",
-        "5": "Researcher",
-        "6": "Manager",
-        "7": "Director",
-        "8": "Chief Officer",
-        "9": "President",
-        "10": "Chairman",
-        "11": "Guard",
-        "12": "Cleaner",
-        "13": "Gardener",
-        "14": "Police",
-        "15": "Cook",
-        "16": "Librarian",
-        "17": "Store Clerk",
+        0: "Unemployed",
+        1: "Intern",
+        2: "Trainee",
+        3: "Assistant",
+        4: "Programmer",
+        5: "Researcher",
+        6: "Manager",
+        7: "Director",
+        8: "Chief Officer",
+        9: "President",
+        10: "Chairman",
+        11: "Guard",
+        12: "Cleaner",
+        13: "Gardener",
+        14: "Police",
+        15: "Cook",
+        16: "Librarian",
+        17: "Store Clerk",
     }
+
     return occupation_mapping.get(job_id, "Unemployed")
 
 
 def get_work_place(job_id: int) -> str:
     work_place_mapping = {
-        "0": "N/A",
-        "1": "School",
-        "2": "School",
-        "3": "School",
-        "4": "School",
-        "5": "School",
-        "6": "School",
-        "7": "School",
-        "8": "School",
-        "9": "School",
-        "10": "School",
-        "11": "School",
-        "12": "School",
-        "13": "Garden",
-        "14": "PoliceStation",
-        "15": "Canteen",
-        "16": "Library",
-        "17": "Supermarket",
+        0: "N/A",
+        1: "school",  # Intern
+        2: "school",  # Trainee
+        3: "school",  # Assistant
+        4: "office",  # Programmer
+        5: "school",  # Researcher
+        6: "office",  # Manager
+        7: "office",  # Director
+        8: "office",  # ChiefOfficer
+        9: "office",  # President
+        10: "office",  # Chairman
+        11: "school",  # Guard
+        12: "square",  # Cleaner
+        13: "garden",  # Gardener
+        14: "policestation",  # Police
+        15: "canteen",  # Cook
+        16: "library",  # Librarian
+        17: "supermarket",  # StoreClerk
     }
     return work_place_mapping.get(job_id, "N/A")
 

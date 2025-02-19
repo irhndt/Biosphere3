@@ -34,6 +34,8 @@ class AI_WS_Server:
         self.web_monitor = WebMonitor(self.character_manager)
         self.config = config
         self.current_day = 0
+        self.cv_and_mayor_lock = asyncio.Lock()
+        self.cv_and_mayor_task = None
 
     async def handler(self, websocket, path):
         character_id = None
@@ -84,14 +86,19 @@ class AI_WS_Server:
                         if self.current_day != new_day:
                             self.current_day = new_day
                         # At the end of the week, we will allocate cv submission
-                        if self.current_day % 7 == 1:
-                            asyncio.create_task(
-                                self.cv_submission(agent_instance, data)
-                            )
-                        elif self.current_day % 7 == 2:
-                            asyncio.create_task(
-                                self.mayer_decision(self.current_day / 7 + 1)
-                            )
+                        with self.cv_and_mayor_lock:
+                            if not self.cv_and_mayor_task:
+                                if self.current_day % 7 == 1:
+                                    self.cv_and_mayor_task = asyncio.create_task(
+                                        self.cv_submission(agent_instance, data)
+                                    )
+                                elif self.current_day % 7 == 2:
+                                    self.cv_and_mayor_task = asyncio.create_task(
+                                        self.mayer_decision(self.current_day / 7 + 1)
+                                    )
+                            else:
+                                if self.cv_and_mayor_task.done():
+                                    self.cv_and_mayor_task = None
 
                 except websockets.ConnectionClosed as e:
                     logger.warning(f"🔗 Connection closed from {character_id}: {e}")
