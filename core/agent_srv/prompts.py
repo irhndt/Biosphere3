@@ -1,5 +1,6 @@
 from langchain_core.prompts import ChatPromptTemplate
 
+action_detail_rules = """"""
 obj_planner_prompt = ChatPromptTemplate.from_template(
     """
 You are the daily objectives planner in a RPG game. Come up with a general daily objectives.
