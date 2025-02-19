@@ -15,42 +15,54 @@ class ReflectionHandler(BaseHandler):
             Reflection,
             0.8,
         )
-        conversation = agent_api.request_sync(
+        action_log = agent_api.request_sync(
             method="GET",
-            endpoint="/conversation/",
+            endpoint="/action_log/",
             params={
                 "characterId": state["userid"],
-                "start_day": state["meta"]["day"] - 1,
+                "game_day": state["meta"]["day"] - 1,
             },
         )
-        failed_actions = await format_queue_data(state["false_action_queue"])
+        action_log_str = (
+            "# Today's actions\n"
+            + "".join(
+                [
+                    f"{action['command']}: {action['description']} (Execution result: {action['state']})\n"
+                    for action in action_log["log"]
+                ]
+            )
+            if action_log["log"]
+            else ""
+        )
+
+        price_response = game_api.request_sync(
+            method="GET", endpoint="/ammPool/getAveragePrice"
+        )
+        item_str = get_item_str(price_response)
+
+        production_path_str = get_production_path_str()
+
+        job_str = get_job_str()
+
+        character_data_str = "# Character Info\n"+ get_character_data_str(
+            characterId=state["userid"], character_data=state["character_stats"]
+        )
+
+        character_name = state["character_stats"].get("name", "None")
+
+        industry_data=agent_api.request_sync(
+            method="GET",
+            endpoint=f"/industry/{state["userid"]}/goal"
+        )
         payload = {
-            "daily_objectives": format_daily_obj(state["decision"]["daily_objective"]),
-            "action_results": state["decision"]["action_result"],
-            "failed_actions": failed_actions,
-            "reflection_ar": state["prompts"]["reflection_ar"],
-            "focus_topic": state["prompts"]["focus_topic"],
-            "depth_of_reflection": state["prompts"]["depth_of_reflection"],
-            "level_of_detail": state["prompts"]["level_of_detail"],
-            "tone_and_style": state["prompts"]["tone_and_style"],
-            "status_changes": format_status_changes(
-                state["past_stats"],
-                state["character_stats"],
-                fields=[
-                    "health",
-                    "energy",
-                    "hungry",
-                    "education",
-                    "education_experience",
-                    "money",
-                    "occupation",
-                    "efficiency",
-                    "inventory",
-                ],
-            ),
-            "conversation_memory": format_conversation_data(
-                state["userid"], conversation
-            ),
+            "action_log_str": action_log_str,
+            "item_str":item_str,
+            "production_path_str":production_path_str,
+            "job_str":job_str,
+            "character_data_str":character_data_str,
+            "character_name":character_name,
+            "industry":industry_data['industry'],
+            "goal":industry_data['goal'],
         }
         daily_reflection = await self.api_retry(
             daily_reflection_generator,
@@ -61,22 +73,29 @@ class ReflectionHandler(BaseHandler):
 
         full_prompt = daily_reflection_prompt.format(**payload)
         logger.info("======generate_daily_reflection======\n" + full_prompt)
-        state["decision"]["reflection"].append(daily_reflection.reflection)
+        reflection_summary = (
+            f"Resource Management: {daily_reflection.resource_management}\n"
+            f"Energy and Health: {daily_reflection.energy_and_health}\n"
+            f"Time Efficiency: {daily_reflection.time_efficiency}\n"
+            f"Financial Strategy: {daily_reflection.financial_strategy}\n"
+            f"Task Prioritization: {daily_reflection.task_prioritization}"
+        )
+        state["decision"]["reflection"].append(reflection_summary)
         save_reflection_to_db(
-            state["userid"], {"new_reflection": daily_reflection.reflection}
+            state["userid"], {"new_reflection": reflection_summary}
         )
         response = await self.send_message(
             state,
             "daily_reflection",
             11,
             {
-                "reflection": daily_reflection.reflection,
+                "reflection": reflection_summary,
             },
         )
         if state.get("instance"):
             state["instance"].log_message("received", response)
 
-        logger.info(f"🔍 DAILY_REFLECTION INVOKED with {daily_reflection.reflection}")
+        logger.info(f"🔍 DAILY_REFLECTION INVOKED with {reflection_summary}")
 
         return {"current_pointer": "Daily_Reflection"}
 

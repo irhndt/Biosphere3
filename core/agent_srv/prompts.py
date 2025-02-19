@@ -87,34 +87,29 @@ The output format is in JSON format:
 
 daily_reflection_prompt = ChatPromptTemplate.from_template(
     """
-You are a daily reflection generator in a RPG game. Your job is to generate a diary-like daily reflection for the user.
-Here are some information you need to know:
-Changes in User Status: {status_changes}
-Recent Daily Objectives: {daily_objectives}
-Recent Action Results: {action_results}
-Failed Actions: {failed_actions}
-Some additional Requirements: {reflection_ar}
-Conversation Memory: {conversation_memory}
+{character_data_str}
 
-Remind:
-1. You should summarize the user's changes in status, daily objective, failed actions and conversation in the reflection.
-2. You should mainly focus on how to improve future planning.
-3. You should focus on these topics in a descending order: {focus_topic}.
-4. Depth of reflection: {depth_of_reflection}.
-5. The level of detail: {level_of_detail}.
+{item_str}
 
-You can have different tone and style for different users based on their actions or stats.Use first person to describe the reflection.
+{production_path_str}
 
-Output Specifications:
-1. The final format should be a string of the reflection
-2. you SHOULD NOT output other formats or other description words
-3. The reflection should be no more than 100 words
-4. The tone and style of the words: {tone_and_style}
+{job_str}
 
-Example Output:
-Today I failed to study for 2 hours. Perhaps before going to school, I should earn enough money to pay the tuition fee.
+{action_log_str}
 
-Based on the information above, please generate the daily reflection for the user:
+# Requirements
+{character_name} focuses on {industry}. The ultimate goal: {goal}.
+Reflect on today's actions to see if there were any shortcomings in each area, and the measures for improvement.
+The reflection should be written in the first person, reflecting {character_name}'s unique tone and style. It should also be concise, with each area containing multiple points. Each point should be specific and no more than 20 words.
+
+The output format is in JSON format:
+{{
+    "resource_management": content (one paragraph),
+    "energy_and_health": content,
+    "time_efficiency": content,
+    "financial_strategy": content,
+    "task_prioritization": content
+}}
 """
 )
 
