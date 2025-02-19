@@ -8,7 +8,7 @@ from core.conversation_srv.handler.dialogue import a_talk
 from core.conversation_srv.handler.clock import calculate_game_time, sleep_with_connection
 from core.conversation_srv.handler.impression import update_impression
 from core.conversation_srv.handler.intimacy import update_intimacy
-from datetime import datetime
+from datetime import datetime, timezone
 import random
 from langgraph.graph import StateGraph
 
@@ -94,7 +94,7 @@ async def start_conversation(state: ConversationState):
     time_obj = datetime.strptime(game_start_time, "%H:%M")
     start_hour = time_obj.hour
     start_minute = time_obj.minute
-    current_time = calculate_game_time(datetime.now())
+    current_time = calculate_game_time(datetime.now(timezone.utc))
     if current_time[1] < start_hour or (
         current_time[1] == start_hour and current_time[2] < start_minute
     ):
