@@ -5,12 +5,12 @@ from core.conversation_srv.conversation_prompts import conversation_generator_pr
 from core.conversation_srv.handler.plan import random_conversation_target
 from core.conversation_srv.handler.information import load_all_information
 from loguru import logger
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def change_conversation_target(state: ConversationState, current_talk: ConversationTask):
     # ensure that this target is not the one whom the agent is talking with
-    current_time = calculate_game_time(datetime.now())
+    current_time = calculate_game_time(datetime.now(timezone.utc))
     talking_data = {
         "to_id": state["userid"],
         "start_day": current_time[0]
@@ -97,7 +97,7 @@ def reformat_conversation(raw_conversation: str, my_name: str, target_name: str)
 def save_conversation(all_content: list, current_talk: ConversationTask, content_type: str, topic: str):
     from_to_count = 0
     for sentence in all_content:
-        current_realtime = datetime.now()
+        current_realtime = datetime.now(timezone.utc)
         current_day, current_hour, current_minute = calculate_game_time(
             current_realtime
         )

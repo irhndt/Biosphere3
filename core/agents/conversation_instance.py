@@ -1,6 +1,6 @@
 from core.conversation_srv.conversation_engines import *
 import asyncio
-
+from datetime import datetime, timezone
 
 class ConversationInstance:
     def __init__(self, user_id, websocket=None):
@@ -53,7 +53,7 @@ class ConversationInstance:
                     self.plan_signal = False
 
                     # calculate time gap for next workflow
-                    day, hour, minute = calculate_game_time(real_time=datetime.now())
+                    day, hour, minute = calculate_game_time(real_time=datetime.now(timezone.utc))
                     time_gap = ((24-hour)*60*60+(0-minute)*60)//7+(self.user_id//1000)
                     self.logger.info(
                         f"Next planning workflow will start in {time_gap} seconds."
