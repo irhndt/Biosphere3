@@ -118,6 +118,8 @@ class ReflectionHandler(BaseHandler):
             "character_name": character_name,
             "biography": biography,
         }
+        full_prompt = generate_character_arc_prompt.format(**payload)
+        logger.info("======generate_character_arc======\n" + full_prompt)
         character_arc = await self.api_retry(
             character_arc_generator,
             payload,
