@@ -60,14 +60,14 @@ impression_update_prompt = ChatPromptTemplate.from_template(
     The conversation content is {conversation}.
     
     The impression must include the following four parts.
-    1.relation: the positive, negative or neutral relationship between the two players. Also include a brief description and reason.
+    1.Relation: the positive, negative or neutral relationship between the two players. Also include a brief description and reason.
     You can choose the relation from the relation list or randomly generate one.
     The relation list is: {relation_list}.
-    2.emotion: a positive or negative emotion of {to_name}.
+    2.Emotion: a positive or negative emotion of {to_name}.
     eg: Alice is exhausted due to her bad study habit. / Jack is angry because we don't agree with each other.
-    3.personality: describe {to_name}'s personality traits from a social perspective.
+    3.Personality: describe {to_name}'s personality traits from a social perspective.
     eg: Ivy is open and likes to talk with others./ Amy is a lonely person. She likes to stay alone.
-    4.habits and preferences: habits and tastes of {to_name}. Also include things he dislike.
+    4.Habits and Preferences: habits and tastes of {to_name}. Also include things he dislike.
     eg: David really likes travelling. He prefers to traveling everyday.
     
     Also consider the old relation between {from_name} and {to_name}.
@@ -75,13 +75,12 @@ impression_update_prompt = ChatPromptTemplate.from_template(
     Generate the new relations based on the old ones.
     
     Here is an example of impressions format. Each impression item should be in a new line.
-    relation: 
-    emotion: 
-    personality: 
-    habits and preferences:  
+    Relation: 
+    Emotion: 
+    Personality: 
+    Habits and Preferences:  
     
     Now generate the two impressions in English.
-    impression:
     """
 )
 
