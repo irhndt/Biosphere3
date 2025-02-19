@@ -28,7 +28,7 @@ Only when the inventory has the specified number of required items, will the nex
 You need to determine the highest level you have reached and continue to collect the remaining items needed to reach higher levels.
 
 Here are the actions you can plan: go to different places, sleep, study, see a doctor, work, use/buy/sell different items, craft different items.
-Here are the places you can reach: school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen.
+Here are the places you can reach: school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen, ranch, forest.
 The following are the items that exist in this world:
     - apple, wheat, pear, rice, chicken, beef, fish
     - iron_ore, timber, copper_ore, silicon_ore
@@ -268,7 +268,7 @@ Below are detailed explanations of each possible action, including constraints a
 1. **goto [placeName:string]**  
    - **Action Effect**: Moves the character to a specific location, only change the location. 
    - **Constraints**: The placeName must be one of the following:  
-     (school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
+     (school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen, ranch, forest).
 
 2. **sleep [hours:int]**  
    - **Action Effect**: Recover energy (10 per hour).  
@@ -324,55 +324,51 @@ Below are detailed explanations of each possible action, including constraints a
    - **Action Effect**: Sells items to the market to earn money according to the market price.  
    - **Constraints**:  
      - Must have the items in the inventory.
+     
+
 ---
 
 ### Crafting System Details
 
 You can **craft** items if you have the required materials and enough energy. Each recipe has specific constraints on the required materials, how much energy it costs, and the resulting product.
 Action format: `craft [itemType:string] [amount:int]` (remember, the amount should not exceed 10).
+The following is a table of items that can be crafted, along with their energy cost, place, and recipe:
 
-- **Basic Energy Cost** for certain items (5 per item):
-1. apple (no materials required, be in farm)
-2. wheat (no materials required, be in farm)
-3. pear (no materials required, be in farm)
-4. rice (no materials required, be in farm)
-5. chicken (requires 1 feed, be in farm)
-6. beef (requires 3 feed, be in farm)
-7. fish (no materials required, be in farm)
-8. wood (no materials required, be in farm)
-
-9. iron_ore (no materials required, be in mine)
-10. copper_ore (no materials required, be in mine)
-11. silicon_ore (no materials required, be in mine)
-
-- **Moderate Energy Cost** for certain items (10 per item):
-1. feed (requires 1 rice, be in foodfactory)
-2. flour (requires 1 wheat, be in foodfactory)
-3. bread (requires 1 flour, be in foodfactory)
-4. apple_pie (requires 1 apple, 1 flour, be in foodfactory)
-5. fruit_salad (requires 1 apple, 1 pear, be in foodfactory)
-6. chicken_salad (requires 1 chicken, 1 fruit_salad, be in foodfactory)
-7. beef_rice (requires 1 beef, 1 rice, be in foodfactory)
-8. sushi (requires 1 fish, 1 rice, be in foodfactory)
-
-9. iron_ingot (requires 3 iron_ore, be in factory)
-10. wooden_board (requires 3 wood, be in factory)
-11. copper_ingot (requires 3 copper_ore, be in factory)
-12. pure_silicon (requires 3 silicon_ore, be in factory)
-13. pickaxes (requires 1 iron_ingot, 1 wood_boards, be in factory)
-14. iron_plate (requires 1 iron_ingot, be in factory)
-15. pulp (requires 1 wood_boards, be in factory)
-16. books (requires 3 pulp, be in factory)
-17. copper_wire (requires 1 copper_ingots, be in factory)
-18. transistor (requires 1 pure_silicon, be in factory)
-
-- **High Energy Cost** for advanced items (20 per item):
-1. circuit_board (requires 1 iron_plates, 2 copper_wire, be in factory)
-2. a100 (requires 2 circuit_board, 2 transistors, be in factory)
-3. h100 (requires 2 a100, be in factory)
-4. h200 (requires 2 h100, be in factory)
-5. b200 (requires 2 h200, be in factory)
-
+| Item           | Energy Cost | Place        | Recipe                                  |
+|----------------|-------------|--------------|-----------------------------------------|
+| Apple          | 3           | orchard      | —                                       |
+| Wheat          | 2           | farm         | —                                       |
+| Pear           | 3           | orchard      | —                                       |
+| Rice           | 3           | farm         | —                                       |
+| Chicken        | 5           | ranch        | 1 × Feed                                |
+| Beef           | 5           | ranch        | 3 × Feed                                |
+| Fish           | 3           | fishing      | —                                       |
+| Feed           | 5           | forest       | 1 × Rice                                |
+| Flour          | 3           | mine         | 1 × Wheat                               |
+| Bread          | 3           | mine         | 1 × Flour                               |
+| Apple Pie      | 3           | mine         | 1 × Apple, 1 × Flour                      |
+| Fruit Salad    | 5           | foodfactory  | 1 × Apple, 1 × Pear                       |
+| Chicken Salad  | 10          | foodfactory  | 1 × Chicken, 1 × Fruit Salad              |
+| Beef Rice      | 10          | foodfactory  | 1 × Beef, 1 × Rice                        |
+| Sushi          | 7           | foodfactory  | 1 × Fish, 1 × Rice                        |
+| Iron Ore       | 1           | foodfactory  | —                                       |
+| Wood           | 1           | factory      | —                                       |
+| Copper Ore     | 1           | factory      | —                                       |
+| Silicon Ore    | 1           | factory      | —                                       |
+| Iron Ingot     | 5           | minefactory  | 3 × Iron Ore                            |
+| Wooden Board   | 5           | factory      | 3 × Wood                                |
+| Copper Ingot   | 5           | minefactory  | 3 × Copper Ore                          |
+| Pure Silicon   | 5           | minefactory  | 3 × Silicon Ore                         |
+| Iron Plate     | 5           | minefactory  | 1 × Iron Ingot                          |
+| Pulp           | 5           | factory      | 1 × Wooden Board                        |
+| Books          | 10          | factory      | 3 × Pulp                                |
+| Copper Wire    | 5           | minefactory  | 1 × Copper Ingot                        |
+| Transistor     | 5           | factory      | 1 × Pure Silicon                        |
+| Circuit Board  | 20          | factory      | 1 × Iron Plate, 2 × Copper Wire         |
+| A100           | 20          | factory      | 2 × Circuit Board, 2 × Transistor       |
+| H100           | 25          | factory      | 2 × A100                                |
+| H200           | 50          | factory      | 2 × H100                                |
+| B200           | 100         | factory      | —                                       |
 ---
 
 ### Reference production graph:
@@ -606,20 +602,42 @@ replanner_prompt = ChatPromptTemplate.from_template(
 #### **Crafting System**
 
 **Action**: `craft [itemType:string] [amount:int]` (max 10 items per action)
-
-- **Basic Energy Cost** (5 per item) for items like:  
-  apple, wheat, pear, rice, chicken (needs 1 feed), beef (needs 3 feed), fish, iron_ore, wood, copper_ore, silicon_ore.  
-  - Must be at farm for apple, wheat, pear, rice, chicken, beef, fish, wood
-  - Must be at mine for iron_ore, copper_ore, silicon_ore.
-
-- **Moderate Energy Cost** (10 per item) for items like:  
-  feed (needs 1 rice), flour (needs 1 wheat), bread (1 flour), apple_pie (1 apple + 1 flour), fruit_salad (1 apple + 1 pear), chicken_salad (1 chicken + 1 fruit_salad), beef_rice (1 beef + 1 rice), sushi (1 fish + 1 rice), iron_ingot (3 iron_ore), wooden_board (3 wood), copper_ingot (3 copper_ore), pure_silicon (3 silicon_ore), pickaxes (1 iron_ingot + 1 wood_boards), iron_plate (1 iron_ingot), pulp (1 wood_boards), books (3 pulp), copper_wire (1 copper_ingots), transistor (1 pure_silicon).  
-  - Must be at foodfactory for food recipes.  
-  - Must be at factory for metal/tech recipes.
-
-- **High Energy Cost** (20 per item) for advanced items:  
-  circuit_board (1 iron_plates + 2 copper_wire), a100 (2 circuit_board + 2 transistors), h100 (2 a100), h200 (2 h100), b200 (2 h200).  
-  - Must be at factory.
+The following is a table of items that can be crafted, along with their energy cost, place, and recipe:
+| Item           | Energy Cost | Place        | Recipe                                  |
+|----------------|-------------|--------------|-----------------------------------------|
+| Apple          | 3           | orchard      | —                                       |
+| Wheat          | 2           | farm         | —                                       |
+| Pear           | 3           | orchard      | —                                       |
+| Rice           | 3           | farm         | —                                       |
+| Chicken        | 5           | ranch        | 1 × Feed                                |
+| Beef           | 5           | ranch        | 3 × Feed                                |
+| Fish           | 3           | fishing      | —                                       |
+| Feed           | 5           | forest       | 1 × Rice                                |
+| Flour          | 3           | mine         | 1 × Wheat                               |
+| Bread          | 3           | mine         | 1 × Flour                               |
+| Apple Pie      | 3           | mine         | 1 × Apple, 1 × Flour                      |
+| Fruit Salad    | 5           | foodfactory  | 1 × Apple, 1 × Pear                       |
+| Chicken Salad  | 10          | foodfactory  | 1 × Chicken, 1 × Fruit Salad              |
+| Beef Rice      | 10          | foodfactory  | 1 × Beef, 1 × Rice                        |
+| Sushi          | 7           | foodfactory  | 1 × Fish, 1 × Rice                        |
+| Iron Ore       | 1           | foodfactory  | —                                       |
+| Wood           | 1           | factory      | —                                       |
+| Copper Ore     | 1           | factory      | —                                       |
+| Silicon Ore    | 1           | factory      | —                                       |
+| Iron Ingot     | 5           | minefactory  | 3 × Iron Ore                            |
+| Wooden Board   | 5           | factory      | 3 × Wood                                |
+| Copper Ingot   | 5           | minefactory  | 3 × Copper Ore                          |
+| Pure Silicon   | 5           | minefactory  | 3 × Silicon Ore                         |
+| Iron Plate     | 5           | minefactory  | 1 × Iron Ingot                          |
+| Pulp           | 5           | factory      | 1 × Wooden Board                        |
+| Books          | 10          | factory      | 3 × Pulp                                |
+| Copper Wire    | 5           | minefactory  | 1 × Copper Ingot                        |
+| Transistor     | 5           | factory      | 1 × Pure Silicon                        |
+| Circuit Board  | 20          | factory      | 1 × Iron Plate, 2 × Copper Wire         |
+| A100           | 20          | factory      | 2 × Circuit Board, 2 × Transistor       |
+| H100           | 25          | factory      | 2 × A100                                |
+| H200           | 50          | factory      | 2 × H100                                |
+| B200           | 100         | factory      | —                                       |
 
 ---
 

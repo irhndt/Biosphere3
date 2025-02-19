@@ -181,6 +181,8 @@ class ActionRunner:
             "library",
             "supermarket",
             "canteen",
+            "ranch",
+            "forest",
         ]:
             # Current: Give up goto
             self.actions = []
