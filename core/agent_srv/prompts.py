@@ -60,34 +60,27 @@ Based on the information above, please generate the daily objectives for the use
 
 generate_character_arc_prompt = ChatPromptTemplate.from_template(
     """
-You are a character arc generator in a RPG game. Your job is to generate a character arc for the user.
-Here are some information you need to know:
-User State: {character_stats}
-Character Info: {character_info}
-Daily Objectives: {daily_objectives}
-Daily Reflection: {daily_reflection}
-Daily Action Results: {action_results}
+# Personal Information
+Name: {character_name}
+Biography: {biography}
 
-Remind:
-1. You should carefully analyze the user's current state, the user's past actions, and any other relevant factors to decide the character arc.
-2. Character Arc should include aspects like:
-    - belief
-    - mood
-    - values
-    - habits
-    - personality
+{conversation_str}
 
-Output Specifications:
-1. The final format should be a dictionary with five keys: "belief", "mood", "values", "habits", "personality"
-2. You SHOULD NOT output other formats or other description words
+{action_log_str}
 
-Example Output:
+{initial_character_arc_str}
+
+# Requirements
+Based on the character's dialogues and actions today, present the process of the character's growth or change (for better or for worse), building on their Initial Setup.
+The new setup should be written in the first person, reflecting {character_name}'s unique tone and style.
+
+The output format is in JSON format:
 {{
-    "belief": "I believe that hard work is the key to success",
-    "mood": "I feel happy and satisfied with my progress",
-    "values": "I value honesty and integrity",
-    "habits": "I have developed a habit of studying every day",
-    "personality": "I am a friendly and outgoing person"
+    "belief": content (one paragraph),
+    "mood": content,
+    "values": content,
+    "habits": content,
+    "personality": content
 }}
 """
 )

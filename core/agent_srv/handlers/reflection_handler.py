@@ -87,16 +87,36 @@ class ReflectionHandler(BaseHandler):
             CharacterArc,
             0.8,
         )
-
-        character_info = game_api.request_sync(
-            method="GET", endpoint=f"/characters/getById/{state['userid']}"
+        conversation_str = agent_api.request_sync(
+            method="GET",
+            endpoint="/conversation/str",
+            params={"characterId":state["userid"], "start_day":state["meta"]["day"] - 1},
         )
+        conversation_str = "# Today's conversations\n" + conversation_str if conversation_str else ""
+
+        action_log = agent_api.request_sync(
+            method="GET",
+            endpoint="/action_log/",
+            params={"characterId":state["userid"], "game_day":state["meta"]["day"] - 1},
+        )
+        action_log_str = "# Today's actions\n" + "".join([f"{action['command']}: {action['description']} (Execution result: {action['state']})\n" for action in action_log['log']]) if action_log['log'] else ""
+
+        initial_character_arc=agent_api.request_sync(
+            method="GET",
+            endpoint="/character_arc/",
+            params={"characterId":state["userid"], "k":1},
+        )
+        initial_character_arc_str = (f"# Character Initial Setup\n" if initial_character_arc else "") + ''.join([f"\nbelief: {character['belief']}\nmood: {character['mood']}\nvalues: {character['values']}\nhabits: {character['habits']}\npersonality: {character['personality']}\n" for character in initial_character_arc])
+
+        character_name = state["character_stats"].get("name", "None")
+        biography = state["character_stats"].get("biography", "None")
+
         payload = {
-            "character_stats": format_character_data(state["character_stats"]),
-            "character_info": character_info,
-            "daily_objectives": format_daily_obj(state["decision"]["daily_objective"]),
-            "daily_reflection": state["decision"]["reflection"],
-            "action_results": state["decision"]["action_result"],
+            "conversation_str": conversation_str,
+            "action_log_str": action_log_str,
+            "initial_character_arc_str": initial_character_arc_str,
+            "character_name": character_name,
+            "biography": biography,
         }
         character_arc = await self.api_retry(
             character_arc_generator,
