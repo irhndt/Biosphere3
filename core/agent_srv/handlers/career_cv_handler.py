@@ -34,7 +34,7 @@ class CareerCVHandler(BaseHandler):
             past_work_experience = None
         else:
             past_work_experience = cv_data[0].get("experience", None)
-        biography = instance.state["character_stats"].get("personality", "None")
+        biography = instance.state["character_stats"].get("biography", "None")
         job_data = game_api.request_sync(
             method="GET", endpoint=f"/publicWork/getById/{jobId}"
         )
