@@ -2,7 +2,7 @@ from core.conversation_srv.api_utils import make_api_request_sync
 from core.conversation_srv.conversation_model import ConversationState, DailyConversationPlan, ConversationTask
 from loguru import logger
 import random
-from datetime import datetime
+from datetime import datetime, timezone
 from core.conversation_srv.handler.clock import calculate_game_time
 
 
@@ -32,7 +32,7 @@ def random_conversation_target(k: int, my_id: int):
 
 # randomly generate k conversation times from the current time until 10 minutes before the end of the message value
 def generate_talk_time(k: int):
-    day, hour, minute = calculate_game_time(real_time=datetime.now())
+    day, hour, minute = calculate_game_time(real_time=datetime.now(timezone.utc))
 
     largest_minute = ((24 - hour) * 60 + (0 - minute)) // 7
     k = min(k - 1, largest_minute // 10) + 1
@@ -48,7 +48,7 @@ def generate_talk_time(k: int):
 
     # only for test, set the first conversation to happen after 5 minutes in game time
     # sorted_numbers = range(1, 11)
-    # sorted_numbers[0] = 1
+    sorted_numbers[0] = 1
 
     for t in sorted_numbers:
         add_hour, add_minute = divmod(minute + t, 60)
@@ -64,7 +64,7 @@ def generate_talk_time(k: int):
 
 # check the talked volume of certain user to avoid too many conversations due to workflow restart
 def check_daily_conversation_volume(id: int):
-    day, hour, minute = calculate_game_time(datetime.now())
+    day, hour, minute = calculate_game_time(datetime.now(timezone.utc))
     volume_data = {
         "to_id": id,
         "start_day": day
@@ -123,6 +123,7 @@ def a_plan(state: ConversationState):
 
     # Test: select target
     # target_list = [554552 for _ in range(conversation_number)]
+    # target_list[0] = 790456
 
     logger.info(
         f"User {state['userid']} planned to have conversation with {target_list}."
