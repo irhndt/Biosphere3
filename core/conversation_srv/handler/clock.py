@@ -14,7 +14,7 @@ def calculate_game_time(real_time=datetime.now(), day1_str="2025-1-29 00:00"):
     remaining_seconds = total_seconds - (game_day * 86400)
     game_hour, remainder = divmod(remaining_seconds, 3600)
     game_minute, seconds = divmod(remainder, 60)
-    return [game_day+1, game_hour, game_minute]
+    return [game_day, game_hour, game_minute]
 
 
 async def sleep_with_connection(seconds: int, state:ConversationState):
