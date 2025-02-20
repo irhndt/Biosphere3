@@ -237,7 +237,24 @@ class LangGraphInstance:
             self.logger.error(traceback.format_exc())
             self.logger.error("⛔ Task a_run terminated due to termination signal.")
             self.task.cancel()
-            # self.routine_tasks.cancel()
+
+            await self.send_message(
+                {
+                    "characterId": self.user_id,
+                    "messageName": "Agent workflow error",
+                    "messageCode": 11,
+                    "data": "An error occur when running workflow. The workflow will restart in 60 seconds.",
+                }
+            )
+
+            await asyncio.sleep(60)
+            initial_state = await get_initial_state_from_db(self.user_id, self.websocket)
+            self.state = initial_state
+            self.state["instance"] = self
+
+            self.schedule_event("PLAN")
+            self.task = asyncio.create_task(self.a_run())
+            self.logger.info(f"🏃 User {self.user_id}: Restart the workflow")
 
     async def send_message(self, message):
         async with self.websocket_lock:
