@@ -726,7 +726,6 @@ def refine_list(action_list: list) -> list:
 
 
 def filter_jobs(all_public_jobs, education, experience):
-    # 学历排序（从低到高）
     education_order = [
         "None",
         "PrimarySchool",
@@ -783,174 +782,115 @@ def get_job_name(job_id: int, all_public_jobs: list):
             return job["jobName"]
     return "Unemployed"
 
-def get_item_str(price_response:list):
+
+def get_item_str(price_response: list):
     energy_dict = {
-    "apple": {
-        "energy_cost": 3,
-        "recipe": None,
-        "special_effect": "Hungry +10"
-    },
-    "wheat": {
-        "energy_cost": 2,
-        "recipe": None,
-        "special_effect": "-"
-    },
-    "pear": {
-        "energy_cost": 3,
-        "recipe": None,
-        "special_effect": "Hungry +15"
-    },
-    "rice": {
-        "energy_cost": 3,
-        "recipe": None,
-        "special_effect": "-"
-    },
-    "chicken": {
-        "energy_cost": 5,
-        "recipe": "1 × feed",
-        "special_effect": "-"
-    },
-    "beef": {
-        "energy_cost": 5,
-        "recipe": "3 × feed",
-        "special_effect": "-"
-    },
-    "fish": {
-        "energy_cost": 3,
-        "recipe": None,
-        "special_effect": "-"
-    },
-    "feed": {
-        "energy_cost": 5,
-        "recipe": "1 × rice",
-        "special_effect": "-"
-    },
-    "flour": {
-        "energy_cost": 3,
-        "recipe": "1 × wheat",
-        "special_effect": "-"
-    },
-    "bread": {
-        "energy_cost": 3,
-        "recipe": "1 × flour",
-        "special_effect": "Hungry +25"
-    },
-    "apple_pie": {
-        "energy_cost": 3,
-        "recipe": "1 × apple, 1 × flour",
-        "special_effect": "Hungry +20"
-    },
-    "fruit_salad": {
-        "energy_cost": 5,
-        "recipe": "1 × apple, 1 × pear",
-        "special_effect": "Hungry +35"
-    },
-    "chicken_salad": {
-        "energy_cost": 10,
-        "recipe": "1 × chicken, 1 × fruit_salad",
-        "special_effect": "Hungry +35, Energy +10"
-    },
-    "beef_rice": {
-        "energy_cost": 10,
-        "recipe": "1 × beef, 1 × rice",
-        "special_effect": "Hungry +50, Energy +5"
-    },
-    "sushi": {
-        "energy_cost": 7,
-        "recipe": "1 × fish, 1 × rice",
-        "special_effect": "Hungry +30"
-    },
-    "iron_ore": {
-        "energy_cost": 1,
-        "recipe": None,
-        "special_effect": "-"
-    },
-    "wood": {
-        "energy_cost": 1,
-        "recipe": None,
-        "special_effect": "-"
-    },
-    "copper_ore": {
-        "energy_cost": 1,
-        "recipe": None,
-        "special_effect": "-"
-    },
-    "silicon_ore": {
-        "energy_cost": 1,
-        "recipe": None,
-        "special_effect": "-"
-    },
-    "iron_ingot": {
-        "energy_cost": 5,
-        "recipe": "3 × iron_ore",
-        "special_effect": "-"
-    },
-    "wooden_board": {
-        "energy_cost": 5,
-        "recipe": "3 × wood",
-        "special_effect": "-"
-    },
-    "copper_ingot": {
-        "energy_cost": 5,
-        "recipe": "3 × copper_ore",
-        "special_effect": "-"
-    },
-    "pure_silicon": {
-        "energy_cost": 5,
-        "recipe": "3 × silicon_ore",
-        "special_effect": "-"
-    },
-    "iron_plate": {
-        "energy_cost": 5,
-        "recipe": "1 × iron_ingot",
-        "special_effect": "-"
-    },
-    "pulp": {
-        "energy_cost": 5,
-        "recipe": "1 × wooden_board",
-        "special_effect": "-"
-    },
-    "books": {
-        "energy_cost": 10,
-        "recipe": "3 × pulp",
-        "special_effect": "Education Experience +20"
-    },
-    "copper_wire": {
-        "energy_cost": 5,
-        "recipe": "1 × copper_ingot",
-        "special_effect": "-"
-    },
-    "transistor": {
-        "energy_cost": 5,
-        "recipe": "1 × pure_silicon",
-        "special_effect": "-"
-    },
-    "circuit_board": {
-        "energy_cost": 20,
-        "recipe": "1 × iron_plate, 2 × copper_wire",
-        "special_effect": "-"
-    },
-    "a100": {
-        "energy_cost": 20,
-        "recipe": "2 × circuit_board, 2 × transistor",
-        "special_effect": "1 unit of GPU"
-    },
-    "h100": {
-        "energy_cost": 25,
-        "recipe": "2 × a100",
-        "special_effect": "2 units of GPU"
-    },
-    "h200": {
-        "energy_cost": 50,
-        "recipe": "2 × h100",
-        "special_effect": "4 units of GPU"
-    },
-    "b200": {
-        "energy_cost": 100,
-        "recipe": "2 × h200",
-        "special_effect": "8 units of GPU"
-    },
-}
+        "apple": {"energy_cost": 3, "recipe": None, "special_effect": "Hungry +10"},
+        "wheat": {"energy_cost": 2, "recipe": None, "special_effect": "-"},
+        "pear": {"energy_cost": 3, "recipe": None, "special_effect": "Hungry +15"},
+        "rice": {"energy_cost": 3, "recipe": None, "special_effect": "-"},
+        "chicken": {"energy_cost": 5, "recipe": "1 × feed", "special_effect": "-"},
+        "beef": {"energy_cost": 5, "recipe": "3 × feed", "special_effect": "-"},
+        "fish": {"energy_cost": 3, "recipe": None, "special_effect": "-"},
+        "feed": {"energy_cost": 5, "recipe": "1 × rice", "special_effect": "-"},
+        "flour": {"energy_cost": 3, "recipe": "1 × wheat", "special_effect": "-"},
+        "bread": {
+            "energy_cost": 3,
+            "recipe": "1 × flour",
+            "special_effect": "Hungry +25",
+        },
+        "apple_pie": {
+            "energy_cost": 3,
+            "recipe": "1 × apple, 1 × flour",
+            "special_effect": "Hungry +20",
+        },
+        "fruit_salad": {
+            "energy_cost": 5,
+            "recipe": "1 × apple, 1 × pear",
+            "special_effect": "Hungry +35",
+        },
+        "chicken_salad": {
+            "energy_cost": 10,
+            "recipe": "1 × chicken, 1 × fruit_salad",
+            "special_effect": "Hungry +35, Energy +10",
+        },
+        "beef_rice": {
+            "energy_cost": 10,
+            "recipe": "1 × beef, 1 × rice",
+            "special_effect": "Hungry +50, Energy +5",
+        },
+        "sushi": {
+            "energy_cost": 7,
+            "recipe": "1 × fish, 1 × rice",
+            "special_effect": "Hungry +30",
+        },
+        "iron_ore": {"energy_cost": 1, "recipe": None, "special_effect": "-"},
+        "wood": {"energy_cost": 1, "recipe": None, "special_effect": "-"},
+        "copper_ore": {"energy_cost": 1, "recipe": None, "special_effect": "-"},
+        "silicon_ore": {"energy_cost": 1, "recipe": None, "special_effect": "-"},
+        "iron_ingot": {
+            "energy_cost": 5,
+            "recipe": "3 × iron_ore",
+            "special_effect": "-",
+        },
+        "wooden_board": {"energy_cost": 5, "recipe": "3 × wood", "special_effect": "-"},
+        "copper_ingot": {
+            "energy_cost": 5,
+            "recipe": "3 × copper_ore",
+            "special_effect": "-",
+        },
+        "pure_silicon": {
+            "energy_cost": 5,
+            "recipe": "3 × silicon_ore",
+            "special_effect": "-",
+        },
+        "iron_plate": {
+            "energy_cost": 5,
+            "recipe": "1 × iron_ingot",
+            "special_effect": "-",
+        },
+        "pulp": {"energy_cost": 5, "recipe": "1 × wooden_board", "special_effect": "-"},
+        "books": {
+            "energy_cost": 10,
+            "recipe": "3 × pulp",
+            "special_effect": "Education Experience +20",
+        },
+        "copper_wire": {
+            "energy_cost": 5,
+            "recipe": "1 × copper_ingot",
+            "special_effect": "-",
+        },
+        "transistor": {
+            "energy_cost": 5,
+            "recipe": "1 × pure_silicon",
+            "special_effect": "-",
+        },
+        "circuit_board": {
+            "energy_cost": 20,
+            "recipe": "1 × iron_plate, 2 × copper_wire",
+            "special_effect": "-",
+        },
+        "a100": {
+            "energy_cost": 20,
+            "recipe": "2 × circuit_board, 2 × transistor",
+            "special_effect": "1 unit of GPU",
+        },
+        "h100": {
+            "energy_cost": 25,
+            "recipe": "2 × a100",
+            "special_effect": "2 units of GPU",
+        },
+        "h200": {
+            "energy_cost": 50,
+            "recipe": "2 × h100",
+            "special_effect": "4 units of GPU",
+        },
+        "b200": {
+            "energy_cost": 100,
+            "recipe": "2 × h200",
+            "special_effect": "8 units of GPU",
+        },
+    }
     price_dict = {}
     for item in price_response:
         std_name = item["name"].lower()
@@ -968,6 +908,7 @@ def get_item_str(price_response:list):
     item_str = "# Item Info\n" + pd.DataFrame(table_data).to_string()
 
     return item_str
+
 
 def get_production_path_str():
     production_path = {
@@ -996,63 +937,111 @@ def get_production_path_str():
         "h200": "96 × copper_ore, 96 × iron_ore, 48 × silicon_ore → 32 × copper_ingot, 32 × iron_ingot, 16 × pure_silicon → 16 × copper_wire, 16 × iron_plate, 8 × transistor → 8 × circuit_board, 8 × transistor → 4 × a100 → 2 × h100 → 1 × h200",
         "b200": "192 × copper_ore, 192 × iron_ore, 96 × silicon_ore → 64 × copper_ingot, 64 × iron_ingot, 32 × pure_silicon → 32 × copper_wire, 32 × iron_plate, 16 × transistor → 16 × circuit_board, 16 × transistor → 8 × a100 → 4 × h100 → 2 × h200 → 1 × b200",
     }
-    production_path_str = "# Production Path\n" + "\n".join([f"{item}: {path}" for item, path in production_path.items()])
+    production_path_str = "# Production Path\n" + "\n".join(
+        [f"{item}: {path}" for item, path in production_path.items()]
+    )
     return production_path_str
+
 
 def get_job_str():
     job_data = {
         "Job Title": [
-            "Intern", "Trainee", "Assistant", "Programmer", "Researcher", 
-            "Manager", "Director", "Chief Officer", "President", "Chairman", 
-            "Guard", "Cleaner", "Gardener", "Police", "Cook", "Librarian", "Store Clerk"
+            "Intern",
+            "Trainee",
+            "Assistant",
+            "Programmer",
+            "Researcher",
+            "Manager",
+            "Director",
+            "Chief Officer",
+            "President",
+            "Chairman",
+            "Guard",
+            "Cleaner",
+            "Gardener",
+            "Police",
+            "Cook",
+            "Librarian",
+            "Store Clerk",
         ],
         "Hourly Income": [
-            30, 30, 50, 40, 50, 80, 100, 150, 200, 250, 15, 15, 25, 40, 25, 40, 25
+            30,
+            30,
+            50,
+            40,
+            50,
+            80,
+            100,
+            150,
+            200,
+            250,
+            15,
+            15,
+            25,
+            40,
+            25,
+            40,
+            25,
         ],
         "Minimum Education Experience": [
-            40, 40, 80, 60, 80, 140, 200, 350, 500, 700, 10, 10, 30, 60, 30, 60, 30
-        ]
+            40,
+            40,
+            80,
+            60,
+            80,
+            140,
+            200,
+            350,
+            500,
+            700,
+            10,
+            10,
+            30,
+            60,
+            30,
+            60,
+            30,
+        ],
     }
 
     # Convert the dictionary into a DataFrame
     job_str = "# Job Info\n" + pd.DataFrame(job_data).to_string()
     return job_str
 
-def get_character_data_str(characterId:int, character_data: dict) -> str:
-    dormitoryId = (
-        game_api.request_sync(
-            "GET", f"/characterDormitory/getByCharacterIdNew/{characterId}"
-        )
-        .get("dormitoryId")
-    )
-    dormitory = game_api.request_sync(
-        "GET", f"/dormitory/getById/{dormitoryId}"
-    )
+
+def get_character_data_str(characterId: int, character_data: dict) -> str:
+    dormitoryId = game_api.request_sync(
+        "GET", f"/characterDormitory/getByCharacterIdNew/{characterId}"
+    ).get("dormitoryId")
+    dormitory = game_api.request_sync("GET", f"/dormitory/getById/{dormitoryId}")
     formatted_data = []
     formatted_data.append(f"Name: {character_data.get('name', 'N/A')}")
     formatted_data.append(f"Biography: {character_data.get('biography', 'N/A')}")
     formatted_data.append(
-            f"Health: {character_data.get('health', 'N/A')} - The range is 0 to {dormitory.get("maxHealth")}; It costs 50 money for a visit to the doctor, restoring 20 health points."
-        )
+        f"Health: {character_data.get('health', 'N/A')} - The range is 0 to {dormitory.get('maxHealth')}; It costs 50 money for a visit to the doctor, restoring 20 health points."
+    )
     formatted_data.append(
-            f"Energy: {character_data.get('energy', 'N/A')} - The range is 0 to {dormitory.get("maxEnergy")}; Sleeping restores {dormitory.get("energyRecovery")} energy points per hour."
-        )
+        f"Energy: {character_data.get('energy', 'N/A')} - The range is 0 to {dormitory.get('maxEnergy')}; Sleeping restores {dormitory.get('energyRecovery')} energy points per hour."
+    )
     formatted_data.append(
-            f"Hungry: {character_data.get('hungry', 'N/A')} - The range is 0 to {dormitory.get("maxHungry")}; Indicates the character's level of satiety; the higher, the fuller."
-        )
+        f"Hungry: {character_data.get('hungry', 'N/A')} - The range is 0 to {dormitory.get('maxHungry')}; Indicates the character's level of satiety; the higher, the fuller."
+    )
     formatted_data.append(
-            f"Education Experience: {character_data.get('education_experience', 'N/A')} - Studying consumes 3 energy, 50 money per hour, and grants 5 Education Experience. Using a book can directly increase 20 Education Experience."
-        )
+        f"Education Experience: {character_data.get('education_experience', 'N/A')} - Studying consumes 3 energy, 50 money per hour, and grants 5 Education Experience. Using a book can directly increase 20 Education Experience."
+    )
     formatted_data.append(f"Money: {character_data.get('money', 'N/A')}")
-    job_id = character_data.get('jobId', None)
+    job_id = character_data.get("jobId", None)
     if job_id:
-        wagePerHour = game_api.request_sync("GET", f"/publicWork/getById/{job_id}").get("wagePerHour")
+        wagePerHour = game_api.request_sync("GET", f"/publicWork/getById/{job_id}").get(
+            "wagePerHour"
+        )
         formatted_data.append(
             f"Occupation: {character_data.get('occupation', 'N/A')} - Working consumes 3 energy per hour and earns {wagePerHour} money."
         )
     formatted_data.append(f"Inventory: {character_data.get('inventory', {})}")
 
     return "\n".join(formatted_data)
+
 
 if __name__ == "__main__":
     # print(refine_craft_action("craft rice 2"))
@@ -1070,4 +1059,3 @@ if __name__ == "__main__":
         "craft feed 6",
     ]
     print(refine_list(list_1))
-
