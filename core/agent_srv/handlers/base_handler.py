@@ -4,7 +4,7 @@ from pydantic import ValidationError
 from core.utils.llm_factory import llm_selector, LLM
 from core.agent_srv.prompts import correct_format_prompt
 from core.db.api_client import game_api, agent_api
-from core.agent_srv.node_model import BaseModel, RunningState
+from core.agent_srv.node_model import BaseModel, RunningState, CV
 from azure.core.exceptions import HttpResponseError
 from langchain_core.exceptions import OutputParserException
 import traceback
@@ -96,6 +96,7 @@ class BaseHandler:
         await state["instance"].send_message(response)
         return response
 
+    @classmethod
     async def correct_format_error(self, state, raw_response, node_model):
         correcter = self.create_planner(
             correct_format_prompt,
