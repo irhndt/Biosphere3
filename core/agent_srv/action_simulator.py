@@ -31,7 +31,7 @@ class ActionSimulator:
         """
         Simulate the action list on the initial state, return the final state and reward
         """
-        self.action_runner.market_data = market_data
+        self.action_runner.init(market_data)
         state = copy.deepcopy(initial_state)
         state["inventory"] = {
             item.lower(): num for item, num in state["inventory"].items()
@@ -80,8 +80,28 @@ class ActionRunner:
     def __init__(self):
         self.actions = []
         self.market_data = {}
-        self.craft_recipes, self.cost_dict, self.location = self.load_craft_recipes()
-        # print(self.location)
+        (
+            self.craft_recipes,
+            self.cost_dict,
+            self.location,
+            self.craft_location,
+            self.trade_location,
+        ) = self.load_craft_recipes()
+
+    def init(self, market_data):
+        self.market_data = market_data
+        self.prob_food = self.compute_food_prob(
+            [
+                "apple",
+                "pear",
+                "bread",
+                "apple_pie",
+                "fruit_salad",
+                "chicken_salad",
+                "beef_rice",
+                "sushi",
+            ]
+        )
 
     def load_craft_recipes(self):
         """
@@ -89,17 +109,20 @@ class ActionRunner:
         """
         craft_recipes = json.load(open("core/files/skill2actions.json"))
         final_recipes = {}
-        cost_dict = {}
 
         for _, skill in craft_recipes.items():
-            cost = skill["cost"]
+            # cost = skill["cost"]
             for product, materials in skill["materials"].items():
                 final_recipes[product] = materials
-                cost_dict[product] = cost
-
+                # cost_dict[product] = cost
+        cost_dict = json.load(open("core/files/cost.json"))
         location_dict = json.load(open("core/files/location.json"))
 
-        return final_recipes, cost_dict, location_dict
+        craft_location = json.load(open("core/files/craft_location.json"))
+
+        trade_location = json.load(open("core/files/trade_location.json"))
+
+        return final_recipes, cost_dict, location_dict, craft_location, trade_location
 
     def run_action(self, action_name: str, action_args: List[str], state: Dict):
         """
@@ -153,25 +176,25 @@ class ActionRunner:
         action_args[0] = action_args[0].lower()
         if action_args[0] not in [
             "school",
-            "workshop",
             "home",
             "farm",
             "mall",
             "square",
-            "councilhall",
             "hospital",
             "fruit",
             "harvest",
             "fishing",
             "mine",
             "orchard",
+            "chemfactory",
             "foodfactory",
-            "factory",
+            "semiconductorfactory",
             "garden",
             "policestation",
             "library",
             "supermarket",
-            "canteen",
+            "ranch",
+            "forest",
         ]:
             # Current: Give up goto
             self.actions = []
@@ -354,7 +377,7 @@ class ActionRunner:
             state["energy"] += 5
         elif action_args[0] == "sushi":
             state["hungry"] += 30
-        elif action_args[0] == "book":
+        elif action_args[0] == "books":
             state["education_experience"] += 10
         state["inventory"][action_args[0]] -= item_num
         return self.actions
@@ -400,6 +423,13 @@ class ActionRunner:
         if action_args[0] not in state["inventory"]:
             state["inventory"][action_args[0]] = 0
         state["inventory"][action_args[0]] += item_num
+        if state["location"] != self.trade_location[action_args[0]]:
+            buy_index = self.actions.index(f"buy {action_args[0]} {action_args[1]}")
+            self.actions.insert(
+                buy_index, f"goto {self.trade_location[action_args[0]]}"
+            )
+            state["location"] = self.trade_location[action_args[0]]
+            state["hungry"] -= 2
         return self.actions
 
     def sell(self, action_args: List[str], state: Dict, market_data):
@@ -432,6 +462,13 @@ class ActionRunner:
 
         state["money"] += reward
         state["inventory"][action_args[0]] -= item_num
+        if state["location"] != self.trade_location[action_args[0]]:
+            sell_index = self.actions.index(f"sell {action_args[0]} {action_args[1]}")
+            self.actions.insert(
+                sell_index, f"goto {self.trade_location[action_args[0]]}"
+            )
+            state["location"] = self.trade_location[action_args[0]]
+            state["hungry"] -= 2
         return self.actions
 
     def craft(self, action_args: List[str], state: Dict, market_data):
@@ -543,14 +580,14 @@ class ActionRunner:
 
             if action.startswith("craft"):
                 item_type = action.split(" ")[1]
-                if current_location != self.location[item_type][0]:
+                if current_location != self.craft_location[item_type]:
                     insert_index_list.append(
                         {
                             "index": index,
-                            "action": f"goto {self.location[item_type][0]}",
+                            "action": f"goto {self.craft_location[item_type]}",
                         }
                     )
-                    current_location = self.location[item_type][0]
+                    current_location = self.craft_location[item_type]
 
             if action.startswith("sleep"):
                 if current_location != "home":
@@ -650,11 +687,29 @@ class ActionRunner:
             "beef_rice": 50,
             "sushi": 30,
         }
-        choices = ["craft", "buy"]
-        choose_to = random.choice(choices)
-        food = random.choice(foods)
+        # Decide by probability and money:
+        # if the character has more money, they are more likely to choose to buy
+        # the more expensive the food, the less likely to choose to buy
 
+        # choose_to = random.choice(choices)
+        # food = random.choice(foods)
+        prob_buy = state["money"] / (state["money"] + 50)
+        choose_to = "buy" if random.random() < prob_buy else "craft"
+        food = random.choices(foods, weights=list(self.prob_food.values()))[0]
         num = recover_hungry // hungry_dict[food] + 1
+        if state["inventory"].get(food, 0) > 0:
+            if state["inventory"][food] >= num:
+                actions = [f"use {food} {num}"]
+                state["hungry"] = min(100, state["hungry"] + hungry_dict[food])
+                return actions
+            else:
+                actions = [f"use {food} {state['inventory'][food]}"]
+                state["hungry"] = min(
+                    100, state["hungry"] + state["inventory"][food] * hungry_dict[food]
+                )
+                num -= state["inventory"][food]
+                return actions
+
         if choose_to == "craft":
             actions = self.generate_craft_sequence_and_check(
                 state,
@@ -702,6 +757,23 @@ class ActionRunner:
             "Store Clerk": 25,
         }
         return salary_dict[occupation]
+
+    def compute_food_prob(self, foods):
+        """
+        Compute the probability of choosing to eat food
+        """
+        price_dict = {}
+        total_price = 0
+        for food in foods:
+            for item in self.market_data:
+                if item["itemName"] == food:
+                    price_dict[food] = item["price"]
+                    total_price += 1 / item["price"]
+
+        prob_dict = {}
+        for food in foods:
+            prob_dict[food] = 1 / price_dict[food] / total_price
+        return prob_dict
 
 
 if __name__ == "__main__":

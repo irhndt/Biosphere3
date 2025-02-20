@@ -28,7 +28,7 @@ Only when the inventory has the specified number of required items, will the nex
 You need to determine the highest level you have reached and continue to collect the remaining items needed to reach higher levels.
 
 Here are the actions you can plan: go to different places, sleep, study, see a doctor, work, use/buy/sell different items, craft different items.
-Here are the places you can reach: school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen.
+Here are the places you can reach: school, office, home, farm, mall, square, hospital, fishing, mine, orchard, foodfactory, chemfactory, semiconductorfactory, garden, policestation, library, supermarket, ranch, forest.
 The following are the items that exist in this world:
     - apple, wheat, pear, rice, chicken, beef, fish
     - iron_ore, timber, copper_ore, silicon_ore
@@ -60,68 +60,56 @@ Based on the information above, please generate the daily objectives for the use
 
 generate_character_arc_prompt = ChatPromptTemplate.from_template(
     """
-You are a character arc generator in a RPG game. Your job is to generate a character arc for the user.
-Here are some information you need to know:
-User State: {character_stats}
-Character Info: {character_info}
-Daily Objectives: {daily_objectives}
-Daily Reflection: {daily_reflection}
-Daily Action Results: {action_results}
+# Personal Information
+Name: {character_name}
+Biography: {biography}
 
-Remind:
-1. You should carefully analyze the user's current state, the user's past actions, and any other relevant factors to decide the character arc.
-2. Character Arc should include aspects like:
-    - belief
-    - mood
-    - values
-    - habits
-    - personality
+{conversation_str}
 
-Output Specifications:
-1. The final format should be a dictionary with five keys: "belief", "mood", "values", "habits", "personality"
-2. You SHOULD NOT output other formats or other description words
+{action_log_str}
 
-Example Output:
+{initial_character_arc_str}
+
+# Requirements
+Based on the character's dialogues and actions today, present the process of the character's growth or change (for better or for worse), building on their Initial Setup.
+The new setup should be written in the first person, reflecting {character_name}'s unique tone and style.
+
+The output format is in JSON format:
 {{
-    "belief": "I believe that hard work is the key to success",
-    "mood": "I feel happy and satisfied with my progress",
-    "values": "I value honesty and integrity",
-    "habits": "I have developed a habit of studying every day",
-    "personality": "I am a friendly and outgoing person"
+    "belief": content (one paragraph),
+    "mood": content,
+    "values": content,
+    "habits": content,
+    "personality": content
 }}
 """
 )
 
 daily_reflection_prompt = ChatPromptTemplate.from_template(
     """
-You are a daily reflection generator in a RPG game. Your job is to generate a diary-like daily reflection for the user.
-Here are some information you need to know:
-Changes in User Status: {status_changes}
-Recent Daily Objectives: {daily_objectives}
-Recent Action Results: {action_results}
-Failed Actions: {failed_actions}
-Some additional Requirements: {reflection_ar}
-Conversation Memory: {conversation_memory}
+{character_data_str}
 
-Remind:
-1. You should summarize the user's changes in status, daily objective, failed actions and conversation in the reflection.
-2. You should mainly focus on how to improve future planning.
-3. You should focus on these topics in a descending order: {focus_topic}.
-4. Depth of reflection: {depth_of_reflection}.
-5. The level of detail: {level_of_detail}.
+{item_str}
 
-You can have different tone and style for different users based on their actions or stats.Use first person to describe the reflection.
+{production_path_str}
 
-Output Specifications:
-1. The final format should be a string of the reflection
-2. you SHOULD NOT output other formats or other description words
-3. The reflection should be no more than 100 words
-4. The tone and style of the words: {tone_and_style}
+{job_str}
 
-Example Output:
-Today I failed to study for 2 hours. Perhaps before going to school, I should earn enough money to pay the tuition fee.
+{action_log_str}
 
-Based on the information above, please generate the daily reflection for the user:
+# Requirements
+{character_name} focuses on {industry}. The ultimate goal: {goal}.
+Reflect on today's actions to see if there were any shortcomings in each area, and the measures for improvement.
+The reflection should be written in the first person, reflecting {character_name}'s unique tone and style. It should also be concise, with each area containing multiple points. Each point should be specific and no more than 20 words.
+
+The output format is in JSON format:
+{{
+    "resource_management": content (one paragraph),
+    "energy_and_health": content,
+    "time_efficiency": content,
+    "financial_strategy": content,
+    "task_prioritization": content
+}}
 """
 )
 
@@ -268,7 +256,7 @@ Below are detailed explanations of each possible action, including constraints a
 1. **goto [placeName:string]**  
    - **Action Effect**: Moves the character to a specific location, only change the location. 
    - **Constraints**: The placeName must be one of the following:  
-     (school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
+     (school, office, home, farm, mall, square, hospital, mine, orchard, foodfactory, chemfactory, semiconductorfactory, garden, policestation, library, supermarket, ranch, forest).
 
 2. **sleep [hours:int]**  
    - **Action Effect**: Recover energy (10 per hour).  
@@ -324,55 +312,51 @@ Below are detailed explanations of each possible action, including constraints a
    - **Action Effect**: Sells items to the market to earn money according to the market price.  
    - **Constraints**:  
      - Must have the items in the inventory.
+     
+
 ---
 
 ### Crafting System Details
 
 You can **craft** items if you have the required materials and enough energy. Each recipe has specific constraints on the required materials, how much energy it costs, and the resulting product.
 Action format: `craft [itemType:string] [amount:int]` (remember, the amount should not exceed 10).
+The following is a table of items that can be crafted, along with their energy cost, place, and recipe:
 
-- **Basic Energy Cost** for certain items (5 per item):
-1. apple (no materials required, be in farm)
-2. wheat (no materials required, be in farm)
-3. pear (no materials required, be in farm)
-4. rice (no materials required, be in farm)
-5. chicken (requires 1 feed, be in farm)
-6. beef (requires 3 feed, be in farm)
-7. fish (no materials required, be in farm)
-8. wood (no materials required, be in farm)
-
-9. iron_ore (no materials required, be in mine)
-10. copper_ore (no materials required, be in mine)
-11. silicon_ore (no materials required, be in mine)
-
-- **Moderate Energy Cost** for certain items (10 per item):
-1. feed (requires 1 rice, be in foodfactory)
-2. flour (requires 1 wheat, be in foodfactory)
-3. bread (requires 1 flour, be in foodfactory)
-4. apple_pie (requires 1 apple, 1 flour, be in foodfactory)
-5. fruit_salad (requires 1 apple, 1 pear, be in foodfactory)
-6. chicken_salad (requires 1 chicken, 1 fruit_salad, be in foodfactory)
-7. beef_rice (requires 1 beef, 1 rice, be in foodfactory)
-8. sushi (requires 1 fish, 1 rice, be in foodfactory)
-
-9. iron_ingot (requires 3 iron_ore, be in factory)
-10. wooden_board (requires 3 wood, be in factory)
-11. copper_ingot (requires 3 copper_ore, be in factory)
-12. pure_silicon (requires 3 silicon_ore, be in factory)
-13. pickaxes (requires 1 iron_ingot, 1 wood_boards, be in factory)
-14. iron_plate (requires 1 iron_ingot, be in factory)
-15. pulp (requires 1 wood_boards, be in factory)
-16. books (requires 3 pulp, be in factory)
-17. copper_wire (requires 1 copper_ingots, be in factory)
-18. transistor (requires 1 pure_silicon, be in factory)
-
-- **High Energy Cost** for advanced items (20 per item):
-1. circuit_board (requires 1 iron_plates, 2 copper_wire, be in factory)
-2. a100 (requires 2 circuit_board, 2 transistors, be in factory)
-3. h100 (requires 2 a100, be in factory)
-4. h200 (requires 2 h100, be in factory)
-5. b200 (requires 2 h200, be in factory)
-
+| Item           | Energy Cost | Place                | Recipe                                  |
+|----------------|-------------|----------------------|-----------------------------------------|
+| apple          | 3           | orchard              | —                                       |
+| wheat          | 2           | farm                 | —                                       |
+| pear           | 3           | orchard              | —                                       |
+| rice           | 3           | farm                 | —                                       |
+| chicken        | 5           | ranch                | 1 × feed                                |
+| beef           | 5           | ranch                | 3 × feed                                |
+| fish           | 3           | fishing              | —                                       |
+| feed           | 5           | foodfactory          | 1 × rice                                |
+| flour          | 3           | foodfactory          | 1 × wheat                               |
+| bread          | 3           | foodfactory          | 1 × flour                               |
+| apple_pie      | 3           | foodfactory          | 1 × apple, 1 × flour                    |
+| fruit_salad    | 5           | foodfactory          | 1 × apple, 1 × pear                     |
+| chicken_salad  | 10          | foodfactory          | 1 × chicken, 1 × fruit_salad            |
+| beef_rice      | 10          | foodfactory          | 1 × beef, 1 × rice                      |
+| sushi          | 7           | foodfactory          | 1 × fish, 1 × rice                      |
+| wood           | 1           | forest               | —                                       |
+| iron_ore       | 1           | mine                 | —                                       |
+| copper_ore     | 1           | mine                 | —                                       |
+| silicon_ore    | 1           | mine                 | —                                       |
+| iron_ingot     | 5           | chemfactory          | 3 × iron_ore                            |
+| wooden_board   | 5           | chemfactory          | 3 × wood                                |
+| copper_ingot   | 5           | chemfactory          | 3 × copper_ore                          |
+| pure_silicon   | 5           | chemfactory          | 3 × silicon_ore                         |
+| iron_plate     | 5           | chemfactory          | 1 × iron_ingot                          |
+| pulp           | 5           | chemfactory          | 1 × wooden_board                        |
+| books          | 10          | chemfactory          | 3 × pulp                                |
+| copper_wire    | 5           | chemfactory          | 1 × copper_ingot                        |
+| transistor     | 5           | semiconductorfactory | 1 × pure_silicon                        |
+| circuit_board  | 20          | semiconductorfactory | 1 × iron Plate, 2 × copper_wire         |
+| A100           | 20          | semiconductorfactory | 2 × circuit Board, 2 × transistor       |
+| H100           | 25          | semiconductorfactory | 2 × A100                                |
+| H200           | 50          | semiconductorfactory | 2 × H100                                |
+| B200           | 100         | semiconductorfactory | —                                       |
 ---
 
 ### Reference production graph:
@@ -564,7 +548,7 @@ replanner_prompt = ChatPromptTemplate.from_template(
 
 1. **goto [placeName:string]**  
    - Moves the character to `placeName`. Valid places include:  
-     (school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen).
+     (school, office, home, farm, mall, square, hospital, mine, orchard, foodfactory, chemfactory, semiconductorfactory, garden, policestation, library, supermarket, ranch, forest).
 
 2. **sleep [hours:int]**  
    - Recover energy (10 per hour).
@@ -606,21 +590,42 @@ replanner_prompt = ChatPromptTemplate.from_template(
 #### **Crafting System**
 
 **Action**: `craft [itemType:string] [amount:int]` (max 10 items per action)
-
-- **Basic Energy Cost** (5 per item) for items like:  
-  apple, wheat, pear, rice, chicken (needs 1 feed), beef (needs 3 feed), fish, iron_ore, wood, copper_ore, silicon_ore.  
-  - Must be at farm for apple, wheat, pear, rice, chicken, beef, fish, wood
-  - Must be at mine for iron_ore, copper_ore, silicon_ore.
-
-- **Moderate Energy Cost** (10 per item) for items like:  
-  feed (needs 1 rice), flour (needs 1 wheat), bread (1 flour), apple_pie (1 apple + 1 flour), fruit_salad (1 apple + 1 pear), chicken_salad (1 chicken + 1 fruit_salad), beef_rice (1 beef + 1 rice), sushi (1 fish + 1 rice), iron_ingot (3 iron_ore), wooden_board (3 wood), copper_ingot (3 copper_ore), pure_silicon (3 silicon_ore), pickaxes (1 iron_ingot + 1 wood_boards), iron_plate (1 iron_ingot), pulp (1 wood_boards), books (3 pulp), copper_wire (1 copper_ingots), transistor (1 pure_silicon).  
-  - Must be at foodfactory for food recipes.  
-  - Must be at factory for metal/tech recipes.
-
-- **High Energy Cost** (20 per item) for advanced items:  
-  circuit_board (1 iron_plates + 2 copper_wire), a100 (2 circuit_board + 2 transistors), h100 (2 a100), h200 (2 h100), b200 (2 h200).  
-  - Must be at factory.
-
+The following is a table of items that can be crafted, along with their energy cost, place, and recipe:
+| Item           | Energy Cost | Place                | Recipe                                  |
+|----------------|-------------|----------------------|-----------------------------------------|
+| apple          | 3           | orchard              | —                                       |
+| wheat          | 2           | farm                 | —                                       |
+| pear           | 3           | orchard              | —                                       |
+| rice           | 3           | farm                 | —                                       |
+| chicken        | 5           | ranch                | 1 × feed                                |
+| beef           | 5           | ranch                | 3 × feed                                |
+| fish           | 3           | fishing              | —                                       |
+| feed           | 5           | foodfactory          | 1 × rice                                |
+| flour          | 3           | foodfactory          | 1 × wheat                               |
+| bread          | 3           | foodfactory          | 1 × flour                               |
+| apple_pie      | 3           | foodfactory          | 1 × apple, 1 × flour                    |
+| fruit_salad    | 5           | foodfactory          | 1 × apple, 1 × pear                     |
+| chicken_salad  | 10          | foodfactory          | 1 × chicken, 1 × fruit_salad            |
+| beef_rice      | 10          | foodfactory          | 1 × beef, 1 × rice                      |
+| sushi          | 7           | foodfactory          | 1 × fish, 1 × rice                      |
+| wood           | 1           | forest               | —                                       |
+| iron_ore       | 1           | mine                 | —                                       |
+| copper_ore     | 1           | mine                 | —                                       |
+| silicon_ore    | 1           | mine                 | —                                       |
+| iron_ingot     | 5           | chemfactory          | 3 × iron_ore                            |
+| wooden_board   | 5           | chemfactory          | 3 × wood                                |
+| copper_ingot   | 5           | chemfactory          | 3 × copper_ore                          |
+| pure_silicon   | 5           | chemfactory          | 3 × silicon_ore                         |
+| iron_plate     | 5           | chemfactory          | 1 × iron_ingot                          |
+| pulp           | 5           | chemfactory          | 1 × wooden_board                        |
+| books          | 10          | chemfactory          | 3 × pulp                                |
+| copper_wire    | 5           | chemfactory          | 1 × copper_ingot                        |
+| transistor     | 5           | semiconductorfactory | 1 × pure_silicon                        |
+| circuit_board  | 20          | semiconductorfactory | 1 × iron Plate, 2 × copper_wire         |
+| A100           | 20          | semiconductorfactory | 2 × circuit Board, 2 × transistor       |
+| H100           | 25          | semiconductorfactory | 2 × A100                                |
+| H200           | 50          | semiconductorfactory | 2 × H100                                |
+| B200           | 100         | semiconductorfactory | —                                       |
 ---
 
 ### **Forbidden Error Examples**
@@ -785,12 +790,12 @@ Below is the information you have at your disposal:
 2. **Inventory & Requirements**: Determine which items the user has in surplus (potentially sell) or needs more of (potentially buy).  
 3. **When to Trade**: Skip trading if it’s not advantageous, or if the user’s resources (finances or key materials) are insufficient.  
 4. **Valid Locations for Trading**:  
-   - *school, workshop, home, farm, mall, square, councilhall, hospital, fruit, harvest, fishing, mine, orchard, foodfactory, factory, garden, policestation, library, supermarket, canteen.*  
+   - *school, home, farm, mall, square, hospital, fishing, forest, mine, orchard, foodfactory, chemfactory, semiconductorfactory, garden, policestation, library, supermarket, office*  
 5. **Available Items**:  
    - Basic crops & livestock: *apple, wheat, pear, rice, chicken, beef, fish.*  
-   - Raw materials: *iron_ore, timber, copper_ore, silicon_ore.*  
+   - Raw materials: *iron_ore, wood, copper_ore, silicon_ore.*  
    - Intermediate goods: *feed, flour, bread, apple_pie, fruit_salad, chicken_salad, beef_rice, sushi.*  
-   - Processed materials: *iron_ingots, wooden_boards, copper_ingots, pure_silicon, pickaxes, iron_plates, pulp, books, copper_wire, transistors.*  
+   - Processed materials: *iron_ingot, wooden_board, copper_ingot, pure_silicon, iron_plate, pulp, books, copper_wire, transistor.*  
    - Advanced items: *circuit_board, a100, h100, h200, b200.*  
 
 ---
@@ -854,16 +859,12 @@ Biography: {biography}
 {eligible_jobs_str}
 
 # require
-Think from the perspective of the celebrity {characterName} whether {characterName} would choose to have a new job, and if so, generate a CV for applying to the new job that suits their personal situation.
-If {characterName} wants a new job, the 'jobId' should be the id of the new job, which needs to be of type int, and the 'cv' should be a string representing the CV.
-If {characterName} does not want the new job or there are no eligible jobs available, the "jobId" should be 0 and the "cv" should be a string representing the reason.
-If {characterName} is currently unemployed and there are eligible jobs available, they must choose one from the available options.
-The cv should be written in a lively, conversational first-person narrative (one paragraph), mimicking {characterName}'s tone. It should be natural storytelling rather than a formal structure. Avoid bullet points and headings, and make it sound like {characterName} is casually explaining why they're the perfect fit for the job. The writing should be explosive, intense, and create a huge buzz among the public.
+{characterName}'s current position has expired. Please think from {characterName}'s perspective to determine whether they would want a job. If they do, generate an interesting and personality-driven CV for applying to a suitable position. The CV should be written in the first person, reflecting {characterName}'s unique tone and style. If {characterName} does not want a job, the "jobId" should be 0, and the "cv" should be a reason written in the first person that reflects their personality and reasoning for not wanting a job.
 
 The output format is in JSON format:
 {{
     "jobId": id,
-    "cv": content
+    "cv": content (one paragraph)
 }}
 """
 )
