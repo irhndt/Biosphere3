@@ -109,14 +109,13 @@ class ActionRunner:
         """
         craft_recipes = json.load(open("core/files/skill2actions.json"))
         final_recipes = {}
-        cost_dict = {}
 
         for _, skill in craft_recipes.items():
-            cost = skill["cost"]
+            # cost = skill["cost"]
             for product, materials in skill["materials"].items():
                 final_recipes[product] = materials
-                cost_dict[product] = cost
-
+                # cost_dict[product] = cost
+        cost_dict = json.load(open("core/files/cost.json"))
         location_dict = json.load(open("core/files/location.json"))
 
         craft_location = json.load(open("core/files/craft_location.json"))
