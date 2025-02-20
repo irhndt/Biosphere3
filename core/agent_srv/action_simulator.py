@@ -177,7 +177,6 @@ class ActionRunner:
         action_args[0] = action_args[0].lower()
         if action_args[0] not in [
             "school",
-            "workshop",
             "home",
             "farm",
             "mall",
@@ -189,6 +188,7 @@ class ActionRunner:
             "fishing",
             "mine",
             "orchard",
+            "chemfactory",
             "foodfactory",
             "semiconductorfactory",
             "garden",
