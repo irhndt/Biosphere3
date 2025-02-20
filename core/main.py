@@ -86,7 +86,7 @@ class AI_WS_Server:
                         if self.current_day != new_day:
                             self.current_day = new_day
                         # At the end of the week, we will allocate cv submission
-                        with self.cv_and_mayor_lock:
+                        async with self.cv_and_mayor_lock:
                             if not self.cv_and_mayor_task:
                                 if self.current_day % 7 == 1:
                                     self.cv_and_mayor_task = asyncio.create_task(
