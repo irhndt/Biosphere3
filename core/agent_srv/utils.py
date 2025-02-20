@@ -740,15 +740,11 @@ def filter_jobs(all_public_jobs, education, experience):
         role_edu_index = education_order.index(education)
     except ValueError:
         return {}
-
-    # 将 eligible_jobs 初始化为一个字典
     eligible_jobs = {}
     for job in all_public_jobs:
-        # 条件验证
         job_edu_index = education_order.index(job["education"])
         if role_edu_index >= job_edu_index and experience >= job["experience"]:
 
-            # 按需过滤字段
             filtered_job = {
                 "id": job["id"],
                 "jobType": job["jobType"],
@@ -758,20 +754,12 @@ def filter_jobs(all_public_jobs, education, experience):
                 "wagePerHour": job["wagePerHour"],
                 # "populationRatioCap": job["populationRatioCap"],
             }
-            # 使用 jobName 作为键，将 filtered_job 添加到字典中
             eligible_jobs[job["jobName"]] = filtered_job
 
     return eligible_jobs
 
 
 def convert_to_table_string(dict_data):
-    """
-    将给定的字典数据转换为表格形式的字符串
-    参数:
-    sellable_items (dict): 包含商品信息的字典，结构为 {商品名: {属性: 值}}
-    返回:
-    str: 转换后的表格字符串
-    """
     if not dict_data:
         return None
     df = pd.DataFrame.from_dict(dict_data, orient="index")
@@ -963,14 +951,10 @@ def get_item_str(price_response:list):
         "special_effect": "8 units of GPU"
     },
 }
-
-    # 处理price数据
     price_dict = {}
     for item in price_response:
         std_name = item["name"].lower()
         price_dict[std_name] = item["averagePrice"]
-
-    # 构建完整表格
     table_data = []
     for std_name, energy_info in energy_dict.items():
         row = {
@@ -981,7 +965,6 @@ def get_item_str(price_response:list):
         }
         table_data.append(row)
 
-    # 创建DataFrame并按原始顺序排列
     item_str = "# Item Info\n" + pd.DataFrame(table_data).to_string()
 
     return item_str
