@@ -108,6 +108,7 @@ class AI_WS_Server:
                     logger.error(f"❌ JSON decode error: {e}")
                 except Exception as e:
                     logger.error(f"❌ Error in message loop: {e}")
+                    print(traceback.format_exc())
                     break
         finally:
             if character_id:
