@@ -1010,21 +1010,32 @@ def get_job_str():
 
 
 def get_character_data_str(characterId: int, character_data: dict) -> str:
-    dormitoryId = game_api.request_sync(
+    dormitory_data = game_api.request_sync(
         "GET", f"/characterDormitory/getByCharacterIdNew/{characterId}"
-    ).get("dormitoryId")
-    dormitory = game_api.request_sync("GET", f"/dormitory/getById/{dormitoryId}")
+    )
+    
+    if not dormitory_data:  # 如果返回结果是 None 或者空值
+        dormitoryId = None
+    else:
+        dormitoryId = dormitory_data.get("dormitoryId")
+    
+    # 如果 dormitoryId 为 None，则返回一些默认数据或处理错误
+    if dormitoryId:
+        dormitory = game_api.request_sync("GET", f"/dormitory/getById/{dormitoryId}")
+    else:
+        dormitory = {}
+
     formatted_data = []
     formatted_data.append(f"Name: {character_data.get('name', 'N/A')}")
     formatted_data.append(f"Biography: {character_data.get('biography', 'N/A')}")
     formatted_data.append(
-        f"Health: {character_data.get('health', 'N/A')} - The range is 0 to {dormitory.get('maxHealth')}; It costs 50 money for a visit to the doctor, restoring 20 health points."
+        f"Health: {character_data.get('health', 'N/A')} - The range is 0 to {dormitory.get('maxHealth', '60')}; It costs 50 money for a visit to the doctor, restoring 20 health points."
     )
     formatted_data.append(
-        f"Energy: {character_data.get('energy', 'N/A')} - The range is 0 to {dormitory.get('maxEnergy')}; Sleeping restores {dormitory.get('energyRecovery')} energy points per hour."
+        f"Energy: {character_data.get('energy', 'N/A')} - The range is 0 to {dormitory.get('maxEnergy', '60')}; Sleeping restores {dormitory.get('energyRecovery', 'N/A')} energy points per hour."
     )
     formatted_data.append(
-        f"Hungry: {character_data.get('hungry', 'N/A')} - The range is 0 to {dormitory.get('maxHungry')}; Indicates the character's level of satiety; the higher, the fuller."
+        f"Hungry: {character_data.get('hungry', 'N/A')} - The range is 0 to {dormitory.get('maxHungry', '60')}; Indicates the character's level of satiety; the higher, the fuller."
     )
     formatted_data.append(
         f"Education Experience: {character_data.get('education_experience', 'N/A')} - Studying consumes 3 energy, 50 money per hour, and grants 5 Education Experience. Using a book can directly increase 20 Education Experience."
@@ -1033,7 +1044,7 @@ def get_character_data_str(characterId: int, character_data: dict) -> str:
     job_id = character_data.get("jobId", None)
     if job_id:
         wagePerHour = game_api.request_sync("GET", f"/publicWork/getById/{job_id}").get(
-            "wagePerHour"
+            "wagePerHour", 'N/A'
         )
         formatted_data.append(
             f"Occupation: {character_data.get('occupation', 'N/A')} - Working consumes 3 energy per hour and earns {wagePerHour} money."
@@ -1041,6 +1052,7 @@ def get_character_data_str(characterId: int, character_data: dict) -> str:
     formatted_data.append(f"Inventory: {character_data.get('inventory', {})}")
 
     return "\n".join(formatted_data)
+
 
 
 if __name__ == "__main__":

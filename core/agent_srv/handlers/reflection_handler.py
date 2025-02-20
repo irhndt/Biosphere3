@@ -22,6 +22,7 @@ class ReflectionHandler(BaseHandler):
                 "characterId": state["userid"],
                 "game_day": state["meta"]["day"] - 1,
             },
+            # params={"characterId":state["userid"], "k":20},
         )
         action_log_str = (
             "# Today's actions\n"
@@ -31,10 +32,9 @@ class ReflectionHandler(BaseHandler):
                     for action in action_log["log"]
                 ]
             )
-            if action_log["log"]
+            if action_log and action_log.get("log")
             else ""
         )
-
         price_response = game_api.request_sync(
             method="GET", endpoint="/ammPool/getAveragePrice"
         )
@@ -44,25 +44,24 @@ class ReflectionHandler(BaseHandler):
 
         job_str = get_job_str()
 
-        character_data_str = "# Character Info\n"+ get_character_data_str(
+        character_data_str = "# Character Info\n" + get_character_data_str(
             characterId=state["userid"], character_data=state["character_stats"]
         )
 
         character_name = state["character_stats"].get("name", "None")
 
-        industry_data=agent_api.request_sync(
-            method="GET",
-            endpoint=f"/industry/{state['userid']}/goal"
+        industry_data = agent_api.request_sync(
+            method="GET", endpoint=f"/industry/{state['userid']}/goal"
         )
         payload = {
             "action_log_str": action_log_str,
-            "item_str":item_str,
-            "production_path_str":production_path_str,
-            "job_str":job_str,
-            "character_data_str":character_data_str,
-            "character_name":character_name,
-            "industry":industry_data['industry'],
-            "goal":industry_data['goal'],
+            "item_str": item_str,
+            "production_path_str": production_path_str,
+            "job_str": job_str,
+            "character_data_str": character_data_str,
+            "character_name": character_name,
+            "industry": industry_data["industry"],
+            "goal": industry_data["goal"],
         }
         daily_reflection = await self.api_retry(
             daily_reflection_generator,
@@ -81,9 +80,7 @@ class ReflectionHandler(BaseHandler):
             f"Task Prioritization: {daily_reflection.task_prioritization}"
         )
         state["decision"]["reflection"].append(reflection_summary)
-        save_reflection_to_db(
-            state["userid"], {"new_reflection": reflection_summary}
-        )
+        save_reflection_to_db(state["userid"], {"new_reflection": reflection_summary})
         response = await self.send_message(
             state,
             "daily_reflection",
@@ -109,23 +106,48 @@ class ReflectionHandler(BaseHandler):
         conversation_str = agent_api.request_sync(
             method="GET",
             endpoint="/conversation/str",
-            params={"characterId":state["userid"], "start_day":state["meta"]["day"] - 1},
+            params={
+                "characterId": state["userid"],
+                "start_day": state["meta"]["day"] - 1,
+            },
         )
-        conversation_str = "# Today's conversations\n" + conversation_str if conversation_str else ""
+        conversation_str = (
+            "# Today's conversations\n" + conversation_str if conversation_str else ""
+        )
 
         action_log = agent_api.request_sync(
             method="GET",
             endpoint="/action_log/",
-            params={"characterId":state["userid"], "game_day":state["meta"]["day"] - 1},
+            params={
+                "characterId": state["userid"],
+                "game_day": state["meta"]["day"] - 1,
+            },
+            # params={"characterId":state["userid"], "k":20},
         )
-        action_log_str = "# Today's actions\n" + "".join([f"{action['command']}: {action['description']} (Execution result: {action['state']})\n" for action in action_log['log']]) if action_log['log'] else ""
-
-        initial_character_arc=agent_api.request_sync(
+        action_log_str = (
+            "# Today's actions\n"
+            + "".join(
+                [
+                    f"{action['command']}: {action['description']} (Execution result: {action['state']})\n"
+                    for action in action_log["log"]
+                ]
+            )
+            if action_log and action_log.get("log")
+            else ""
+        )
+        initial_character_arc = agent_api.request_sync(
             method="GET",
             endpoint="/character_arc/",
-            params={"characterId":state["userid"], "k":1},
+            params={"characterId": state["userid"], "k": 1},
         )
-        initial_character_arc_str = (f"# Character Initial Setup\n" if initial_character_arc else "") + ''.join([f"\nbelief: {character['belief']}\nmood: {character['mood']}\nvalues: {character['values']}\nhabits: {character['habits']}\npersonality: {character['personality']}\n" for character in initial_character_arc])
+        initial_character_arc_str = (
+            f"# Character Initial Setup\n" if initial_character_arc else ""
+        ) + "".join(
+            [
+                f"\nbelief: {character['belief']}\nmood: {character['mood']}\nvalues: {character['values']}\nhabits: {character['habits']}\npersonality: {character['personality']}\n"
+                for character in initial_character_arc
+            ]
+        )
 
         character_name = state["character_stats"].get("name", "None")
         biography = state["character_stats"].get("biography", "None")
