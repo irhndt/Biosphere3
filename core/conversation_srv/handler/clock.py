@@ -1,14 +1,19 @@
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import asyncio
 from core.conversation_srv.conversation_model import ConversationState
 from loguru import logger
 
 
 # a tool for transferring real_time to game_time
-def calculate_game_time(real_time=datetime.now(), day1_str="2025-1-29 00:00"):
+def calculate_game_time(real_time=datetime.now(timezone.utc), day1_str="2025-2-19 00:00"):
     day1 = datetime.strptime(day1_str, "%Y-%m-%d %H:%M")
+
+    real_time = real_time.astimezone(timezone(timedelta(hours=8)))
+    real_time = real_time.replace(tzinfo=None)
+
     elapsed_time = real_time - day1
     game_elapsed_time = elapsed_time * 7
+
     game_day = game_elapsed_time.days
     total_seconds = int(game_elapsed_time.total_seconds())
     remaining_seconds = total_seconds - (game_day * 86400)

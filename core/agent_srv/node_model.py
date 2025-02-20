@@ -174,7 +174,11 @@ class MayorDecision(BaseModel):
 
 
 class Reflection(BaseModel):
-    reflection: str
+    resource_management:  str = Field(description="The content of resource_management")
+    energy_and_health:  str = Field(description="The content of energy_and_health")
+    time_efficiency:   str = Field(description="The content of time_efficiency")
+    financial_strategy:   str = Field(description="The content of financial_strategy")
+    task_prioritization:   str = Field(description="The content of task_prioritization")
 
 
 class Response(BaseModel):
