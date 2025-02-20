@@ -181,7 +181,6 @@ class ActionRunner:
             "farm",
             "mall",
             "square",
-            "councilhall",
             "hospital",
             "fruit",
             "harvest",
@@ -195,10 +194,8 @@ class ActionRunner:
             "policestation",
             "library",
             "supermarket",
-            "canteen",
             "ranch",
             "forest",
-            "minefactory",
         ]:
             # Current: Give up goto
             self.actions = []
@@ -381,7 +378,7 @@ class ActionRunner:
             state["energy"] += 5
         elif action_args[0] == "sushi":
             state["hungry"] += 30
-        elif action_args[0] == "book":
+        elif action_args[0] == "books":
             state["education_experience"] += 10
         state["inventory"][action_args[0]] -= item_num
         return self.actions

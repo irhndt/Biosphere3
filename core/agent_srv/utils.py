@@ -317,7 +317,7 @@ Constraints: Must have an occupation and be in the corresponding work place.
     - chickensalad: +35 hungry and +10 energy
     - beefrice: +50 hungry and +5 energy
     - sushi: +30 hungry
-    - book: +10 education experience
+    - books: +10 education experience
 Constraints: Must have enough items in inventory.
 7. buy [itemType:string] [amount:int]: Purchase items, costing money (you should check the market data to get the price of different items).
 Constraints: Must have enough money, and items must be available in sufficient quantity in the AMM.
