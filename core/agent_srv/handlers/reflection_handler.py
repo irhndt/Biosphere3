@@ -52,7 +52,7 @@ class ReflectionHandler(BaseHandler):
 
         industry_data=agent_api.request_sync(
             method="GET",
-            endpoint=f"/industry/{state["userid"]}/goal"
+            endpoint=f"/industry/{state['userid']}/goal"
         )
         payload = {
             "action_log_str": action_log_str,
