@@ -70,8 +70,8 @@ class ReflectionHandler(BaseHandler):
             Reflection,
         )
 
-        full_prompt = daily_reflection_prompt.format(**payload)
-        logger.info("======generate_daily_reflection======\n" + full_prompt)
+        # full_prompt = daily_reflection_prompt.format(**payload)
+        # logger.info("======generate_daily_reflection======\n" + full_prompt)
         reflection_summary = (
             f"Resource Management: {daily_reflection.resource_management}\n"
             f"Energy and Health: {daily_reflection.energy_and_health}\n"
@@ -159,8 +159,8 @@ class ReflectionHandler(BaseHandler):
             "character_name": character_name,
             "biography": biography,
         }
-        full_prompt = generate_character_arc_prompt.format(**payload)
-        logger.info("======generate_character_arc======\n" + full_prompt)
+        # full_prompt = generate_character_arc_prompt.format(**payload)
+        # logger.info("======generate_character_arc======\n" + full_prompt)
         character_arc = await self.api_retry(
             character_arc_generator,
             payload,

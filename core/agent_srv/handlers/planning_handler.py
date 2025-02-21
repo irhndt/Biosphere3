@@ -54,7 +54,7 @@ class PlanningHandler(BaseHandler):
             "production_graph": state["meta"]["production_graph"],
         }
 
-        print(obj_planner_prompt.format(**payload))
+        # print(obj_planner_prompt.format(**payload))
         planner_response = await self.api_retry(
             obj_planner,
             payload,
@@ -109,7 +109,7 @@ class PlanningHandler(BaseHandler):
             "example_output": meta_seq_example_out,
             "forbidden_example_output": meta_seq_forbidden_example_out,
         }
-        print(crafting_and_trading_prompt.format(**payload))
+        # print(crafting_and_trading_prompt.format(**payload))
         crafting_and_trading_sequence = await self.api_retry(
             crafting_and_trading_planner,
             payload,
@@ -342,7 +342,7 @@ class PlanningHandler(BaseHandler):
             "additional_info": state.get("decision", {}).get("additional_info", ""),
         }
 
-        print(merger_prompt.format(**payload))
+        # print(merger_prompt.format(**payload))
         merger_response = await self.api_retry(
             merger,
             payload,

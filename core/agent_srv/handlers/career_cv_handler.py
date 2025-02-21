@@ -72,7 +72,7 @@ class CareerCVHandler(BaseHandler):
             "current_job_str": current_job_str,
             "eligible_jobs_str": eligible_jobs_str,
         }
-        logger.info(prompt_for_cv_new.format(**payload))
+        # logger.info(prompt_for_cv_new.format(**payload))
         cv = await self.api_retry(
             cv_generator,
             payload,
@@ -157,9 +157,9 @@ class CareerCVHandler(BaseHandler):
             "public_work_info": public_work_info,
             "meet_requirements": {"meet": code == 1, "message": message},
         }
-        logger.info(
-            f"🧔 Mayor decision prompt: {mayor_decision_prompt.format(**payload)}"
-        )
+        # logger.info(
+        #     f"🧔 Mayor decision prompt: {mayor_decision_prompt.format(**payload)}"
+        # )
         mayor_decision = await self.api_retry(
             mayor_decision_generator,
             payload,
@@ -223,9 +223,9 @@ class MayorDecisionHandler(BaseHandler):
                 "jobType": work["jobType"],
                 "jobName": work["jobName"],
                 "jobPlace": work["jobPlace"],
-                "minimum_education": work["education"],  
-                "studyxp": work["experience"],  
-                "number_of_positions": work["jobAvailable"],  
+                "minimum_education": work["education"],
+                "studyxp": work["experience"],
+                "number_of_positions": work["jobAvailable"],
             }
             for work in public_works
             if work["id"] in job_ids
@@ -249,7 +249,9 @@ class MayorDecisionHandler(BaseHandler):
                 for cv in cvs
                 if cv["jobid"] == public_work["job_id"]
             ]
-            logger.info(f"🧔 Candidates: {[candidate['characterId'] for candidate in candidates]}")
+            logger.info(
+                f"🧔 Candidates: {[candidate['characterId'] for candidate in candidates]}"
+            )
             formatted_candidates = "\n\n".join(
                 f"characterId: {candidate['characterId']}\nstudyxp: {candidate['studyxp']}\npastExperience: {candidate['pastExperience']}\nCV: {candidate['CV']}"
                 for candidate in candidates
@@ -272,14 +274,12 @@ class MayorDecisionHandler(BaseHandler):
             )
             logger.success(f"🧔 Mayor decision: {mayer_decision_batchly}")
             # avoid the case that the number of positions is less than the number of candidates
-            decisions = mayer_decision_batchly.decision[:public_work["number_of_positions"]]
+            decisions = mayer_decision_batchly.decision[
+                : public_work["number_of_positions"]
+            ]
             for candidate in candidates:
                 characterId = candidate["characterId"]
-                election_status = (
-                    "succeeded"
-                    if characterId in decisions
-                    else "failed"
-                )
+                election_status = "succeeded" if characterId in decisions else "failed"
 
                 agent_api.request_sync(
                     method="PUT",
@@ -305,17 +305,13 @@ class MayorDecisionHandler(BaseHandler):
                 }
                 if character_manager.has_character(characterId):
                     await character_manager.get_character(
-                            characterId
-                        ).agent_instance.send_message(back_msg)
-                    
+                        characterId
+                    ).agent_instance.send_message(back_msg)
 
     def filter_cvs(self, cvs):
-        cvs = [
-            cv for cv in cvs if cv["CV_content"] and cv["studyxp"]
-        ]
+        cvs = [cv for cv in cvs if cv["CV_content"] and cv["studyxp"]]
         cv_dict = {}
         for cv in cvs:
             # filter redundant cv of the same character
             cv_dict[cv["characterId"]] = cv
         return list(cv_dict.values())
-        
