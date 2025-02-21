@@ -88,8 +88,8 @@ class LangGraphInstance:
                         f"🏃 User {self.user_id}: Received action result: {msg['data']}"
                     )
                     self.state["decision"]["action_result"].append(message_data["msg"])
-                    if message_data.get("actionName").startswith("goto"):
-                        save_action_to_db(self.user_id, message_data)
+                    # if message_data.get("actionName").startswith("goto"):
+                    #     save_action_to_db(self.user_id, message_data)
                     # If the action result is False, put REPLAN into event_queue
                     self.state["decision"]["expanded_meta_seq"].popleft()
                     if msg["data"]["result"] is False:
@@ -248,7 +248,9 @@ class LangGraphInstance:
             )
 
             await asyncio.sleep(60)
-            initial_state = await get_initial_state_from_db(self.user_id, self.websocket)
+            initial_state = await get_initial_state_from_db(
+                self.user_id, self.websocket
+            )
             self.state = initial_state
             self.state["instance"] = self
 
