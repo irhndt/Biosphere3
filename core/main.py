@@ -249,7 +249,8 @@ def main():
     )
 
     # environment = "production" if sys.platform.startswith("linux") else "development"
-    environment = "test"
+    # environment = "test"
+    environment = "production"
     config = ConfigLoader(environment)
     server = AI_WS_Server(config)
     asyncio.run(server.run())
