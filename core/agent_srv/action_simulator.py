@@ -240,13 +240,13 @@ class ActionRunner:
             self.actions = []
             return self.actions
 
-        if state["money"] < hours * 100:
+        if state["money"] < hours * 50:
             # Current: Give up study
             self.actions = []
             return self.actions
 
-        if state["energy"] < hours * 10:
-            lack_energy = (hours * 10 - state["energy"]) // 10 + 1
+        if state["energy"] < hours * 3:
+            lack_energy = (hours * 3 - state["energy"]) // 10 + 1
             self.actions.insert(0, f"sleep {lack_energy}")
             self.actions.insert(0, "goto home")
             state["location"] = "home"
@@ -274,7 +274,7 @@ class ActionRunner:
             self.actions = []
             return self.actions
 
-        if state["money"] < hours * 100:
+        if state["money"] < hours * 50:
             # Current: Give up see doctor
             self.actions = []
             return self.actions
@@ -351,6 +351,21 @@ class ActionRunner:
             self.actions = []
             return self.actions
 
+        if action_args[0] not in [
+            "apple",
+            "pear",
+            "bread",
+            "apple_pie",
+            "fruit_salad",
+            "chicken_salad",
+            "beef_rice",
+            "sushi",
+            "books",
+        ]:
+            # Current: Give up use
+            self.actions = []
+            return self.actions
+
         if (
             action_args[0] not in state["inventory"]
             or state["inventory"][action_args[0]] < item_num
@@ -381,7 +396,7 @@ class ActionRunner:
         elif action_args[0] == "sushi":
             state["hungry"] += 30
         elif action_args[0] == "books":
-            state["education_experience"] += 10
+            state["education_experience"] += 20
         state["inventory"][action_args[0]] -= item_num
         return self.actions
 

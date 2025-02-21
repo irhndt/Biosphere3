@@ -298,7 +298,7 @@ Below are detailed explanations of each possible action, including constraints a
      - chicken_salad: +35 hungry, +10 energy
      - beef_rice: +50 hungry, +5 energy
      - sushi: +30 hungry
-     - books: +10 education experience
+     - books: +20 education experience
    - **Constraints**:  
      - Must have enough items in the inventory.
 
@@ -577,7 +577,7 @@ replanner_prompt = ChatPromptTemplate.from_template(
      - chicken_salad: +35 hungry, +10 energy  
      - beef_rice: +50 hungry, +5 energy  
      - sushi: +30 hungry  
-     - books: +10 education experience  
+     - books: +0 education experience  
 
 7. **buy [itemType:string] [amount:int]**  
    - Purchases items from market, costs money according to market price.

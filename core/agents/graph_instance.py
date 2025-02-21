@@ -14,8 +14,9 @@ from core.agent_srv.node_engines import *
 from core.agent_srv.node_model import RunningState
 from core.agent_srv.utils import (
     get_initial_state_from_db,
-    save_decision_to_db,
-    save_action_to_db,
+    get_character_data_async,
+    # save_decision_to_db,
+    # save_action_to_db,
     update_state_daily,
     clear_decision,
 )
@@ -71,6 +72,13 @@ class LangGraphInstance:
 
         return self
 
+    async def refresh_state(self):
+        try:
+            new_char_stats = await get_character_data_async(self.user_id)
+            self.state["character_stats"] = new_char_stats
+        except Exception as e:
+            self.logger.error(f"User {self.user_id}: Error in refresh_state: {e}")
+
     async def msg_processor(self):
         """
         Continuously processes incoming messages from the message queue.
@@ -98,6 +106,7 @@ class LangGraphInstance:
                                 f"❌ User {self.user_id}: Put REPLAN into event_queue"
                             )
                             self.state["false_action_queue"].put_nowait(msg["data"])
+                            self.refresh_state()
                             self.schedule_event("REPLAN")
                         except Exception as e:
                             self.logger.error(
@@ -121,6 +130,7 @@ class LangGraphInstance:
                     logger.info(
                         f"User {self.state['userid']} received ActionList Empty!"
                     )
+                    self.refresh_state()
                     self.schedule_event("PLAN")
                 elif (
                     message_name == "accommodation_event"
