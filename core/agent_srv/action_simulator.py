@@ -1,5 +1,6 @@
 import json
 from typing import List, Dict
+from loguru import logger
 from pprint import pprint
 import copy
 import random
@@ -133,30 +134,32 @@ class ActionRunner:
         if action_name == "goto":
             self.goto(action_args, state)
 
-        if action_name == "sleep":
+        elif action_name == "sleep":
             self.sleep(action_args, state)
 
-        if action_name == "study":
+        elif action_name == "study":
             self.study(action_args, state)
 
-        if action_name == "seedoctor":
+        elif action_name == "seedoctor":
             self.seedoctor(action_args, state)
 
-        if action_name == "work":
+        elif action_name == "work":
             self.actions = self.work(action_args, state)
 
-        if action_name == "use":
+        elif action_name == "use":
             self.use(action_args, state, self.market_data)
 
-        if action_name == "buy":
+        elif action_name == "buy":
             self.buy(action_args, state, self.market_data)
 
-        if action_name == "sell":
+        elif action_name == "sell":
             self.sell(action_args, state, self.market_data)
 
-        if action_name == "craft":
+        elif action_name == "craft":
             self.actions = self.craft(action_args, state, self.market_data)
-
+        else:
+            logger.warning(f"Invalid action: {action_name}")
+            return []
         if state["hungry"] <= 30:
             if state["hungry"] < 0:
                 state["hungry"] = 0
@@ -789,6 +792,7 @@ if __name__ == "__main__":
         "craft rice 6",
         "craft feed 3",
         "craft beef 1",
+        "Make dinner 1",
     ]
     initial_state = asyncio.run(utils.get_initial_state_from_db(790456, "websocket"))[
         "character_stats"

@@ -40,7 +40,7 @@ class BaseHandler:
                     print(traceback.format_exc())
                     retry_count += 1
                     if retry_count == self.MAX_RETRIES and hasattr(e, "doc"):
-                        return self.correct_format_error(state, e.doc, node_model)
+                        return await self.correct_format_error(state, e.doc, node_model)
                     continue
                 else:
                     raise e
@@ -64,7 +64,9 @@ class BaseHandler:
                 )
                 retry_count += 1
                 if retry_count == self.MAX_RETRIES and e.errors() is not None:
-                    return self.correct_format_error(state, e.errors(), node_model)
+                    return await self.correct_format_error(
+                        state, e.errors(), node_model
+                    )
                 continue
             except HttpResponseError as e:
                 logger.error(f"⛔ HttpResponseError in api_retry: {e}")
@@ -77,7 +79,7 @@ class BaseHandler:
                 print(traceback.format_exc())
                 retry_count += 1
                 if retry_count == self.MAX_RETRIES and response is not None:
-                    return self.correct_format_error(state, response, node_model)
+                    return await self.correct_format_error(state, response, node_model)
                 continue
 
         return response
