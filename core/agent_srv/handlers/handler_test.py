@@ -4,6 +4,7 @@ from core.agent_srv.handlers import *
 from loguru import logger
 from collections import deque
 from core.main import CharacterManager
+from core.agent_srv.utils import update_state_daily
 
 
 class MainTest:
@@ -104,15 +105,15 @@ class MainTest:
             "messageName": "new_day",
             "data": {
                 "health": 100,
-                "studyXp": 10,
-                "education": "None",
+                "studyXp": 30,
+                "education": "SecondarySchool",
                 "week": 3,
                 "date": 23,
                 "msg": "this is a message to sync new day",
             },
         }
-
-        await self.career_cv.generate_cv(self.instance, msg)
+        update_state_daily(self.state, msg)
+        await self.career_cv.generate_cv(self.state)
 
     async def test_decision(self):
         character_manager = CharacterManager()

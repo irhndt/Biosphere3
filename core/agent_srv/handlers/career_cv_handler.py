@@ -8,18 +8,21 @@ from loguru import logger
 
 class CareerCVHandler(BaseHandler):
 
-    async def generate_cv(self, instance, msg):
+    async def generate_cv(self, state):
         cv_generator = self.create_planner(prompt_for_cv_new, "gpt-4o-mini", NewCV, 0.5)
-        userid = msg.get("characterId")
-        msg_data = msg.get("data", {})
-        health = msg_data.get("health", 0)
-        money = instance.state["character_stats"].get("money", 0)
-        experience = msg_data.get("studyXp", 0)
-        education = instance.state["character_stats"].get("education", "None")
-        jobId = instance.state["character_stats"].get("jobId", 0)
-        week = msg_data.get("week", 0)
-        date = msg_data.get("date", 0)
-        character_name = instance.state["character_stats"].get("name", "None")
+        instance = state.get("instance", None)
+        if instance is None:
+            logger.error("CareerCVHandler: instance is None")
+            return
+        userid = state["userid"]
+        health = state["character_stats"].get("health", 0)
+        money = state["character_stats"].get("money", 0)
+        experience = state["character_stats"].get("experience", 0)
+        education = state["character_stats"].get("education", "PrimarySchool")
+        jobId = state["character_stats"].get("jobId", 0)
+        week = state["meta"].get("week", 0)
+        date = state["meta"].get("day", 0)
+        character_name = state["character_stats"].get("name", "None")
 
         character_industry = agent_api.request_sync(
             method="GET", endpoint=f"/industry/{userid}"
@@ -34,7 +37,7 @@ class CareerCVHandler(BaseHandler):
             past_work_experience = None
         else:
             past_work_experience = cv_data[0].get("experience", None)
-        biography = instance.state["character_stats"].get("biography", "None")
+        biography = state["character_stats"].get("biography", "None")
         job_data = game_api.request_sync(
             method="GET", endpoint=f"/publicWork/getById/{jobId}"
         )
@@ -76,13 +79,13 @@ class CareerCVHandler(BaseHandler):
         cv = await self.api_retry(
             cv_generator,
             payload,
-            state=instance.state,
+            state=state,
             node_model=NewCV,
         )
         logger.info(f"📃 CV: {cv}")
         if cv.job_id == 0:
             logger.info("📃 CV: No job selected. Agent want to keep the original job. ")
-            instance.state["cv"] = {
+            state["cv"] = {
                 "job_id": 0,
                 "content": "",
             }
@@ -101,29 +104,11 @@ class CareerCVHandler(BaseHandler):
             "election_status": "not_yet",
         }
         agent_api.request_sync("POST", "/cv/", data=cv_request)
-        instance.state["decision"]["cv"] = {
+        state["decision"]["cv"] = {
             "job_id": cv.job_id,
             "content": cv.cv,
             "studyxp": experience,
         }
-        # mayor_decision = await self.generate_mayor_decision(
-        #     cv, userid, experience, education, week
-        # )
-        # if instance and instance.websocket:
-        #     response = await instance.send_message(
-        #         {
-        #             "characterId": userid,
-        #             "messageName": "mayor_decision",
-        #             "messageCode": 10,
-        #             "data": {
-        #                 "jobId": cv.job_id,
-        #                 "jobName": decision_job_name,
-        #                 "cv": cv.cv,
-        #                 **mayor_decision,
-        #             },
-        #         }
-        #     )
-        #     instance.log_message("received", json.dumps(response))
 
     async def generate_mayor_decision(
         self,

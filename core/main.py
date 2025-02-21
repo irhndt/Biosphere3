@@ -91,16 +91,19 @@ class AI_WS_Server:
                             ):
                                 if self.current_day != new_day:
                                     self.current_day = new_day
-                                if self.current_day % 7 == 1:
-                                    self.cv_and_mayor_task = asyncio.create_task(
-                                        self.cv_submission(agent_instance, data)
-                                    )
-                                elif self.current_day % 7 == 2:
+                                # if self.current_day % 7 == 1:
+                                #     self.cv_and_mayor_task = asyncio.create_task(
+                                #         self.cv_submission(agent_instance, data)
+                                #     )
+                                if self.current_day % 7 == 2:
                                     self.cv_and_mayor_task = asyncio.create_task(
                                         self.mayer_decision(self.current_day / 7 + 1)
                                     )
                             else:
-                                if self.cv_and_mayor_task and self.cv_and_mayor_task.done():
+                                if (
+                                    self.cv_and_mayor_task
+                                    and self.cv_and_mayor_task.done()
+                                ):
                                     self.cv_and_mayor_task = None
 
                 except websockets.ConnectionClosed as e:

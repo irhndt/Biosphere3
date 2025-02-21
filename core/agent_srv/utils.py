@@ -538,8 +538,12 @@ def format_daily_obj(daily_objectives: deque) -> str:
     return formatted_str
 
 
-def update_state_daily(state: dict, day: int):
-    state["meta"]["day"] = day
+def update_state_daily(state: dict, msg_data: dict):
+    state["meta"]["day"] = msg_data.get("date", 0)
+    state["meta"]["week"] = msg_data.get("week", 0)
+    state["character_stats"]["health"] = msg_data.get("health", 0)
+    state["character_stats"]["education_experience"] = msg_data.get("studyXp", 0)
+    state["character_stats"]["education"] = msg_data.get("education", "PrimarySchool")
     state["past_stats"] = copy.deepcopy(state["character_stats"])
 
 
@@ -1013,12 +1017,12 @@ def get_character_data_str(characterId: int, character_data: dict) -> str:
     dormitory_data = game_api.request_sync(
         "GET", f"/characterDormitory/getByCharacterIdNew/{characterId}"
     )
-    
+
     if not dormitory_data:  # 如果返回结果是 None 或者空值
         dormitoryId = None
     else:
         dormitoryId = dormitory_data.get("dormitoryId")
-    
+
     # 如果 dormitoryId 为 None，则返回一些默认数据或处理错误
     if dormitoryId:
         dormitory = game_api.request_sync("GET", f"/dormitory/getById/{dormitoryId}")
@@ -1044,7 +1048,7 @@ def get_character_data_str(characterId: int, character_data: dict) -> str:
     job_id = character_data.get("jobId", None)
     if job_id:
         wagePerHour = game_api.request_sync("GET", f"/publicWork/getById/{job_id}").get(
-            "wagePerHour", 'N/A'
+            "wagePerHour", "N/A"
         )
         formatted_data.append(
             f"Occupation: {character_data.get('occupation', 'N/A')} - Working consumes 3 energy per hour and earns {wagePerHour} money."
@@ -1052,7 +1056,6 @@ def get_character_data_str(characterId: int, character_data: dict) -> str:
     formatted_data.append(f"Inventory: {character_data.get('inventory', {})}")
 
     return "\n".join(formatted_data)
-
 
 
 if __name__ == "__main__":

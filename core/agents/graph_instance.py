@@ -36,6 +36,7 @@ class LangGraphInstance:
         self.message_log = []
 
         self.websocket_lock = None
+        self.restart_lock = asyncio.Lock()
         self.graph = None
         self.graph_config = {"recursion_limit": 1e10}
         self.logger = logger.bind(agent_instance=True)
@@ -45,6 +46,7 @@ class LangGraphInstance:
         self.event_scheduler_task = None
         self.task = None
         self.routine_tasks = None
+        self.restart_task = None
 
         # Handlers setup
         self.planner = PlanningHandler()
@@ -55,22 +57,49 @@ class LangGraphInstance:
     @classmethod
     async def create(cls, user_id, websocket=None):
         self = cls(user_id, websocket)
-        initial_state = await get_initial_state_from_db(user_id, websocket)
-        self.state = initial_state
+        has_arun = False
+        async with self.restart_lock:
+            if self.restart_task is not None:
+                if not self.restart_task.done():
+                    self.restart_task.cancel()
+                    self.restart_task = None
+                else:
+                    self.restart_task = None
+                    has_arun = True
 
-        self.state["instance"] = self
-        self.websocket_lock = asyncio.Lock()
-        self.graph = self._get_workflow()
-        self.graph_config = {"recursion_limit": 1e10}
-        self.start_time = time.time()
-
-        self.msg_processor_task = asyncio.create_task(self.msg_processor())
-        # self.event_scheduler_task = asyncio.create_task(self.event_scheduler())
-        self.schedule_event("PLAN")
-        self.logger.info(f"User {self.user_id} workflow initialized")
-        self.task = asyncio.create_task(self.a_run())
+        if not has_arun:
+            initial_state = await get_initial_state_from_db(user_id, websocket)
+            self.state = initial_state
+            self.state["instance"] = self
+            self.websocket_lock = asyncio.Lock()
+            self.graph = self._get_workflow()
+            self.graph_config = {"recursion_limit": 1e10}
+            self.start_time = time.time()
+            self.msg_processor_task = asyncio.create_task(self.msg_processor())
+            # self.event_scheduler_task = asyncio.create_task(self.event_scheduler())
+            self.schedule_event("PLAN")
+            self.logger.info(f"User {self.user_id} workflow initialized")
+            self.task = asyncio.create_task(self.a_run())
+        else:
+            self.logger.info(f"User {self.user_id} has already been running.")
 
         return self
+
+    async def restart(self):
+        await asyncio.sleep(60)
+        async with self.restart_lock:
+            initial_state = await get_initial_state_from_db(
+                self.user_id, self.websocket
+            )
+            self.state = initial_state
+            self.state["instance"] = self
+            self.start_time = time.time()
+            if self.msg_processor_task.done():
+                self.msg_processor_task = asyncio.create_task(self.msg_processor())
+            self.schedule_event("PLAN")
+            self.task = asyncio.create_task(self.a_run())
+
+            self.logger.info(f"🏃 User {self.user_id}: Restart the workflow")
 
     async def refresh_state(self):
         try:
@@ -106,7 +135,7 @@ class LangGraphInstance:
                         self.refresh_state()
                         self.schedule_event("PLAN")
                         continue
-                    
+
                     self.state["decision"]["expanded_meta_seq"].popleft()
                     if msg["data"]["result"] is False:
                         try:
@@ -149,13 +178,14 @@ class LangGraphInstance:
                 elif message_name == "new_day":
                     update_state_daily(
                         self.state,
-                        message_data.get("date", self.state["meta"]["day"] + 1),
+                        message_data,
                     )
                     self.schedule_event("CHARACTER_ARC")
                     self.schedule_event("DAILY_REFLECTION")
-                    # await self.career_cv.generate_cv(self.state["instance"], msg)
-                    await asyncio.sleep(60)
-                    clear_decision(self.state)
+                    if message_data.get("date") % 7 == 1:
+                        self.schedule_event("CAREER_CV")
+
+                    # clear_decision(self.state)
                 elif message_name == "cv_submission":
                     await self.career_cv.generate_cv(self.state["instance"], msg)
                 else:
@@ -200,6 +230,8 @@ class LangGraphInstance:
                 return "Daily_Reflection"
             elif event == "ACCOMMODATION_EVENT":
                 return "Accommodation_Decision"
+            elif event == "CAREER_CV":
+                return "Career_CV"
             else:
                 self.logger.error(f"User {self.user_id}: Unknown event: {event}")
 
@@ -232,6 +264,7 @@ class LangGraphInstance:
         workflow.add_node(
             "Accommodation_Decision", self.accommodation.generate_accommodation_decision
         )
+        workflow.add_node("Career_CV", self.career_cv.generate_cv)
 
         workflow.set_entry_point("Sensing_Route")
 
@@ -242,6 +275,7 @@ class LangGraphInstance:
         workflow.add_edge("Character_Arc", "Sensing_Route")
         workflow.add_edge("Daily_Reflection", "Sensing_Route")
         workflow.add_edge("Accommodation_Decision", "Sensing_Route")
+        workflow.add_edge("Career_CV", "Sensing_Route")
 
         return workflow.compile()
 
@@ -264,17 +298,7 @@ class LangGraphInstance:
                     "data": "An error occur when running workflow. The workflow will restart in 60 seconds.",
                 }
             )
-
-            await asyncio.sleep(60)
-            initial_state = await get_initial_state_from_db(
-                self.user_id, self.websocket
-            )
-            self.state = initial_state
-            self.state["instance"] = self
-
-            self.schedule_event("PLAN")
-            self.task = asyncio.create_task(self.a_run())
-            self.logger.info(f"🏃 User {self.user_id}: Restart the workflow")
+            self.restart_task = asyncio.create_task(self.restart())
 
     async def send_message(self, message):
         async with self.websocket_lock:
