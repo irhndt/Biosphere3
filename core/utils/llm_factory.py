@@ -95,7 +95,7 @@ class LLMSelector:
                     api_version=os.environ.get("AZURE_OPENAI_API_VERSION"),
                     temperature=temperature,
                     callbacks=callbacks,
-                    model="gpt-4o-mini",
+                    model=model_name,
                     streaming=False,
                 )
         elif model_name.startswith("deepseek"):
