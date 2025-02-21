@@ -100,7 +100,7 @@ class AI_WS_Server:
                                         self.mayer_decision(self.current_day / 7 + 1)
                                     )
                             else:
-                                if self.cv_and_mayor_task.done():
+                                if self.cv_and_mayor_task and self.cv_and_mayor_task.done():
                                     self.cv_and_mayor_task = None
 
                 except websockets.ConnectionClosed as e:
