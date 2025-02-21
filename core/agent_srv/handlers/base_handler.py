@@ -39,8 +39,10 @@ class BaseHandler:
                     logger.error(f"⛔ JSON parsing related error in api_retry: {e}")
                     print(traceback.format_exc())
                     retry_count += 1
-                    if retry_count == self.MAX_RETRIES and hasattr(e, "doc"):
-                        return await self.correct_format_error(state, e.doc, node_model)
+                    if retry_count == self.MAX_RETRIES and hasattr(e, "llm_output"):
+                        return await self.correct_format_error(
+                            state, e.llm_output, node_model
+                        )
                     continue
                 else:
                     raise e
