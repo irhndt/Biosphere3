@@ -99,6 +99,14 @@ class LangGraphInstance:
                     # if message_data.get("actionName").startswith("goto"):
                     #     save_action_to_db(self.user_id, message_data)
                     # If the action result is False, put REPLAN into event_queue
+                    if len(self.state["decision"]["expanded_meta_seq"]) == 0:
+                        self.logger.info(
+                            f"User {self.user_id}: No more meta actions to execute."
+                        )
+                        self.refresh_state()
+                        self.schedule_event("PLAN")
+                        continue
+                    
                     self.state["decision"]["expanded_meta_seq"].popleft()
                     if msg["data"]["result"] is False:
                         try:
@@ -141,7 +149,7 @@ class LangGraphInstance:
                 elif message_name == "new_day":
                     update_state_daily(
                         self.state,
-                        message_data.get("day", self.state["meta"]["day"] + 1),
+                        message_data.get("date", self.state["meta"]["day"] + 1),
                     )
                     self.schedule_event("CHARACTER_ARC")
                     self.schedule_event("DAILY_REFLECTION")

@@ -100,7 +100,7 @@ class AI_WS_Server:
                                         self.mayer_decision(self.current_day / 7 + 1)
                                     )
                             else:
-                                if self.cv_and_mayor_task.done():
+                                if self.cv_and_mayor_task and self.cv_and_mayor_task.done():
                                     self.cv_and_mayor_task = None
 
                 except websockets.ConnectionClosed as e:
@@ -253,7 +253,8 @@ def main():
     )
 
     # environment = "production" if sys.platform.startswith("linux") else "development"
-    environment = "test"
+    # environment = "test"
+    environment = "production"
     config = ConfigLoader(environment)
     server = AI_WS_Server(config)
     asyncio.run(server.run())
