@@ -163,12 +163,13 @@ class ActionRunner:
         if state["hungry"] <= 30:
             if state["hungry"] < 0:
                 state["hungry"] = 0
-            self.actions = (
-                self.craft_or_buy_eating_stuff(
-                    state, random.randint(40, 80) - state["hungry"]
+            if random.randint(0, 100) < 30:
+                self.actions = (
+                    self.craft_or_buy_eating_stuff(
+                        state, random.randint(40, 80) - state["hungry"]
+                    )
+                    + self.actions
                 )
-                + self.actions
-            )
 
         return self.actions
 
@@ -711,7 +712,7 @@ class ActionRunner:
 
         # choose_to = random.choice(choices)
         # food = random.choice(foods)
-        prob_buy = state["money"] / (state["money"] + 50)
+        prob_buy = state["money"] / (state["money"] + 150)
         choose_to = "buy" if random.random() < prob_buy else "craft"
         food = random.choices(foods, weights=list(self.prob_food.values()))[0]
         num = recover_hungry // hungry_dict[food] + 1
@@ -736,7 +737,7 @@ class ActionRunner:
             )
         else:
             money = self.compute_amm_cost("buy", [food, num], self.market_data)
-            if state["money"] < money:
+            if state["money"] - 100 < money:
                 actions = self.generate_craft_sequence_and_check(
                     state,
                     item_type=food,

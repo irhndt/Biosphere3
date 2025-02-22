@@ -37,6 +37,7 @@ class LangGraphInstance:
 
         self.websocket_lock = None
         self.restart_lock = asyncio.Lock()
+        self.msg_processor_lock = asyncio.Lock()
         self.graph = None
         self.graph_config = {"recursion_limit": 1e10}
         self.logger = logger.bind(agent_instance=True)
@@ -75,7 +76,8 @@ class LangGraphInstance:
             self.graph = self._get_workflow()
             self.graph_config = {"recursion_limit": 1e10}
             self.start_time = time.time()
-            self.msg_processor_task = asyncio.create_task(self.msg_processor())
+            async with self.msg_processor_lock:
+                self.msg_processor_task = asyncio.create_task(self.msg_processor())
             # self.event_scheduler_task = asyncio.create_task(self.event_scheduler())
             self.schedule_event("PLAN")
             self.logger.info(f"User {self.user_id} workflow initialized")
@@ -87,6 +89,12 @@ class LangGraphInstance:
 
     async def restart(self):
         await asyncio.sleep(60)
+        async with self.msg_processor_lock:
+            if self.msg_processor_task.done():
+                self.msg_processor_task = asyncio.create_task(self.msg_processor())
+            else:
+                self.msg_processor_task.cancel()
+                self.msg_processor_task = asyncio.create_task(self.msg_processor())
         async with self.restart_lock:
             initial_state = await get_initial_state_from_db(
                 self.user_id, self.websocket
@@ -94,8 +102,6 @@ class LangGraphInstance:
             self.state = initial_state
             self.state["instance"] = self
             self.start_time = time.time()
-            if self.msg_processor_task.done():
-                self.msg_processor_task = asyncio.create_task(self.msg_processor())
             self.schedule_event("PLAN")
             self.task = asyncio.create_task(self.a_run())
 
@@ -103,6 +109,7 @@ class LangGraphInstance:
 
     async def refresh_state(self):
         try:
+            await asyncio.sleep(3)
             new_char_stats = await get_character_data_async(self.user_id)
             self.state["character_stats"] = new_char_stats
         except Exception as e:
@@ -132,7 +139,7 @@ class LangGraphInstance:
                         self.logger.info(
                             f"User {self.user_id}: No more meta actions to execute."
                         )
-                        self.refresh_state()
+                        await self.refresh_state()
                         self.schedule_event("PLAN")
                         continue
 
@@ -143,7 +150,7 @@ class LangGraphInstance:
                                 f"❌ User {self.user_id}: Put REPLAN into event_queue"
                             )
                             self.state["false_action_queue"].put_nowait(msg["data"])
-                            self.refresh_state()
+                            await self.refresh_state()
                             self.schedule_event("REPLAN")
                         except Exception as e:
                             self.logger.error(
@@ -167,7 +174,7 @@ class LangGraphInstance:
                     logger.info(
                         f"User {self.state['userid']} received ActionList Empty!"
                     )
-                    self.refresh_state()
+                    await self.refresh_state()
                     self.schedule_event("PLAN")
                 elif (
                     message_name == "accommodation_event"
@@ -176,10 +183,12 @@ class LangGraphInstance:
                 ):
                     self.schedule_event("ACCOMMODATION_EVENT")
                 elif message_name == "new_day":
-                    update_state_daily(
-                        self.state,
-                        message_data,
-                    )
+                    self.state["meta"]["day"] = int(message_data.get("date", 0))
+                    self.state["meta"]["week"] = int(message_data.get("week", 0))
+                    self.state["character_stats"]["health"] = message_data.get("health", 0)
+                    self.state["character_stats"]["education_experience"] = message_data.get("studyXp", 0)
+                    self.state["character_stats"]["education"] = message_data.get("education", "PrimarySchool")
+                    self.state["past_stats"] = copy.deepcopy(self.state["character_stats"])
                     self.schedule_event("CHARACTER_ARC")
                     self.schedule_event("DAILY_REFLECTION")
                     if message_data.get("date") % 7 == 1:
@@ -195,8 +204,17 @@ class LangGraphInstance:
             except Exception as e:
                 self.logger.error(f"User {self.user_id}: Error in msg_processor: {e}")
                 self.logger.error(traceback.format_exc())
-                raise e
-
+                # raise e
+                # restart the workflow
+                # self.restart()
+                if (
+                    message_name == "eventInfo"
+                    and message_data
+                    and message_data.get("msg") == "ActionList Empty"
+                ) or message_name == "actionresult":
+                    await self.refresh_state()
+                    self.schedule_event("PLAN")
+                
     async def event_scheduler(self):
         try:
             plan_task = asyncio.create_task(self.run_event("PLAN", 300))

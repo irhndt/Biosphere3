@@ -284,6 +284,7 @@ async def get_initial_state_from_db(userid, websocket):
         "meta": {
             "tool_functions": tool_functions_live,
             "day": 0,
+            "week": 0,
             "available_locations": available_locations,
         },
         "past_stats": {},
@@ -714,6 +715,10 @@ def refine_craft_action(craft_action: str) -> str:
         "h100": "Manufacture {0} H100(s)",
         "h200": "Manufacture {0} H200(s)",
         "b200": "Manufacture {0} B200(s)",
+        "A100": "Manufacture {0} A100(s)",
+        "H100": "Manufacture {0} H100(s)",
+        "H200": "Manufacture {0} H200(s)",
+        "B200": "Manufacture {0} B200(s)",
     }
 
     return item_templates[craft_item].replace("{0}", craft_num)

@@ -62,7 +62,7 @@ class PlanningHandler(BaseHandler):
             DailyObjective,
         )
         full_prompt = obj_planner_prompt.format(**payload)
-        logger.info("======generate_daily_objective======\n" + full_prompt)
+        # logger.info("======generate_daily_objective======\n" + full_prompt)
         state["decision"]["daily_objective"].append(planner_response.objectives)
         save_decision_to_db(
             state["userid"],
@@ -310,7 +310,7 @@ class PlanningHandler(BaseHandler):
             TradeObjective,
         )
         full_prompt = trade_planner_prompt.format(**payload)
-        logger.info("======generate_daily_objective======\n" + full_prompt)
+        # logger.info("======generate_daily_objective======\n" + full_prompt)
         state["decision"]["trade_objective"].clear()
         for objective in planner_response.objectives:
             state["decision"]["trade_objective"].append(objective)
@@ -352,7 +352,7 @@ class PlanningHandler(BaseHandler):
 
         full_prompt = merger_prompt.format(**payload)
 
-        logger.info("======merge_objectives======\n" + full_prompt)
+        # logger.info("======merge_objectives======\n" + full_prompt)
         # state["decision"]["daily_objective"] = merger_response.objectives
         logger.info(
             f"🌞 MERGER INVOKED with {merger_response.progress}\n"
