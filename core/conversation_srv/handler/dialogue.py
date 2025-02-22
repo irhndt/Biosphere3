@@ -5,7 +5,7 @@ from core.conversation_srv.conversation_prompts import conversation_generator_pr
 from core.conversation_srv.handler.plan import random_conversation_target
 from core.conversation_srv.handler.information import load_all_information
 from loguru import logger
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 
 def change_conversation_target(state: ConversationState, current_talk: ConversationTask):
@@ -101,6 +101,10 @@ def save_conversation(all_content: list, current_talk: ConversationTask, content
         current_day, current_hour, current_minute = calculate_game_time(
             current_realtime
         )
+
+        current_realtime = current_realtime.astimezone(timezone(timedelta(hours=8)))
+        current_realtime = current_realtime.replace(tzinfo=None)
+
         send_gametime = [
             current_day,
             f"{current_hour:02}" + ":" + f"{current_minute:02}",
